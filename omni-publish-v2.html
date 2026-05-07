@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniPublish v2 — AI Multi-Platform Publisher</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+
+/* ═══════════════ DARK THEME (default) ═══════════════ */
+[data-theme="dark"]{
+  --bg:#07070f;
+  --s1:#0d0d1a;
+  --s2:#12121f;
+  --s3:#1a1a2e;
+  --s4:#22223a;
+  --bd:rgba(255,255,255,0.07);
+  --bd2:rgba(255,255,255,0.14);
+  --bd3:rgba(255,255,255,0.22);
+  --tx:#e8e8ff;
+  --tx2:#9090bb;
+  --tx3:#5a5a80;
+  --acc:#6c5ce7;
+  --acc2:#fd79a8;
+  --acc3:#00cec9;
+  --warn:#fdcb6e;
+  --err:#e17055;
+  --card-shadow:0 2px 16px rgba(0,0,0,0.4);
+  --glow:rgba(108,92,231,0.25);
+  --hero:linear-gradient(135deg,rgba(108,92,231,0.12),rgba(253,121,168,0.06));
+  --badge-bg:rgba(108,92,231,0.22);
+  --badge-tx:#a29bfe;
+  --btn-grad:linear-gradient(135deg,#6c5ce7,#fd79a8);
+  --ai-border:rgba(108,92,231,0.45);
+  --ai-bg:linear-gradient(135deg,rgba(108,92,231,0.16),rgba(253,121,168,0.1));
+  --theme-icon:☀;
+  --theme-label:Sky Blue;
+}
+
+/* ═══════════════ SKY BLUE THEME ═══════════════ */
+[data-theme="sky"]{
+  --bg:#daeeff;
+  --s1:#ffffff;
+  --s2:#f0f8ff;
+  --s3:#e0f2ff;
+  --s4:#c8e6ff;
+  --bd:rgba(0,90,180,0.1);
+  --bd2:rgba(0,90,180,0.18);
+  --bd3:rgba(0,90,180,0.28);
+  --tx:#0a1628;
+  --tx2:#2a4a72;
+  --tx3:#6a8aae;
+  --acc:#0066dd;
+  --acc2:#e91e8c;
+  --acc3:#0099cc;
+  --warn:#d97706;
+  --err:#dc2626;
+  --card-shadow:0 2px 16px rgba(0,80,180,0.1);
+  --glow:rgba(0,102,221,0.2);
+  --hero:linear-gradient(135deg,rgba(0,102,221,0.08),rgba(233,30,140,0.05));
+  --badge-bg:rgba(0,102,221,0.12);
+  --badge-tx:#0044aa;
+  --btn-grad:linear-gradient(135deg,#0066dd,#e91e8c);
+  --ai-border:rgba(0,102,221,0.4);
+  --ai-bg:linear-gradient(135deg,rgba(0,102,221,0.1),rgba(233,30,140,0.07));
+  --theme-icon:🌑;
+  --theme-label:Dark;
+}
+
+body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;transition:background 0.35s,color 0.35s}
+
+/* Background decoration - dark mode only */
+[data-theme="dark"] body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(108,92,231,0.14),transparent),linear-gradient(rgba(108,92,231,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(108,92,231,0.02) 1px,transparent 1px);background-size:100% 100%,48px 48px,48px 48px;pointer-events:none;z-index:0}
+[data-theme="sky"] body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 100% 60% at 50% -10%,rgba(0,102,221,0.1),transparent);pointer-events:none;z-index:0}
+
+/* ═══ HEADER ═══ */
+.header{position:sticky;top:0;z-index:200;background:var(--s1);backdrop-filter:blur(24px);border-bottom:1px solid var(--bd2);padding:0 1.5rem;height:58px;display:flex;align-items:center;justify-content:space-between;transition:background 0.35s,border-color 0.35s;box-shadow:var(--card-shadow)}
+[data-theme="dark"] .header{background:rgba(7,7,15,0.88)}
+.logo{font-size:18px;font-weight:800;letter-spacing:-0.5px;display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;border-radius:9px;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:background 0.35s}
+.logo-text{background:var(--btn-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;transition:all 0.35s}
+.header-right{display:flex;align-items:center;gap:10px}
+
+/* Theme toggle button */
+.theme-toggle{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:20px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx2);font-size:12px;font-weight:700;cursor:pointer;transition:all 0.3s;font-family:inherit}
+.theme-toggle:hover{border-color:var(--bd3);color:var(--tx);background:var(--s3)}
+.theme-toggle-track{width:32px;height:18px;border-radius:9px;background:var(--acc);position:relative;transition:background 0.3s;flex-shrink:0}
+.theme-toggle-thumb{width:14px;height:14px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:transform 0.3s;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+[data-theme="sky"] .theme-toggle-thumb{transform:translateX(14px)}
+
+.status-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);padding:5px 12px;border:1px solid var(--bd);border-radius:20px;background:var(--s2);transition:all 0.3s}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--acc3);box-shadow:0 0 6px var(--acc3);animation:pulse 2s ease-in-out infinite;transition:background 0.3s,box-shadow 0.3s}
+.sel-badge{font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:var(--badge-bg);border:1px solid var(--ai-border);color:var(--badge-tx);transition:all 0.35s}
+
+/* ═══ LAYOUT ═══ */
+.app{display:grid;grid-template-columns:390px 1fr 370px;min-height:calc(100vh - 58px);position:relative;z-index:1}
+.panel{border-right:1px solid var(--bd);padding:1.25rem 1.25rem 4rem;overflow-y:auto;max-height:calc(100vh - 58px);transition:border-color 0.35s,background 0.35s}
+.panel:last-child{border-right:none}
+.panel-head{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);margin-bottom:1.25rem;display:flex;align-items:center;gap:8px;transition:color 0.35s}
+.panel-head::before,.panel-head::after{content:'';flex:1;height:1px;background:var(--bd);transition:background 0.35s}
+
+/* ═══ COMPOSE BOX ═══ */
+.compose-box{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:1rem;margin-bottom:1rem;transition:all 0.3s;box-shadow:var(--card-shadow)}
+[data-theme="dark"] .compose-box{background:var(--s1)}
+.compose-box:focus-within{border-color:var(--ai-border);box-shadow:0 0 0 3px var(--glow)}
+.compose-ta{width:100%;background:transparent;border:none;outline:none;color:var(--tx);font-size:14px;line-height:1.7;resize:none;min-height:110px;font-family:inherit;caret-color:var(--acc);transition:color 0.35s}
+.compose-ta::placeholder{color:var(--tx3)}
+.compose-toolbar{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--bd);margin-top:8px;gap:8px;transition:border-color 0.35s}
+.tbar-left{display:flex;gap:5px;flex-wrap:wrap}
+.tbar-btn{background:none;border:1px solid var(--bd);color:var(--tx2);border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.tbar-btn:hover{border-color:var(--bd2);color:var(--tx);background:var(--s2)}
+.char-count{font-size:11px;color:var(--tx3);white-space:nowrap;transition:color 0.3s}
+.char-count.warn{color:var(--warn)}
+.char-count.over{color:var(--err)}
+
+/* ═══ FORMAT SELECTOR ═══ */
+.format-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:1rem}
+.fmt-btn{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:8px 4px;font-size:10px;font-weight:700;cursor:pointer;transition:all 0.2s;text-align:center;color:var(--tx2);font-family:inherit}
+.fmt-btn .fmt-icon{font-size:1.2rem;display:block;margin-bottom:3px}
+.fmt-btn:hover{border-color:var(--bd2);color:var(--tx);background:var(--s2)}
+.fmt-btn.active{border-color:var(--acc);background:var(--badge-bg);color:var(--badge-tx);box-shadow:0 0 0 2px var(--glow)}
+
+/* ═══ ASPECT RATIO SELECTOR ═══ */
+.ratio-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.ratio-btn{background:var(--s1);border:1px solid var(--bd);border-radius:9px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.2s;color:var(--tx2);font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ratio-frame{border:2px solid currentColor;background:transparent;transition:all 0.2s;opacity:0.5}
+.ratio-btn:hover{border-color:var(--bd2);color:var(--acc)}
+.ratio-btn:hover .ratio-frame{opacity:0.8}
+.ratio-btn.active{border-color:var(--acc);color:var(--acc);background:var(--badge-bg);box-shadow:0 0 0 2px var(--glow)}
+.ratio-btn.active .ratio-frame{opacity:1}
+
+/* Ratio frames */
+.rf-16-9{width:32px;height:18px}
+.rf-9-16{width:16px;height:28px}
+.rf-1-1{width:22px;height:22px}
+.rf-4-5{width:18px;height:22px}
+.rf-2-3{width:16px;height:24px}
+
+/* ═══ PREVIEW PANEL ═══ */
+.preview-wrap{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1rem;display:flex;flex-direction:column;align-items:center;gap:10px;transition:all 0.35s}
+.preview-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);width:100%;display:flex;align-items:center;justify-content:space-between}
+.preview-device{position:relative;display:flex;align-items:center;justify-content:center}
+.device-frame{background:var(--s3);border:2px solid var(--bd3);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1)}
+.device-notch{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:40px;height:6px;background:var(--bd3);border-radius:3px}
+.device-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center}
+.device-content-text{font-size:9px;color:var(--tx2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;width:100%}
+.device-platform-bar{display:flex;align-items:center;gap:4px;position:absolute;bottom:8px;left:8px;right:8px}
+.device-avatar{width:14px;height:14px;border-radius:50%;background:var(--acc);flex-shrink:0}
+.device-username{font-size:8px;color:var(--tx2);font-weight:700}
+.device-media-preview{width:100%;aspect-ratio:inherit;background:var(--s4);display:flex;align-items:center;justify-content:center;font-size:1.2rem;border-radius:4px;flex:1}
+.preview-meta{font-size:11px;color:var(--tx3);text-align:center}
+
+/* Format: landscape */
+.frame-16-9{width:200px;height:112px;border-radius:10px}
+/* Format: portrait phone */
+.frame-9-16{width:90px;height:160px;border-radius:16px}
+/* Format: square */
+.frame-1-1{width:140px;height:140px;border-radius:10px}
+/* Format: portrait */
+.frame-4-5{width:112px;height:140px;border-radius:10px}
+/* Format: tall portrait */
+.frame-2-3{width:100px;height:150px;border-radius:10px}
+
+/* Format badges on device */
+.format-badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);border-radius:6px;padding:2px 6px;font-size:8px;font-weight:800;color:#fff;letter-spacing:0.5px}
+.compat-row{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;width:100%}
+.compat-chip{font-size:9px;padding:2px 7px;border-radius:10px;background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border);font-weight:700}
+
+/* ═══ MEDIA ZONE ═══ */
+.media-zone{border:1px dashed var(--bd2);border-radius:12px;padding:1.1rem;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:1rem;position:relative;overflow:hidden}
+.media-zone:hover,.media-zone.drag{border-color:var(--acc);background:var(--badge-bg)}
+.media-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+.media-zone-txt{font-size:12px;color:var(--tx3);transition:color 0.2s}
+.media-zone-icon{font-size:1.6rem;margin-bottom:5px;display:block}
+.media-previews{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;justify-content:center}
+.media-thumb{width:54px;height:54px;border-radius:7px;object-fit:cover;border:1px solid var(--bd2)}
+
+/* ═══ TABS ═══ */
+.tabs{display:flex;gap:3px;background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:3px;margin-bottom:1rem;transition:all 0.35s}
+.tab-btn{flex:1;padding:7px 4px;border-radius:8px;border:none;background:transparent;color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit}
+.tab-btn.active{background:var(--s1);color:var(--tx);border:1px solid var(--bd2);box-shadow:var(--card-shadow)}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ═══ SCHEDULE ═══ */
+.sched-row{display:flex;gap:8px}
+.sched-input{flex:1;background:var(--s1);border:1px solid var(--bd);border-radius:9px;padding:8px 12px;color:var(--tx);font-size:13px;outline:none;font-family:inherit;transition:all 0.2s}
+.sched-input:focus{border-color:var(--ai-border);box-shadow:0 0 0 2px var(--glow)}
+[data-theme="sky"] .sched-input::-webkit-calendar-picker-indicator{opacity:0.6}
+[data-theme="dark"] .sched-input::-webkit-calendar-picker-indicator{filter:invert(0.5) sepia(1) saturate(2) hue-rotate(220deg)}
+
+/* ═══ AI BUTTON ═══ */
+.ai-btn{width:100%;margin-top:1rem;padding:11px 16px;border-radius:12px;border:1px solid var(--ai-border);background:var(--ai-bg);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.3s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+.ai-btn:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0 6px 20px var(--glow)}
+.ai-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,0.2);border-top-color:var(--acc);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+.template-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:0.75rem}
+.tmpl-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--bd);background:var(--s1);color:var(--tx2);cursor:pointer;transition:all 0.2s;font-family:inherit}
+.tmpl-btn:hover{border-color:var(--acc);color:var(--acc);background:var(--badge-bg)}
+
+/* ═══ PLATFORMS GRID ═══ */
+.sel-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;margin-bottom:1rem;font-size:12px;transition:all 0.35s}
+.sel-bar-lbl{color:var(--tx2)}
+.sel-all-btn{background:none;border:none;color:var(--acc);font-size:12px;font-weight:700;cursor:pointer;padding:0;font-family:inherit}
+
+.plats-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.plat-card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:9px 11px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;gap:9px;position:relative;overflow:hidden;box-shadow:var(--card-shadow)}
+.plat-card::after{content:'';position:absolute;inset:0;background:var(--pc,#6c5ce7);opacity:0;transition:opacity 0.2s;pointer-events:none}
+.plat-card.sel{border-color:var(--pc)}
+.plat-card.sel::after{opacity:0.06}
+.plat-card:hover{background:var(--s2)}
+.plat-card.dimmed{opacity:0.35;pointer-events:none}
+.plat-card.sel .plat-toggle{background:var(--pc);border-color:var(--pc)}
+.plat-card.sel .plat-toggle::after{content:'✓';font-size:9px;font-weight:900;color:#fff}
+.plat-icon{width:31px;height:31px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;color:#fff;letter-spacing:-0.5px}
+.plat-info{flex:1;min-width:0}
+.plat-name{font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:color 0.35s}
+.plat-meta{font-size:10px;color:var(--tx3);margin-top:1px;transition:color 0.35s}
+.plat-toggle{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0}
+.plat-compat{font-size:9px;padding:1px 5px;border-radius:8px;background:var(--s3);color:var(--tx3);font-weight:600;margin-top:2px;display:inline-block}
+
+/* ═══ PUBLISH PANEL ═══ */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:1.25rem}
+.stat-card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:12px 10px;text-align:center;transition:all 0.35s;box-shadow:var(--card-shadow)}
+.stat-num{font-size:21px;font-weight:800;color:var(--tx);line-height:1;transition:color 0.35s}
+.stat-label{font-size:10px;color:var(--tx3);margin-top:4px;font-weight:600;letter-spacing:0.5px;transition:color 0.35s}
+
+.pub-btn{width:100%;padding:13px;border-radius:13px;border:none;background:var(--btn-grad);color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:all 0.3s;margin-bottom:1.25rem;font-family:inherit;position:relative;overflow:hidden;letter-spacing:0.3px}
+.pub-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 32px var(--glow)}
+.pub-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none}
+.pub-btn.going::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.18),transparent);animation:shimmer 1.4s infinite}
+
+/* ═══ ADAPTED CARDS ═══ */
+.adapted-card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:11px;margin-bottom:8px;animation:fadeUp 0.3s ease;box-shadow:var(--card-shadow);transition:all 0.35s}
+.adapted-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.a-plat-icon{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;flex-shrink:0}
+.a-plat-name{font-size:12px;font-weight:800;flex:1;color:var(--tx);transition:color 0.35s}
+.a-chars{font-size:10px;color:var(--tx3)}
+.a-copy-btn{background:none;border:1px solid var(--bd);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--tx3);cursor:pointer;transition:all 0.2s;font-family:inherit}
+.a-copy-btn:hover{border-color:var(--bd2);color:var(--tx)}
+.adapted-text{font-size:12px;color:var(--tx2);line-height:1.55;border-top:1px solid var(--bd);padding-top:8px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;transition:color 0.35s}
+.mini-prog{height:2px;background:var(--bd2);border-radius:1px;margin-top:8px;overflow:hidden}
+.mini-prog-fill{height:100%;border-radius:1px;transition:width 0.4s ease}
+
+/* ═══ STATUS ITEMS ═══ */
+.stat-item{display:flex;align-items:center;gap:10px;padding:10px 11px;background:var(--s1);border:1px solid var(--bd);border-radius:11px;margin-bottom:7px;transition:all 0.3s;box-shadow:var(--card-shadow)}
+.stat-item-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;flex-shrink:0}
+.stat-item-info{flex:1}
+.stat-item-name{font-size:12px;font-weight:700;color:var(--tx);transition:color 0.35s}
+.stat-item-detail{font-size:10px;color:var(--tx3);margin-top:2px;transition:color 0.35s}
+.stat-item-prog{height:2px;background:var(--bd2);border-radius:1px;margin-top:5px;overflow:hidden}
+.stat-item-fill{height:100%;border-radius:1px;transition:width 0.4s ease;background:var(--acc)}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+.b-wait{background:var(--s3);color:var(--tx3);border:1px solid var(--bd2)}
+.b-pub{background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border)}
+.b-ok{background:rgba(0,206,201,0.12);color:var(--acc3);border:1px solid rgba(0,206,201,0.3)}
+.b-err{background:rgba(225,112,85,0.12);color:var(--err);border:1px solid rgba(225,112,85,0.3)}
+
+/* ═══ EMPTY + MISC ═══ */
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--tx3)}
+.empty-icon{font-size:2rem;margin-bottom:10px;display:block;opacity:0.4}
+.empty-text{font-size:13px;line-height:1.6}
+.info-box{background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--tx2);line-height:1.6;border-left:3px solid var(--acc);transition:all 0.35s}
+.section-div{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);margin:0.9rem 0 0.6rem;display:flex;align-items:center;gap:8px;transition:color 0.35s}
+.section-div::after{content:'';flex:1;height:1px;background:var(--bd);transition:background 0.35s}
+
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--bd2);border-radius:12px;padding:11px 20px;font-size:13px;z-index:1000;animation:fadeUp 0.3s ease;white-space:nowrap;backdrop-filter:blur(20px);display:none;box-shadow:var(--card-shadow)}
+.toast.ok{border-color:rgba(0,206,201,0.4);color:var(--acc3)}
+.toast.err{border-color:rgba(225,112,85,0.4);color:var(--err)}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+
+/* ═══ KEYFRAMES ═══ */
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes themeSwitch{0%{transform:scale(0.97)}50%{transform:scale(1.01)}100%{transform:scale(1)}}
+.theme-anim{animation:themeSwitch 0.35s ease}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <div class="logo">
+    <div class="logo-icon">⬡</div>
+    <span class="logo-text">OmniPublish</span>
+    <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border);margin-left:2px">v2</span>
+  </div>
+  <div class="header-right">
+    <div class="status-pill"><div class="pulse-dot"></div><span id="ai-status">AI Engine Online</span></div>
+
+    <!-- THEME TOGGLE -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+      <span id="theme-emoji">☀️</span>
+      <div class="theme-toggle-track"><div class="theme-toggle-thumb"></div></div>
+      <span id="theme-lbl">Sky Blue</span>
+    </button>
+
+    <div class="sel-badge" id="hdr-badge">0 Platforms</div>
+  </div>
+</header>
+
+<!-- ═══ APP ═══ -->
+<div class="app">
+
+  <!-- ══════════ LEFT: COMPOSE ══════════ -->
+  <div class="panel">
+    <div class="panel-head">Compose</div>
+
+    <!-- TEXT AREA -->
+    <div class="compose-box">
+      <textarea class="compose-ta" id="content" rows="6"
+        placeholder="Write your content here. The AI will adapt it to each platform's tone, culture, and character limits."
+        oninput="onContentChange()"></textarea>
+      <div class="compose-toolbar">
+        <div class="tbar-left">
+          <button class="tbar-btn" onclick="addMedia()">📎 Media</button>
+          <button class="tbar-btn" onclick="addHashtags()"># Tags</button>
+          <button class="tbar-btn" onclick="addEmoji()">✦ Emoji</button>
+          <button class="tbar-btn" onclick="clearContent()">✕ Clear</button>
+        </div>
+        <span class="char-count" id="char-count">0 chars</span>
+      </div>
+    </div>
+
+    <!-- TEMPLATES -->
+    <div class="section-div">Templates</div>
+    <div class="template-row">
+      <button class="tmpl-btn" onclick="useTemplate('announce')">📣 Announce</button>
+      <button class="tmpl-btn" onclick="useTemplate('launch')">🚀 Launch</button>
+      <button class="tmpl-btn" onclick="useTemplate('tip')">💡 Tip</button>
+      <button class="tmpl-btn" onclick="useTemplate('story')">📖 Story</button>
+      <button class="tmpl-btn" onclick="useTemplate('promo')">🎁 Promo</button>
+      <button class="tmpl-btn" onclick="useTemplate('shorts')">🎬 Shorts Script</button>
+    </div>
+
+    <!-- CONTENT FORMAT -->
+    <div class="section-div">Content format</div>
+    <div class="format-grid" id="format-grid">
+      <button class="fmt-btn active" data-fmt="post" onclick="setFormat(this)"><span class="fmt-icon">📝</span>Post</button>
+      <button class="fmt-btn" data-fmt="video" onclick="setFormat(this)"><span class="fmt-icon">🎬</span>Video</button>
+      <button class="fmt-btn" data-fmt="short" onclick="setFormat(this)"><span class="fmt-icon">⚡</span>Short/Reel</button>
+      <button class="fmt-btn" data-fmt="story" onclick="setFormat(this)"><span class="fmt-icon">⭕</span>Story</button>
+      <button class="fmt-btn" data-fmt="article" onclick="setFormat(this)"><span class="fmt-icon">📰</span>Article</button>
+    </div>
+
+    <!-- ASPECT RATIO -->
+    <div class="section-div">Aspect ratio</div>
+    <div class="ratio-row" id="ratio-row">
+      <button class="ratio-btn active" data-ratio="16:9" onclick="setRatio(this)">
+        <div class="ratio-frame rf-16-9"></div><span>16:9</span>
+      </button>
+      <button class="ratio-btn" data-ratio="9:16" onclick="setRatio(this)">
+        <div class="ratio-frame rf-9-16"></div><span>9:16</span>
+      </button>
+      <button class="ratio-btn" data-ratio="1:1" onclick="setRatio(this)">
+        <div class="ratio-frame rf-1-1"></div><span>1:1</span>
+      </button>
+      <button class="ratio-btn" data-ratio="4:5" onclick="setRatio(this)">
+        <div class="ratio-frame rf-4-5"></div><span>4:5</span>
+      </button>
+      <button class="ratio-btn" data-ratio="2:3" onclick="setRatio(this)">
+        <div class="ratio-frame rf-2-3"></div><span>2:3</span>
+      </button>
+    </div>
+
+    <!-- VISUAL PREVIEW -->
+    <div class="preview-wrap" id="preview-wrap">
+      <div class="preview-label">
+        <span>Preview</span>
+        <span id="preview-meta-top" style="font-size:10px;color:var(--tx3)">YouTube · 16:9 · Video</span>
+      </div>
+      <div class="preview-device">
+        <div class="device-frame frame-16-9" id="device-frame">
+          <div class="device-content" id="device-content">
+            <div class="device-media-preview">🎬</div>
+            <div class="device-content-text" id="device-text">Your content will appear here</div>
+          </div>
+          <div class="format-badge" id="format-badge">16:9</div>
+        </div>
+      </div>
+      <div class="compat-row" id="compat-row"></div>
+    </div>
+
+    <!-- MEDIA -->
+    <div class="section-div">Media</div>
+    <div class="media-zone" id="media-zone"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <input type="file" id="media-input" multiple accept="image/*,video/*" onchange="handleFiles(event.target.files)">
+      <span class="media-zone-icon">🎞️</span>
+      <div class="media-zone-txt">Drop media here or click to browse<br><span style="font-size:10px;opacity:0.6">Images · Videos · GIFs · MP4 · MOV</span></div>
+      <div class="media-previews" id="media-previews"></div>
+    </div>
+
+    <!-- POST TIMING -->
+    <div class="section-div">Timing</div>
+    <div class="tabs" id="time-tabs">
+      <button class="tab-btn active" onclick="switchTab('tab-now',this,'time-tabs')">Post Now</button>
+      <button class="tab-btn" onclick="switchTab('tab-sched',this,'time-tabs')">Schedule</button>
+      <button class="tab-btn" onclick="switchTab('tab-draft',this,'time-tabs')">Save Draft</button>
+    </div>
+    <div class="tab-content active" id="tab-now">
+      <div class="info-box">Content will be published immediately on all selected platforms.</div>
+    </div>
+    <div class="tab-content" id="tab-sched">
+      <div class="sched-row">
+        <input type="date" class="sched-input" id="s-date">
+        <input type="time" class="sched-input" id="s-time">
+      </div>
+    </div>
+    <div class="tab-content" id="tab-draft">
+      <div class="info-box">Content saved as draft. You can review and publish later from the dashboard.</div>
+    </div>
+
+    <!-- AI BUTTON -->
+    <button class="ai-btn" id="ai-btn" onclick="runAIAdapt()">
+      <span id="ai-ico">✦</span>
+      <span id="ai-lbl">AI Adapt for All Platforms</span>
+    </button>
+  </div>
+
+  <!-- ══════════ MIDDLE: PLATFORMS ══════════ -->
+  <div class="panel">
+    <div class="panel-head">Platforms</div>
+    <div class="sel-bar">
+      <span class="sel-bar-lbl" id="sel-label">0 of 14 selected</span>
+      <button class="sel-all-btn" id="sel-all-btn" onclick="toggleAll()">Select All</button>
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;text-align:center" id="compat-hint">
+      Platforms compatible with <strong id="compat-fmt-name" style="color:var(--acc)">Post</strong> + <strong id="compat-ratio-name" style="color:var(--acc)">16:9</strong> are highlighted
+    </div>
+    <div class="plats-grid" id="plats-grid"></div>
+  </div>
+
+  <!-- ══════════ RIGHT: PUBLISH ══════════ -->
+  <div class="panel">
+    <div class="panel-head">Publish</div>
+
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-num" id="snum-plat">0</div><div class="stat-label">Platforms</div></div>
+      <div class="stat-card"><div class="stat-num" id="snum-reach">—</div><div class="stat-label">Est. Reach</div></div>
+      <div class="stat-card"><div class="stat-num" id="snum-score">—</div><div class="stat-label">AI Score</div></div>
+    </div>
+
+    <button class="pub-btn" id="pub-btn" onclick="publishAll()">🚀 &nbsp;Publish to All Platforms</button>
+
+    <div class="tabs" id="right-tabs">
+      <button class="tab-btn active" onclick="switchTab('tab-adapted',this,'right-tabs')">Adapted Content</button>
+      <button class="tab-btn" onclick="switchTab('tab-status',this,'right-tabs')">Publish Status</button>
+    </div>
+
+    <div class="tab-content active" id="tab-adapted">
+      <div class="empty" id="adapted-empty">
+        <span class="empty-icon">✦</span>
+        <div class="empty-text">Click <strong style="color:var(--tx2)">AI Adapt</strong> to generate platform-optimised content for each network.</div>
+      </div>
+      <div id="adapted-list"></div>
+    </div>
+
+    <div class="tab-content" id="tab-status">
+      <div class="empty" id="status-empty">
+        <span class="empty-icon">◉</span>
+        <div class="empty-text">Select platforms and click <strong style="color:var(--tx2)">Publish</strong> to start broadcasting.</div>
+      </div>
+      <div id="status-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════ JAVASCRIPT ═══════════════════════════ -->
+<script>
+/* ── PLATFORM DATA ── */
+const PLATFORMS = [
+  {id:'facebook',  name:'Facebook',    abbr:'f',   color:'#1877F2', limit:63206, reach:'2.9B', formats:['post','video','story'],           ratios:['16:9','1:1','4:5','9:16']},
+  {id:'tiktok',    name:'TikTok',      abbr:'TT',  color:'#FF0050', limit:2200,  reach:'1.5B', formats:['video','short','story'],          ratios:['9:16']},
+  {id:'linkedin',  name:'LinkedIn',    abbr:'in',  color:'#0A66C2', limit:3000,  reach:'950M', formats:['post','video','article'],         ratios:['16:9','1:1','4:5']},
+  {id:'youtube',   name:'YouTube',     abbr:'▶',   color:'#FF0000', limit:5000,  reach:'2.7B', formats:['video','short'],                  ratios:['16:9','9:16','1:1']},
+  {id:'instagram', name:'Instagram',   abbr:'IG',  color:'#C13584', limit:2200,  reach:'2B',   formats:['post','video','short','story'],   ratios:['1:1','4:5','9:16']},
+  {id:'twitch',    name:'Twitch',      abbr:'tw',  color:'#9146FF', limit:500,   reach:'140M', formats:['video','story'],                  ratios:['16:9']},
+  {id:'x',         name:'X (Twitter)', abbr:'X',   color:'#4a4a6a', limit:280,   reach:'550M', formats:['post','video','short'],           ratios:['16:9','1:1']},
+  {id:'telegram',  name:'Telegram',    abbr:'tg',  color:'#26A5E4', limit:4096,  reach:'900M', formats:['post','video','story','article'], ratios:['16:9','9:16','1:1','4:5','2:3']},
+  {id:'reddit',    name:'Reddit',      abbr:'r/',  color:'#FF4500', limit:40000, reach:'430M', formats:['post','video','article'],         ratios:['16:9','1:1','4:5']},
+  {id:'threads',   name:'Threads',     abbr:'⊚',   color:'#4a4a5a', limit:500,   reach:'150M', formats:['post','video','short'],           ratios:['1:1','4:5','9:16']},
+  {id:'pinterest', name:'Pinterest',   abbr:'P',   color:'#E60023', limit:500,   reach:'465M', formats:['post','video'],                   ratios:['2:3','4:5','1:1']},
+  {id:'rumble',    name:'Rumble',      abbr:'R',   color:'#85C742', limit:2000,  reach:'80M',  formats:['video','short'],                  ratios:['16:9','9:16']},
+  {id:'bluesky',   name:'Bluesky',     abbr:'sky', color:'#0085FF', limit:300,   reach:'30M',  formats:['post','video','short'],           ratios:['16:9','1:1','4:5']},
+  {id:'snapchat',  name:'Snapchat',    abbr:'👻',  color:'#C8A800', limit:250,   reach:'750M', formats:['short','story','video'],          ratios:['9:16']},
+];
+
+const FORMAT_COMPAT = {
+  'post':    {name:'Post',       icon:'📝', ratios:['1:1','4:5','16:9']},
+  'video':   {name:'Video',      icon:'🎬', ratios:['16:9','1:1']},
+  'short':   {name:'Short/Reel', icon:'⚡', ratios:['9:16']},
+  'story':   {name:'Story',      icon:'⭕', ratios:['9:16']},
+  'article': {name:'Article',    icon:'📰', ratios:['16:9','4:5']},
+};
+
+const RATIO_COMPAT = {
+  '16:9': {platforms:['youtube','facebook','linkedin','twitch','x','telegram','reddit','rumble'],  label:'YouTube · Facebook · LinkedIn'},
+  '9:16': {platforms:['tiktok','instagram','snapchat','youtube','threads','telegram'],              label:'TikTok · Reels · Shorts · Stories'},
+  '1:1':  {platforms:['instagram','facebook','x','telegram','reddit','threads','bluesky'],         label:'Instagram · X · Facebook'},
+  '4:5':  {platforms:['instagram','facebook','linkedin','threads','pinterest','telegram','bluesky'],label:'Instagram · Pinterest · LinkedIn'},
+  '2:3':  {platforms:['pinterest','telegram'],                                                     label:'Pinterest'},
+};
+
+const TEMPLATES = {
+  announce:`🎉 Exciting news! We're thrilled to share something special with our community. After months of hard work, we're finally ready to reveal what we've been building. Stay tuned — this is just the beginning!\n\n#announcement #news #excited`,
+  launch:`🚀 It's launch day! Introducing [Product Name] — built to change how you [use case].\n\n✅ Feature one that saves you time\n✅ Feature two that removes friction\n✅ Feature three you didn't know you needed\n\nAvailable now — link in bio 👇\n\n#launch #product #innovation #startup`,
+  tip:`💡 Pro tip most people miss:\n\n[Your tip here]\n\nOnce you know this, you'll wonder how you lived without it. Share this with someone who needs it!\n\n#tips #productivity #lifehack #learn`,
+  story:`📖 A year ago I had nothing. Here's what changed everything...\n\n[Your turning point]\n\nThe lesson took me years to learn but only seconds to explain:\n\n[Your core insight]\n\nRetweet if this resonates 🔁\n\n#story #growth #mindset`,
+  promo:`🎁 LIMITED TIME — ends [date]!\n\nGet [Product] at [X]% OFF with code OMNI\n\n✅ Benefit 1\n✅ Benefit 2  \n✅ Benefit 3\n✅ 30-day money back guarantee\n\nShop now 👇\n\n#sale #offer #discount #limited`,
+  shorts:`[HOOK - 0:00-0:03]\n"You've been doing this wrong your whole life..."\n\n[CONTENT - 0:03-0:45]\nStep 1: [Action]\nStep 2: [Action]\nStep 3: [Result]\n\n[CTA - 0:45-0:60]\n"Follow for more tips like this every day"\n\n#shorts #reels #fyp #viral #tips`,
+};
+
+/* ── STATE ── */
+let selected = new Set();
+let adapted = {};
+let publishing = false;
+let currentFormat = 'post';
+let currentRatio = '16:9';
+let currentTheme = 'dark';
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded', () => {
+  renderPlatforms();
+  updateAll();
+  updatePreview();
+  updateCompatibility();
+  const now = new Date();
+  document.getElementById('s-date').value = now.toISOString().split('T')[0];
+  document.getElementById('s-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+});
+
+/* ── THEME TOGGLE ── */
+function toggleTheme() {
+  currentTheme = currentTheme === 'dark' ? 'sky' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  document.getElementById('theme-emoji').textContent = currentTheme === 'dark' ? '☀️' : '🌑';
+  document.getElementById('theme-lbl').textContent = currentTheme === 'dark' ? 'Sky Blue' : 'Dark';
+  document.body.classList.add('theme-anim');
+  setTimeout(() => document.body.classList.remove('theme-anim'), 400);
+  toast('Theme: ' + (currentTheme === 'dark' ? '🌑 Dark Mode' : '☀️ Sky Blue Mode'), 'ok');
+}
+
+/* ── FORMAT SELECTOR ── */
+function setFormat(btn) {
+  document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFormat = btn.dataset.fmt;
+  // Auto-set ratio based on format
+  const fmtCompat = FORMAT_COMPAT[currentFormat];
+  if (fmtCompat && !fmtCompat.ratios.includes(currentRatio)) {
+    const firstRatio = fmtCompat.ratios[0];
+    const ratioBtn = document.querySelector(`[data-ratio="${firstRatio}"]`);
+    if (ratioBtn) setRatio(ratioBtn);
+  } else {
+    updatePreview();
+    updateCompatibility();
+  }
+}
+
+/* ── RATIO SELECTOR ── */
+function setRatio(btn) {
+  document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRatio = btn.dataset.ratio;
+  updatePreview();
+  updateCompatibility();
+}
+
+/* ── PREVIEW UPDATE ── */
+function updatePreview() {
+  const frame = document.getElementById('device-frame');
+  const badge = document.getElementById('format-badge');
+  const topMeta = document.getElementById('preview-meta-top');
+  const txt = document.getElementById('device-text');
+  const content = document.getElementById('content').value;
+
+  // Update frame class
+  const classMap = {'16:9':'frame-16-9','9:16':'frame-9-16','1:1':'frame-1-1','4:5':'frame-4-5','2:3':'frame-2-3'};
+  frame.className = 'device-frame ' + (classMap[currentRatio] || 'frame-16-9');
+  badge.textContent = currentRatio;
+
+  // Device content based on format
+  const fmtInfo = FORMAT_COMPAT[currentFormat] || {};
+  const ratioCompat = RATIO_COMPAT[currentRatio] || {};
+  topMeta.textContent = `${fmtInfo.name || currentFormat} · ${currentRatio} · ${ratioCompat.label || ''}`;
+
+  // Show notch for phone (9:16 / story)
+  let notch = frame.querySelector('.device-notch');
+  if (['9:16'].includes(currentRatio)) {
+    if (!notch) { notch = document.createElement('div'); notch.className='device-notch'; frame.appendChild(notch); }
+  } else {
+    if (notch) notch.remove();
+  }
+
+  // Update preview text
+  const mediaIcon = currentFormat === 'video' ? '🎬' : currentFormat === 'short' ? '⚡' : currentFormat === 'story' ? '⭕' : '🖼️';
+  let inner = frame.querySelector('.device-content');
+  if (!inner) { inner = document.createElement('div'); inner.className='device-content'; inner.id='device-content'; frame.appendChild(inner); }
+  inner.innerHTML = `<div class="device-media-preview">${mediaIcon}</div><div class="device-content-text">${escHtml(content.slice(0,120)) || 'Your content preview'}</div>`;
+
+  // Compat chips
+  const compatRow = document.getElementById('compat-row');
+  const compatPlats = (ratioCompat.platforms || []).slice(0,5);
+  compatRow.innerHTML = compatPlats.map(pid => {
+    const p = PLATFORMS.find(x=>x.id===pid);
+    return p ? `<div class="compat-chip">${p.abbr} ${p.name}</div>` : '';
+  }).join('') + (compatPlats.length < (ratioCompat.platforms||[]).length ? `<div class="compat-chip">+${(ratioCompat.platforms||[]).length - compatPlats.length} more</div>` : '');
+}
+
+/* ── PLATFORM COMPATIBILITY ── */
+function updateCompatibility() {
+  const compat = RATIO_COMPAT[currentRatio] || {};
+  const compatPlats = new Set(compat.platforms || []);
+  document.getElementById('compat-fmt-name').textContent = FORMAT_COMPAT[currentFormat]?.name || currentFormat;
+  document.getElementById('compat-ratio-name').textContent = currentRatio;
+
+  PLATFORMS.forEach(p => {
+    const card = document.getElementById('pc-' + p.id);
+    if (!card) return;
+    const fmtOk = p.formats.includes(currentFormat);
+    const ratioOk = p.ratios.includes(currentRatio);
+    card.classList.toggle('dimmed', !fmtOk || !ratioOk);
+    // Update compat tag
+    let tag = card.querySelector('.plat-compat');
+    if (!tag) { tag = document.createElement('div'); tag.className='plat-compat'; card.querySelector('.plat-info').appendChild(tag); }
+    tag.textContent = fmtOk && ratioOk ? '✓ Compatible' : fmtOk ? '⚠ Wrong ratio' : '✗ Unsupported';
+    tag.style.color = fmtOk && ratioOk ? 'var(--acc3)' : fmtOk ? 'var(--warn)' : 'var(--err)';
+    tag.style.background = fmtOk && ratioOk ? 'rgba(0,206,201,0.1)' : 'transparent';
+  });
+}
+
+/* ── PLATFORMS ── */
+function renderPlatforms() {
+  document.getElementById('plats-grid').innerHTML = PLATFORMS.map(p => {
+    const lim = p.limit >= 1000 ? (p.limit/1000).toFixed(0)+'k' : p.limit;
+    return `<div class="plat-card" id="pc-${p.id}" style="--pc:${p.color}" onclick="toggle('${p.id}')">
+      <div class="plat-icon" style="background:${p.color}">${p.abbr}</div>
+      <div class="plat-info">
+        <div class="plat-name">${p.name}</div>
+        <div class="plat-meta">${lim} chars · ${p.reach}</div>
+      </div>
+      <div class="plat-toggle" id="pt-${p.id}"></div>
+    </div>`;
+  }).join('');
+}
+
+function toggle(id) {
+  selected.has(id) ? selected.delete(id) : selected.add(id);
+  document.getElementById('pc-'+id).classList.toggle('sel', selected.has(id));
+  updateAll();
+}
+
+function toggleAll() {
+  const compatPlats = PLATFORMS.filter(p => p.formats.includes(currentFormat) && p.ratios.includes(currentRatio));
+  const allCompatSelected = compatPlats.every(p => selected.has(p.id));
+  if (allCompatSelected) {
+    selected.clear();
+    document.querySelectorAll('.plat-card').forEach(c => c.classList.remove('sel'));
+  } else {
+    compatPlats.forEach(p => { selected.add(p.id); document.getElementById('pc-'+p.id).classList.add('sel'); });
+  }
+  updateAll();
+}
+
+function getSelected() { return PLATFORMS.filter(p => selected.has(p.id)); }
+
+/* ── STATE UPDATE ── */
+function updateAll() {
+  const sel = getSelected();
+  const n = sel.length;
+  document.getElementById('sel-label').textContent = `${n} of ${PLATFORMS.length} selected`;
+  document.getElementById('sel-all-btn').textContent = n === PLATFORMS.filter(p=>p.formats.includes(currentFormat)&&p.ratios.includes(currentRatio)).length ? 'Deselect All' : 'Select Compatible';
+  document.getElementById('hdr-badge').textContent = `${n} Platform${n!==1?'s':''}`;
+  document.getElementById('snum-plat').textContent = n;
+  let total = 0;
+  sel.forEach(p => { const v = parseFloat(p.reach); total += p.reach.includes('B') ? v*1000 : v; });
+  document.getElementById('snum-reach').textContent = n===0 ? '—' : total>=1000 ? (total/1000).toFixed(1)+'B' : Math.round(total)+'M';
+  onContentChange();
+}
+
+function onContentChange() {
+  const txt = document.getElementById('content').value;
+  const sel = getSelected();
+  document.getElementById('snum-score').textContent = txt.length > 20 && sel.length > 0 ? Math.min(100, Math.round(72+sel.length*1.5-(Math.max(0,txt.length-200)*0.08))) : '—';
+  if (!sel.length) {
+    document.getElementById('char-count').textContent = `${txt.length} chars`;
+    document.getElementById('char-count').className = 'char-count';
+  } else {
+    const minLim = Math.min(...sel.map(p=>p.limit));
+    const minPlat = sel.find(p=>p.limit===minLim);
+    const pct = txt.length/minLim;
+    const el = document.getElementById('char-count');
+    el.textContent = `${txt.length} / ${minLim} (${minPlat.name})`;
+    el.className = 'char-count'+(pct>1?' over':pct>0.85?' warn':'');
+  }
+  updatePreview();
+}
+
+/* ── TABS ── */
+function switchTab(contentId, btn, tabsId) {
+  const tabGroup = document.getElementById(tabsId);
+  tabGroup.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = btn.closest('.panel') || document.body;
+  panel.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById(contentId).classList.add('active');
+}
+
+/* ── MEDIA ── */
+function handleFiles(files) {
+  document.getElementById('media-zone').classList.remove('drag');
+  const prev = document.getElementById('media-previews');
+  Array.from(files).forEach(f => {
+    if (f.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f); img.className='media-thumb';
+      prev.appendChild(img);
+    } else {
+      const tag = document.createElement('div');
+      tag.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--s3);padding:4px 8px;border-radius:6px;font-size:11px;color:var(--tx2);margin:4px';
+      tag.textContent = '🎬 '+f.name.slice(0,18);
+      prev.appendChild(tag);
+    }
+  });
+  document.querySelector('.media-zone-txt').innerHTML = `${document.getElementById('media-previews').children.length} file(s) attached <span style="font-size:10px;opacity:0.6">· click to add more</span>`;
+}
+function addMedia() { document.getElementById('media-input').click(); }
+function handleDrop(e) { e.preventDefault(); document.getElementById('media-zone').classList.remove('drag'); handleFiles(e.dataTransfer.files); }
+
+/* ── TEXT HELPERS ── */
+function addHashtags() {
+  const ta = document.getElementById('content');
+  ta.value += (ta.value.length ? '\n\n' : '') + '#trending #viral #content #socialmedia #growth';
+  onContentChange();
+}
+function addEmoji() {
+  const emojis = ['🚀','💡','🔥','✨','💪','🎯','📈','🌟','💫','🎉','👏','❤️','⚡','🎬','🏆'];
+  document.getElementById('content').value += ' '+emojis[Math.floor(Math.random()*emojis.length)];
+  onContentChange();
+}
+function clearContent() {
+  document.getElementById('content').value = '';
+  onContentChange();
+}
+function useTemplate(key) {
+  document.getElementById('content').value = TEMPLATES[key] || '';
+  if (key === 'shorts') { document.querySelector('[data-fmt="short"]').click(); }
+  onContentChange();
+  toast('Template loaded!','ok');
+}
+
+/* ── AI ADAPT ── */
+async function runAIAdapt() {
+  const txt = document.getElementById('content').value.trim();
+  const sel = getSelected();
+  if (!txt) { toast('Write some content first!','err'); return; }
+  if (!sel.length) { toast('Select at least one platform!','err'); return; }
+
+  const btn = document.getElementById('ai-btn');
+  btn.disabled = true;
+  document.getElementById('ai-ico').outerHTML = '<span class="spin" id="ai-ico"></span>';
+  document.getElementById('ai-lbl').textContent = 'Adapting with AI...';
+
+  const fmt = FORMAT_COMPAT[currentFormat]?.name || currentFormat;
+  const specs = sel.map(p => `- ${p.name} [id:"${p.id}"] max ${p.limit} chars, format: ${fmt}, ratio: ${currentRatio}`).join('\n');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2500,
+        system:`You are an expert social media strategist. Adapt the given content for each platform. The format type is "${fmt}" and aspect ratio is "${currentRatio}". Return ONLY a raw valid JSON object — no markdown, no code fences, no explanation. Keys are platform IDs (strings), values are the adapted content strings. Strictly stay within each character limit. Match platform culture (X=punchy, LinkedIn=professional, TikTok=trendy, Reddit=authentic, YouTube=descriptive for SEO, Pinterest=visual description). Add emojis and hashtags where platform-appropriate.`,
+        messages:[{role:'user',content:`Platforms:\n${specs}\n\nOriginal content:\n"${txt}"\n\nReturn JSON: {"facebook":"...","x":"...",...}`}]
+      })
+    });
+    const data = await res.json();
+    const raw = data.content.find(c=>c.type==='text')?.text || '{}';
+    adapted = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    renderAdapted(sel);
+    toast(`✦ Content adapted for ${sel.length} platforms!`,'ok');
+    document.querySelector('#right-tabs .tab-btn:first-child').click();
+  } catch(err) {
+    console.error(err);
+    sel.forEach(p => { adapted[p.id] = txt.length>p.limit ? txt.slice(0,p.limit-4)+'...' : txt; });
+    renderAdapted(sel);
+    toast('Showing trimmed fallback (AI unavailable)','err');
+  }
+
+  btn.disabled = false;
+  document.getElementById('ai-ico').outerHTML = '<span id="ai-ico">✦</span>';
+  document.getElementById('ai-lbl').textContent = 'Re-Adapt Content';
+}
+
+function renderAdapted(sel) {
+  document.getElementById('adapted-empty').style.display = 'none';
+  document.getElementById('adapted-list').innerHTML = sel.map(p => {
+    const txt = adapted[p.id] || '';
+    const pct = Math.min(txt.length/p.limit, 1);
+    const barC = pct>0.9 ? 'var(--err)' : pct>0.7 ? 'var(--warn)' : 'var(--acc3)';
+    return `<div class="adapted-card">
+      <div class="adapted-head">
+        <div class="a-plat-icon" style="background:${p.color}">${p.abbr}</div>
+        <span class="a-plat-name">${p.name}</span>
+        <span class="a-chars">${txt.length}/${p.limit}</span>
+        <button class="a-copy-btn" onclick="copyText('${p.id}')">Copy</button>
+      </div>
+      <div class="adapted-text" id="atext-${p.id}">${escHtml(txt)}</div>
+      <div class="mini-prog"><div class="mini-prog-fill" style="width:${Math.round(pct*100)}%;background:${barC}"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function copyText(pid) {
+  if (adapted[pid]) { navigator.clipboard.writeText(adapted[pid]); toast('Copied!','ok'); }
+}
+
+/* ── PUBLISH ── */
+async function publishAll() {
+  const txt = document.getElementById('content').value.trim();
+  const sel = getSelected();
+  if (!txt) { toast('Write some content first!','err'); return; }
+  if (!sel.length) { toast('Select at least one platform!','err'); return; }
+  if (publishing) return;
+  publishing = true;
+
+  const btn = document.getElementById('pub-btn');
+  btn.disabled = true; btn.classList.add('going'); btn.textContent = '⟳  Publishing...';
+
+  document.querySelector('#right-tabs .tab-btn:last-child').click();
+  document.getElementById('status-empty').style.display = 'none';
+  const list = document.getElementById('status-list');
+  list.innerHTML = sel.map(p => `
+    <div class="stat-item" id="si-${p.id}">
+      <div class="stat-item-icon" style="background:${p.color}">${p.abbr}</div>
+      <div class="stat-item-info">
+        <div class="stat-item-name">${p.name}</div>
+        <div class="stat-item-detail" id="sid-${p.id}">Queued</div>
+        <div class="stat-item-prog"><div class="stat-item-fill" id="sif-${p.id}"></div></div>
+      </div>
+      <div class="badge b-wait" id="sb-${p.id}">Waiting</div>
+    </div>`).join('');
+
+  let okCount = 0;
+  for (const p of sel) {
+    document.getElementById('sb-'+p.id).className='badge b-pub';
+    document.getElementById('sb-'+p.id).textContent='Uploading';
+    document.getElementById('sid-'+p.id).textContent='Connecting to '+p.name+'...';
+    const delay = 700 + Math.random()*1300;
+    let prog = 0;
+    const iv = setInterval(() => {
+      prog = Math.min(prog + Math.random()*16, 88);
+      const f = document.getElementById('sif-'+p.id);
+      if (f) f.style.width = Math.round(prog)+'%';
+    }, 100);
+    await sleep(delay);
+    clearInterval(iv);
+    const fill = document.getElementById('sif-'+p.id);
+    if (fill) fill.style.width = '100%';
+    const ok = Math.random() > 0.08;
+    if (ok) {
+      okCount++;
+      if (fill) fill.style.background='var(--acc3)';
+      document.getElementById('sb-'+p.id).className='badge b-ok';
+      document.getElementById('sb-'+p.id).textContent='✓ Live';
+      document.getElementById('sid-'+p.id).textContent='Published · '+fmtTime();
+    } else {
+      if (fill) fill.style.background='var(--err)';
+      document.getElementById('sb-'+p.id).className='badge b-err';
+      document.getElementById('sb-'+p.id).textContent='✗ Failed';
+      document.getElementById('sid-'+p.id).textContent='Rate limited — retry in 5 min';
+    }
+    await sleep(80);
+  }
+
+  toast(okCount===sel.length ? `🚀 Published to all ${sel.length} platforms!` : `Published ${okCount}/${sel.length} — ${sel.length-okCount} failed`, okCount>0?'ok':'err');
+  btn.disabled=false; btn.classList.remove('going'); btn.textContent='↺  Publish Again';
+  publishing = false;
+}
+
+/* ── UTILS ── */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function fmtTime() { return new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'}); }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function toast(msg, type) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className='toast '+type; el.style.display='block';
+  clearTimeout(el._t); el._t = setTimeout(()=>el.style.display='none', 3500);
+}
+</script>
+</body>
+</html>
