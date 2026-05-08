@@ -983,39 +983,80 @@ async function publishAll() {
       <div class="badge b-wait" id="sb-${p.id}">Waiting</div>
     </div>`).join('');
 
-  let okCount = 0;
-  for (const p of sel) {
-    document.getElementById('sb-'+p.id).className='badge b-pub';
-    document.getElementById('sb-'+p.id).textContent='Uploading';
-    document.getElementById('sid-'+p.id).textContent='Connecting to '+p.name+'...';
-    const delay = 700 + Math.random()*1300;
-    let prog = 0;
-    const iv = setInterval(() => {
-      prog = Math.min(prog + Math.random()*16, 88);
-      const f = document.getElementById('sif-'+p.id);
-      if (f) f.style.width = Math.round(prog)+'%';
-    }, 100);
-    await sleep(delay);
-    clearInterval(iv);
-    const fill = document.getElementById('sif-'+p.id);
-    if (fill) fill.style.width = '100%';
-    const ok = Math.random() > 0.08;
-    if (ok) {
-      okCount++;
-      if (fill) fill.style.background='var(--acc3)';
-      document.getElementById('sb-'+p.id).className='badge b-ok';
-      document.getElementById('sb-'+p.id).textContent='✓ Live';
-      document.getElementById('sid-'+p.id).textContent='Published · '+fmtTime();
-    } else {
-      if (fill) fill.style.background='var(--err)';
-      document.getElementById('sb-'+p.id).className='badge b-err';
-      document.getElementById('sb-'+p.id).textContent='✗ Failed';
-      document.getElementById('sid-'+p.id).textContent='Rate limited — retry in 5 min';
+  try {
+    const base = BACKEND_URL || window.location.origin;
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('omni_token') || ''}` };
+    const platformIds = sel.map(p => p.id);
+
+    // 1. Create post record
+    for (const p of sel) { document.getElementById('sid-'+p.id).textContent = 'Creating post...'; }
+    const postRes = await fetch(`${base}/api/v1/posts`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ content: txt, platforms: platformIds, format: currentFormat, aspectRatio: currentRatio })
+    });
+    
+    if (!postRes.ok) {
+      throw new Error((await postRes.json()).error || 'Failed to create post');
     }
-    await sleep(80);
+    const { post } = await postRes.json();
+
+    // 2. Publish post
+    for (const p of sel) { 
+      document.getElementById('sb-'+p.id).className='badge b-pub';
+      document.getElementById('sb-'+p.id).textContent='Uploading';
+      document.getElementById('sid-'+p.id).textContent='Connecting to platform...';
+      const fill = document.getElementById('sif-'+p.id);
+      if (fill) fill.style.width = '50%';
+    }
+
+    const pubRes = await fetch(`${base}/api/v1/publish`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ postId: post.id, platforms: platformIds })
+    });
+    
+    const result = await pubRes.json();
+    if (!pubRes.ok) throw new Error(result.error || 'Publish failed');
+
+    // Update UI based on results
+    let okCount = 0;
+    const summaryMap = {};
+    if (result.summary) {
+      result.summary.forEach(s => { summaryMap[s.platform] = s; });
+    }
+
+    for (const p of sel) {
+      const fill = document.getElementById('sif-'+p.id);
+      if (fill) fill.style.width = '100%';
+      const res = summaryMap[p.id] || { status: 'failed', error: 'Unknown error' };
+
+      if (res.status === 'published' || res.status === 'fulfilled') {
+        okCount++;
+        if (fill) fill.style.background='var(--acc3)';
+        document.getElementById('sb-'+p.id).className='badge b-ok';
+        document.getElementById('sb-'+p.id).textContent='✓ Live';
+        document.getElementById('sid-'+p.id).innerHTML=`Published <a href="${res.url}" target="_blank" style="color:inherit">View</a> · ${fmtTime()}`;
+      } else {
+        if (fill) fill.style.background='var(--err)';
+        document.getElementById('sb-'+p.id).className='badge b-err';
+        document.getElementById('sb-'+p.id).textContent='✗ Failed';
+        document.getElementById('sid-'+p.id).textContent=res.error || 'Failed to publish';
+      }
+    }
+
+    toast(okCount===sel.length ? `🚀 Published to all ${sel.length} platforms!` : `Published ${okCount}/${sel.length} — ${sel.length-okCount} failed`, okCount>0?'ok':'err');
+
+  } catch (err) {
+    console.error(err);
+    for (const p of sel) {
+      const fill = document.getElementById('sif-'+p.id);
+      if (fill) { fill.style.width = '100%'; fill.style.background='var(--err)'; }
+      document.getElementById('sb-'+p.id).className='badge b-err';
+      document.getElementById('sb-'+p.id).textContent='✗ Error';
+      document.getElementById('sid-'+p.id).textContent=err.message;
+    }
+    toast('Publishing failed: ' + err.message, 'err');
   }
 
-  toast(okCount===sel.length ? `🚀 Published to all ${sel.length} platforms!` : `Published ${okCount}/${sel.length} — ${sel.length-okCount} failed`, okCount>0?'ok':'err');
   btn.disabled=false; btn.classList.remove('going'); btn.textContent='↺  Publish Again';
   publishing = false;
 }

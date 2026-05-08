@@ -4,21 +4,21 @@
 
 'use strict';
 
-const express                   = require('express');
-const multer                    = require('multer');
-const path                      = require('path');
-const sharp                     = require('sharp');
-const { v4: uuid }              = require('uuid');
-const { supabase }              = require('../config/database');
-const { verifyToken }           = require('../middleware/auth');
-const { mediaRateLimiter }      = require('../middleware/rateLimit');
+const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const sharp = require('sharp');
+const { v4: uuid } = require('uuid');
+const { supabase } = require('../config/database');
+const { verifyToken } = require('../middleware/auth');
+const { mediaRateLimiter } = require('../middleware/rateLimit');
 const { ALLOWED_MEDIA_TYPES, MAX_FILE_SIZE } = require('../config/security');
-const { logger }                = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 const router = express.Router();
 router.use(verifyToken);
 
-const storage    = multer.memoryStorage();
+const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
   const all = [...ALLOWED_MEDIA_TYPES.image, ...ALLOWED_MEDIA_TYPES.video];
   all.includes(file.mimetype) ? cb(null, true) : cb(new Error(`File type ${file.mimetype} not allowed`), false);
@@ -29,7 +29,7 @@ const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_FILE_SIZE.v
 router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, res) => {
   if (!req.files?.length) return res.status(422).json({ error: 'No files uploaded' });
 
-  const bucket  = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
   const results = await Promise.allSettled(req.files.map(async (file) => {
     const isImage = ALLOWED_MEDIA_TYPES.image.includes(file.mimetype);
     const maxSize = isImage ? MAX_FILE_SIZE.image : MAX_FILE_SIZE.video;
@@ -40,7 +40,7 @@ router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, 
 
     if (isImage) {
       const meta = await sharp(buffer).metadata();
-      width  = meta.width;
+      width = meta.width;
       height = meta.height;
       buffer = await sharp(buffer)
         .resize({ width: 3840, height: 2160, fit: 'inside', withoutEnlargement: true })
@@ -48,7 +48,7 @@ router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, 
       file.mimetype = 'image/webp';
     }
 
-    const ext      = isImage ? 'webp' : path.extname(file.originalname).slice(1);
+    const ext = isImage ? 'webp' : path.extname(file.originalname).slice(1);
     const filename = `${req.user.id}/${uuid()}.${ext}`;
 
     const { error: storageErr } = await supabase.storage.from(bucket).upload(filename, buffer, { contentType: file.mimetype, upsert: false });
@@ -65,7 +65,7 @@ router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, 
   }));
 
   const uploaded = results.filter(r => r.status === 'fulfilled').map(r => r.value);
-  const errors   = results.filter(r => r.status === 'rejected').map(r => r.reason.message);
+  const errors = results.filter(r => r.status === 'rejected').map(r => r.reason.message);
   res.status(errors.length === results.length ? 500 : 201).json({ uploaded, errors });
 });
 
