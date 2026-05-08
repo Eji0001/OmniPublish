@@ -67,6 +67,13 @@ const schemas = {
     postId:    z.string().uuid(),
     platforms: z.array(z.string().max(50)).min(1).max(14),
   }),
+  forgotPassword: z.object({
+    email: z.string().email().max(255),
+  }),
+  resetPassword: z.object({
+    token:    z.string().min(64).max(64),
+    password: z.string().min(12).max(128),
+  }),
   patchPost: z.object({
     title:        z.string().max(500).optional(),
     content:      z.string().min(1).max(63206).optional(),

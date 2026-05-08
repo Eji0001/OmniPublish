@@ -8,6 +8,19 @@
 const { supabase } = require('../config/database');
 const { logger }   = require('../utils/logger');
 
+const SENSITIVE_QUERY_KEYS = new Set([
+  'token', 'access_token', 'refresh_token', 'api_key', 'apikey',
+  'secret', 'password', 'key', 'auth', 'authorization',
+]);
+
+const redactQuery = (query) => {
+  const out = {};
+  for (const [k, v] of Object.entries(query || {})) {
+    out[k] = SENSITIVE_QUERY_KEYS.has(k.toLowerCase()) ? '***' : v;
+  }
+  return out;
+};
+
 const ALWAYS_AUDIT = new Set([
   'login', 'logout', 'register', 'password_change',
   'token_refresh', 'account_delete', 'publish',
@@ -59,7 +72,7 @@ const auditLogger = async (req, res, next) => {
         http_status:   res.statusCode,
         duration_ms:   duration,
         request_id:    req.requestId,
-        metadata:      { query: req.query, params: req.params },
+        metadata:      { query: redactQuery(req.query), params: req.params },
       });
     } catch (e) { logger.error('Audit log write failed', { err: e.message }); }
     logger[level](`[AUDIT] ${action}`, { userId: req.user?.id, ip: req.ip, status: res.statusCode, duration });

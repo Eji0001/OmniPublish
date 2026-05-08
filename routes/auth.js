@@ -7,6 +7,7 @@
 
 const express         = require('express');
 const bcrypt          = require('bcryptjs');
+const crypto          = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { supabase }    = require('../config/database');
 const { issueTokens, rotateRefreshToken, revokeToken, verifyToken } = require('../middleware/auth');
@@ -104,6 +105,65 @@ router.get('/me', verifyToken, async (req, res) => {
     .select('id, email, full_name, role, plan, created_at, last_login_at').eq('id', req.user.id).single();
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json({ user });
+});
+
+/* ── POST /auth/forgot-password ── */
+router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'), async (req, res) => {
+  const { email } = req.body;
+
+  // Always return 200 to prevent email enumeration
+  const { data: user } = await supabase.from('users').select('id').eq('email', email).eq('is_active', true).single();
+  if (!user) return res.json({ message: 'If that email is registered you will receive a reset link shortly' });
+
+  // Invalidate any existing unused tokens for this user
+  await supabase.from('password_resets')
+    .delete()
+    .eq('user_id', user.id)
+    .is('used_at', null);
+
+  const plainToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');
+  const expiresAt  = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await supabase.from('password_resets').insert({
+    id: uuidv4(), user_id: user.id, token_hash: tokenHash, expires_at: expiresAt,
+  });
+
+  // TODO: send plainToken via email provider (EMAIL_PROVIDER env var)
+  // In development the token is logged so you can test the reset flow
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('Password reset token (dev only)', { userId: user.id, token: plainToken });
+  }
+
+  logger.info('Password reset requested', { userId: user.id });
+  res.json({ message: 'If that email is registered you will receive a reset link shortly' });
+});
+
+/* ── POST /auth/reset-password ── */
+router.post('/reset-password', authRateLimiter, validateBody('resetPassword'), async (req, res) => {
+  const { token, password } = req.body;
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  const { data: record } = await supabase.from('password_resets')
+    .select('id, user_id, expires_at, used_at')
+    .eq('token_hash', tokenHash)
+    .single();
+
+  if (!record)                          return res.status(400).json({ error: 'Invalid or expired reset token' });
+  if (record.used_at)                   return res.status(400).json({ error: 'Reset token already used' });
+  if (new Date(record.expires_at) < new Date()) return res.status(400).json({ error: 'Reset token has expired' });
+
+  const pwErrors = validatePassword(password);
+  if (pwErrors.length) return res.status(422).json({ error: 'Weak password', errors: pwErrors });
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  await supabase.from('users').update({ password_hash: passwordHash, failed_login_attempts: 0, locked_until: null }).eq('id', record.user_id);
+  await supabase.from('password_resets').update({ used_at: new Date() }).eq('id', record.id);
+
+  logger.info('Password reset completed', { userId: record.user_id });
+  res.json({ message: 'Password updated successfully. Please log in with your new password.' });
 });
 
 module.exports = router;

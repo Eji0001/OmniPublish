@@ -179,10 +179,11 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   created_at    TIMESTAMPTZ  DEFAULT NOW() NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS idx_audit_user   ON audit_logs (user_id);
-CREATE INDEX IF NOT EXISTS idx_audit_action ON audit_logs (action);
-CREATE INDEX IF NOT EXISTS idx_audit_time   ON audit_logs (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_audit_ip     ON audit_logs (ip_address);
+CREATE INDEX IF NOT EXISTS idx_audit_user       ON audit_logs (user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_action     ON audit_logs (action);
+CREATE INDEX IF NOT EXISTS idx_audit_time       ON audit_logs (created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_ip         ON audit_logs (ip_address);
+CREATE INDEX IF NOT EXISTS idx_audit_request_id ON audit_logs (request_id);
 
 -- ── ROW LEVEL SECURITY ────────────────────────────────────
 ALTER TABLE users                ENABLE ROW LEVEL SECURITY;

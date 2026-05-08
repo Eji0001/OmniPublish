@@ -77,6 +77,8 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
         }),
       });
       const data = await res.json();
+      if (data.error) throw Object.assign(new Error(data.message || data.error), { platform: 'bluesky' });
+      if (!data.uri)  throw Object.assign(new Error('Bluesky returned no URI'), { platform: 'bluesky' });
       return { postId: data.uri, url: `https://bsky.app/profile/${conn.platform_user_id}` };
     },
 
@@ -147,6 +149,8 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
         }
       );
       const published = await publishRes.json();
+      if (published.error) throw Object.assign(new Error(published.error.message), { platform: 'instagram' });
+      if (!published.id)   throw Object.assign(new Error('Instagram publish returned no ID'), { platform: 'instagram' });
       return { postId: published.id, url: `https://www.instagram.com/p/${published.id}` };
     },
 
@@ -194,6 +198,8 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
         }
       );
       const published = await publishRes.json();
+      if (published.error) throw Object.assign(new Error(published.error.message), { platform: 'threads' });
+      if (!published.id)   throw Object.assign(new Error('Threads publish returned no ID'), { platform: 'threads' });
       return { postId: published.id, url: `https://www.threads.net/@${conn.platform_user_id}` };
     },
 
@@ -217,11 +223,12 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
       return { postId: data.id, url: `https://www.pinterest.com/pin/${data.id}` };
     },
 
-    /* ── Rumble (unofficial/RSS-based) ── */
+    /* ── Rumble (no public API) ── */
     rumble: async () => {
-      // Rumble does not have a public API; log and return placeholder
-      logger.warn('Rumble does not have a public publish API. Manual upload required.', { userId: conn.user_id });
-      return { postId: 'manual', url: 'https://rumble.com/upload' };
+      throw Object.assign(
+        new Error('Rumble does not have a public publish API. Manual upload required at https://rumble.com/upload'),
+        { platform: 'rumble', status: 501 }
+      );
     },
 
     /* ── Twitch (update stream info) ── */
@@ -239,12 +246,12 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
       return { postId: conn.platform_user_id, url: `https://www.twitch.tv/${conn.platform_user_id}` };
     },
 
-    /* ── Snapchat Snapkit ── */
+    /* ── Snapchat (requires Snap Creative Kit approval) ── */
     snapchat: async () => {
-      // Snapchat requires the Snap Creative Kit / Story Kit
-      // For now this logs the intent and returns a placeholder
-      logger.warn('Snapchat publish requires Snap Creative Kit approval.', { userId: conn.user_id });
-      return { postId: 'pending', url: 'https://snapchat.com' };
+      throw Object.assign(
+        new Error('Snapchat publish requires Snap Creative Kit approval. Contact support to enable this platform.'),
+        { platform: 'snapchat', status: 501 }
+      );
     },
   };
 

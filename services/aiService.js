@@ -46,12 +46,17 @@ const aiAdaptContent = async ({ content, platforms, format, ratio, userId }) => 
 
   try {
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-6', max_tokens: 2500,
+      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6', max_tokens: 2500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
     });
-    const raw = message.content.find(b => b.type === 'text')?.text || '{}';
-    adapted = JSON.parse(raw.replace(/```json|```/g, '').trim());
+    const raw     = message.content.find(b => b.type === 'text')?.text || '{}';
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    try {
+      adapted = JSON.parse(cleaned);
+    } catch {
+      logger.warn('AI response was not valid JSON, using truncation fallback', { userId });
+    }
     logger.info('AI adapt completed', { userId, platforms: platforms.length, ms: Date.now() - start });
   } catch (err) {
     logger.error('AI adapt failed', { userId, err: err.message });
