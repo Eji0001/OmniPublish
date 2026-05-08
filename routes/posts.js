@@ -31,6 +31,32 @@ router.get('/', async (req, res) => {
   res.json({ posts: data, total: count, page: parseInt(page), limit: parseInt(limit) });
 });
 
+/* ── GET /posts/stats/overview — must be before /:id ── */
+router.get('/stats/overview', async (req, res) => {
+  const { data: userPosts } = await supabase
+    .from('posts').select('id, status').eq('user_id', req.user.id);
+  const postIds = (userPosts || []).map(p => p.id);
+  const { data: byPlatform } = postIds.length
+    ? await supabase.from('post_platforms').select('platform, status').in('post_id', postIds)
+    : { data: [] };
+  const counts = (userPosts || []).reduce((acc, p) => { acc[p.status] = (acc[p.status] || 0) + 1; return acc; }, {});
+  const platformStats = (byPlatform || []).reduce((acc, p) => {
+    if (!acc[p.platform]) acc[p.platform] = { total: 0, published: 0, failed: 0 };
+    acc[p.platform].total++;
+    if (p.status === 'published') acc[p.platform].published++;
+    if (p.status === 'failed')    acc[p.platform].failed++;
+    return acc;
+  }, {});
+  res.json({ statusCounts: counts, platformStats });
+});
+
+/* ── POST /posts/adapt — must be before /:id ── */
+router.post('/adapt', aiRateLimiter, validateBody('adaptContent'), async (req, res) => {
+  const { content, platforms, format, ratio } = req.body;
+  const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
+  res.json({ adapted });
+});
+
 /* ── GET /posts/:id ── */
 router.get('/:id', async (req, res) => {
   const { data: post, error } = await supabase.from('posts')
@@ -53,7 +79,7 @@ router.post('/', validateBody('createPost'), async (req, res) => {
 });
 
 /* ── PATCH /posts/:id ── */
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', validateBody('patchPost'), async (req, res) => {
   const allowed = ['title', 'content', 'format', 'aspect_ratio', 'scheduled_at', 'status'];
   const updates = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
   updates.updated_at = new Date();
@@ -67,31 +93,6 @@ router.delete('/:id', async (req, res) => {
   const { error } = await supabase.from('posts').delete().eq('id', req.params.id).eq('user_id', req.user.id);
   if (error) return res.status(404).json({ error: 'Post not found' });
   res.status(204).send();
-});
-
-/* ── POST /posts/adapt — AI platform adaptation ── */
-router.post('/adapt', aiRateLimiter, validateBody('adaptContent'), async (req, res) => {
-  const { content, platforms, format, ratio } = req.body;
-  const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
-  res.json({ adapted });
-});
-
-/* ── GET /posts/stats/overview ── */
-router.get('/stats/overview', async (req, res) => {
-  const [{ data: totals }, { data: byPlatform }] = await Promise.all([
-    supabase.from('posts').select('status').eq('user_id', req.user.id),
-    supabase.from('post_platforms').select('platform, status').in('post_id',
-      (await supabase.from('posts').select('id').eq('user_id', req.user.id)).data?.map(p => p.id) || []),
-  ]);
-  const counts = (totals || []).reduce((acc, p) => { acc[p.status] = (acc[p.status] || 0) + 1; return acc; }, {});
-  const platformStats = (byPlatform || []).reduce((acc, p) => {
-    if (!acc[p.platform]) acc[p.platform] = { total: 0, published: 0, failed: 0 };
-    acc[p.platform].total++;
-    if (p.status === 'published') acc[p.platform].published++;
-    if (p.status === 'failed')    acc[p.platform].failed++;
-    return acc;
-  }, {});
-  res.json({ statusCounts: counts, platformStats });
 });
 
 module.exports = router;

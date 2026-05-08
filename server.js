@@ -19,6 +19,7 @@ const cron        = require('node-cron');
 
 const cookieParser                 = require('cookie-parser');
 const { logger, httpLogStream }    = require('./utils/logger');
+const { dbHealthCheck }            = require('./config/database');
 const { globalRateLimiter }        = require('./middleware/rateLimit');
 const { errorHandler }             = require('./middleware/errorHandler');
 const { requestSanitizer }         = require('./middleware/sanitizer');
@@ -184,7 +185,6 @@ app.post('/api/v1/ai/adapt', require('./middleware/auth').verifyToken, require('
   const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
   res.json({ adapted });
 });
-
 // Catch-all 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found', path: req.path });
@@ -208,12 +208,20 @@ cron.schedule('* * * * *', async () => {
    SERVER START
 ───────────────────────────────────────── */
 const PORT = parseInt(process.env.PORT || '4000', 10);
-const server = app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', async () => {
   logger.info(`OmniPublish API running`, {
     port: PORT,
     env:  process.env.NODE_ENV || 'development',
     pid:  process.pid,
   });
+
+  // Verify database connection on startup
+  const isDbConnected = await dbHealthCheck();
+  if (isDbConnected) {
+    logger.info('Database connected successfully');
+  } else {
+    logger.error('Failed to connect to the database. Check Supabase credentials.');
+  }
 });
 
 /* ─────────────────────────────────────────

@@ -13,7 +13,7 @@ const { issueTokens, rotateRefreshToken, revokeToken, verifyToken } = require('.
 const { validateBody }   = require('../middleware/sanitizer');
 const { authRateLimiter, authSlowDown } = require('../middleware/rateLimit');
 const { generateCSRFToken } = require('../middleware/csrf');
-const { BCRYPT_ROUNDS, validatePassword } = require('../config/security');
+const { BCRYPT_ROUNDS, LOCKOUT_POLICY, validatePassword } = require('../config/security');
 const { logger }      = require('../utils/logger');
 
 const router = express.Router();
@@ -58,7 +58,12 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
-    await supabase.from('users').update({ failed_login_attempts: (user.failed_login_attempts || 0) + 1 }).eq('id', user.id);
+    const newAttempts = (user.failed_login_attempts || 0) + 1;
+    const lockUpdate = { failed_login_attempts: newAttempts };
+    if (newAttempts >= LOCKOUT_POLICY.maxFailedAttempts) {
+      lockUpdate.locked_until = new Date(Date.now() + LOCKOUT_POLICY.lockDurationMs);
+    }
+    await supabase.from('users').update(lockUpdate).eq('id', user.id);
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 

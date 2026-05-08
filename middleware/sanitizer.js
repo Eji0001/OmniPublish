@@ -67,6 +67,14 @@ const schemas = {
     postId:    z.string().uuid(),
     platforms: z.array(z.string().max(50)).min(1).max(14),
   }),
+  patchPost: z.object({
+    title:        z.string().max(500).optional(),
+    content:      z.string().min(1).max(63206).optional(),
+    format:       z.enum(['post', 'video', 'short', 'story', 'article']).optional(),
+    aspect_ratio: z.enum(['16:9', '9:16', '1:1', '4:5', '2:3']).optional(),
+    scheduled_at: z.string().datetime().nullable().optional(),
+    status:       z.enum(['draft', 'scheduled']).optional(),
+  }).strict(),
 };
 
 const validateBody = (schemaKey) => (req, res, next) => {

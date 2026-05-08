@@ -43,18 +43,25 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
       return { postId: data.data.id, url: `https://x.com/i/web/status/${data.data.id}` };
     },
 
-    /* ── LinkedIn API ── */
+    /* ── LinkedIn UGC Posts API v2 ── */
     linkedin: async () => {
-      const res  = await fetch('https://api.linkedin.com/v2/shares', {
+      const res  = await fetch('https://api.linkedin.com/v2/ugcPosts', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0' },
         body: JSON.stringify({
-          owner: `urn:li:person:${conn.platform_user_id}`,
-          text:  { text: content },
-          distribution: { linkedInDistributionTarget: { visibleToGuest: true } },
+          author: `urn:li:person:${conn.platform_user_id}`,
+          lifecycleState: 'PUBLISHED',
+          specificContent: {
+            'com.linkedin.ugc.ShareContent': {
+              shareCommentary: { text: content },
+              shareMediaCategory: 'NONE',
+            },
+          },
+          visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' },
         }),
       });
       const data = await res.json();
+      if (data.status >= 400) throw Object.assign(new Error(data.message || 'LinkedIn post failed'), { platform: 'linkedin' });
       return { postId: data.id, url: `https://www.linkedin.com/feed/update/${data.id}` };
     },
 
@@ -78,7 +85,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
       const res  = await fetch(`https://api.telegram.org/bot${accessToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: conn.platform_user_id, text: content, parse_mode: 'HTML' }),
+        body: JSON.stringify({ chat_id: conn.platform_user_id, text: content }),
       });
       const data = await res.json();
       if (!data.ok) throw Object.assign(new Error(data.description), { platform: 'telegram' });
