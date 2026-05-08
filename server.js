@@ -195,61 +195,46 @@ app.use((req, res) => {
 ───────────────────────────────────────── */
 app.use(errorHandler);
 
-/* ─────────────────────────────────────────
-   SCHEDULED JOBS
-───────────────────────────────────────── */
-// Run every minute — process scheduled posts
-cron.schedule('* * * * *', async () => {
-  try { await processScheduledPosts(); }
-  catch (e) { logger.error('Scheduler error', { err: e.message }); }
-});
+module.exports = app;
 
 /* ─────────────────────────────────────────
-   SERVER START
+   SERVER START — skipped when imported by tests
 ───────────────────────────────────────── */
-const PORT = parseInt(process.env.PORT || '4000', 10);
-const server = app.listen(PORT, '0.0.0.0', async () => {
-  logger.info(`OmniPublish API running`, {
-    port: PORT,
-    env:  process.env.NODE_ENV || 'development',
-    pid:  process.pid,
+if (require.main === module) {
+  // Scheduled jobs
+  cron.schedule('* * * * *', async () => {
+    try { await processScheduledPosts(); }
+    catch (e) { logger.error('Scheduler error', { err: e.message }); }
   });
 
-  // Verify database connection on startup
-  const isDbConnected = await dbHealthCheck();
-  if (isDbConnected) {
-    logger.info('Database connected successfully');
-  } else {
-    logger.error('Failed to connect to the database. Check Supabase credentials.');
-  }
-});
-
-/* ─────────────────────────────────────────
-   GRACEFUL SHUTDOWN
-───────────────────────────────────────── */
-const shutdown = (signal) => {
-  logger.info(`${signal} received — graceful shutdown`);
-  server.close(async () => {
-    logger.info('HTTP server closed');
-    process.exit(0);
+  const PORT = parseInt(process.env.PORT || '4000', 10);
+  const server = app.listen(PORT, '0.0.0.0', async () => {
+    logger.info('OmniPublish API running', {
+      port: PORT,
+      env:  process.env.NODE_ENV || 'development',
+      pid:  process.pid,
+    });
+    const isDbConnected = await dbHealthCheck();
+    if (isDbConnected) {
+      logger.info('Database connected successfully');
+    } else {
+      logger.error('Failed to connect to the database. Check Supabase credentials.');
+    }
   });
-  // Force kill after 15 seconds
-  setTimeout(() => {
-    logger.error('Forced shutdown after timeout');
+
+  const shutdown = (signal) => {
+    logger.info(`${signal} received — graceful shutdown`);
+    server.close(() => { logger.info('HTTP server closed'); process.exit(0); });
+    setTimeout(() => { logger.error('Forced shutdown after timeout'); process.exit(1); }, 15000);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT',  () => shutdown('SIGINT'));
+  process.on('unhandledRejection', (reason) => {
+    logger.error('Unhandled Promise Rejection', { reason: String(reason) });
+  });
+  process.on('uncaughtException', (err) => {
+    logger.error('Uncaught Exception — shutting down', { err: err.message, stack: err.stack });
     process.exit(1);
-  }, 15000);
-};
-
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT',  () => shutdown('SIGINT'));
-
-// Unhandled rejection guard
-process.on('unhandledRejection', (reason, promise) => {
-  logger.error('Unhandled Promise Rejection', { reason: String(reason), promise });
-});
-process.on('uncaughtException', (err) => {
-  logger.error('Uncaught Exception — shutting down', { err: err.message, stack: err.stack });
-  process.exit(1);
-});
-
-module.exports = app; // for testing
+  });
+}

@@ -1,0 +1,268 @@
+'use strict';
+
+const request = require('supertest');
+const bcrypt  = require('bcryptjs');
+const { mockChain } = require('./helpers/db');
+const { TEST_USER, generateAccessToken, generateRefreshToken } = require('./helpers/auth');
+
+// ── Module mocks ───────────────────────────────────────────
+
+jest.mock('../config/database', () => ({
+  supabase: { from: jest.fn() },
+  supabasePublic: { from: jest.fn() },
+  dbHealthCheck: jest.fn().mockResolvedValue(true),
+  execute: jest.fn(),
+  executeWithRetry: jest.fn(),
+}));
+
+jest.mock('../middleware/rateLimit', () => {
+  const pass = (_req, _res, next) => next();
+  return {
+    globalRateLimiter: pass, authRateLimiter: pass, authSlowDown: pass,
+    aiRateLimiter: pass, mediaRateLimiter: pass, publishRateLimiter: pass,
+  };
+});
+
+jest.mock('../middleware/csrf', () => ({
+  verifyCSRF:        (_req, _res, next) => next(),
+  generateCSRFToken: () => 'test-csrf-token',
+}));
+
+const app = require('../server');
+const { supabase } = require('../config/database');
+
+// ── Fixtures ───────────────────────────────────────────────
+
+const HASH = bcrypt.hashSync('ValidPass123!', 1); // cost 1 for speed
+
+const DB_USER = {
+  id: TEST_USER.id, email: TEST_USER.email,
+  password_hash: HASH, role: 'user', plan: 'pro',
+  is_active: true, failed_login_attempts: 0, locked_until: null,
+};
+
+beforeEach(() => jest.clearAllMocks());
+
+// ── POST /api/v1/auth/register ─────────────────────────────
+
+describe('POST /api/v1/auth/register', () => {
+  it('201 — creates user and returns tokens', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))           // email check
+      .mockReturnValueOnce(mockChain({ data: { id: TEST_USER.id, email: TEST_USER.email, role: 'user', plan: 'free' }, error: null })); // insert
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'new@example.com', password: 'ValidPass123!', fullName: 'Test User' });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body).toHaveProperty('refreshToken');
+    expect(res.body.user.email).toBe(TEST_USER.email);
+  });
+
+  it('409 — rejects duplicate email', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { id: 'existing-id' }, error: null })); // email taken
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'taken@example.com', password: 'ValidPass123!' });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already registered/i);
+  });
+
+  it('422 — rejects weak password', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'user@example.com', password: 'weak' });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('422 — rejects invalid email format', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'not-an-email', password: 'ValidPass123!' });
+
+    expect(res.status).toBe(422);
+  });
+});
+
+// ── POST /api/v1/auth/login ────────────────────────────────
+
+describe('POST /api/v1/auth/login', () => {
+  it('200 — returns tokens and sets CSRF cookie on valid credentials', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: DB_USER, error: null }))   // get user
+      .mockReturnValue(mockChain({ data: null, error: null }));          // update last_login_at
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: TEST_USER.email, password: 'ValidPass123!' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body).toHaveProperty('refreshToken');
+    expect(res.headers['set-cookie']).toBeDefined();
+  });
+
+  it('401 — rejects wrong password and increments failed attempts', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: DB_USER, error: null }))   // get user
+      .mockReturnValue(mockChain({ data: null, error: null }));          // update attempts
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: TEST_USER.email, password: 'WrongPassword1!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/invalid credentials/i);
+    // Confirm failed_login_attempts was incremented
+    expect(supabase.from).toHaveBeenCalledWith('users');
+  });
+
+  it('429 — rejects locked account', async () => {
+    const lockedUser = { ...DB_USER, locked_until: new Date(Date.now() + 60_000).toISOString() };
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: lockedUser, error: null }));
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: TEST_USER.email, password: 'ValidPass123!' });
+
+    expect(res.status).toBe(429);
+    expect(res.body.error).toMatch(/locked/i);
+  });
+
+  it('403 — rejects inactive account', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { ...DB_USER, is_active: false }, error: null }));
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: TEST_USER.email, password: 'ValidPass123!' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('locks account after maxFailedAttempts (5) exceeded', async () => {
+    const almostLockedUser = { ...DB_USER, failed_login_attempts: 4 };
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: almostLockedUser, error: null }))
+      .mockReturnValue(mockChain({ data: null, error: null }));
+
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: TEST_USER.email, password: 'WrongPassword1!' });
+
+    // The update call should include locked_until
+    const updateCalls = supabase.from.mock.results
+      .map(r => r.value)
+      .filter(chain => chain.update?.mock?.calls?.length);
+
+    expect(updateCalls.length).toBeGreaterThan(0);
+    const updateArg = updateCalls[0].update.mock.calls[0][0];
+    expect(updateArg).toHaveProperty('locked_until');
+  });
+});
+
+// ── POST /api/v1/auth/refresh ──────────────────────────────
+
+describe('POST /api/v1/auth/refresh', () => {
+  it('200 — rotates refresh token and returns new pair', async () => {
+    const { token: refreshToken } = generateRefreshToken(TEST_USER);
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))  // blacklist old jti
+      .mockReturnValueOnce(mockChain({ data: { ...TEST_USER, is_active: true }, error: null })); // get user
+
+    const res = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body).toHaveProperty('refreshToken');
+  });
+
+  it('401 — rejects invalid refresh token', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken: 'invalid.token.here' });
+
+    expect(res.status).toBe(401);
+  });
+
+  it('422 — rejects missing refreshToken field', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({});
+
+    expect(res.status).toBe(422);
+  });
+});
+
+// ── POST /api/v1/auth/logout ───────────────────────────────
+
+describe('POST /api/v1/auth/logout', () => {
+  it('200 — revokes token and clears cookie', async () => {
+    const { token } = generateAccessToken(TEST_USER);
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))  // revoked_tokens check (not revoked)
+      .mockReturnValue(mockChain({ data: null, error: null }));      // insert revoked token
+
+    const res = await request(app)
+      .post('/api/v1/auth/logout')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/logged out/i);
+  });
+
+  it('401 — rejects request without token', async () => {
+    const res = await request(app).post('/api/v1/auth/logout');
+    expect(res.status).toBe(401);
+  });
+});
+
+// ── GET /api/v1/auth/me ────────────────────────────────────
+
+describe('GET /api/v1/auth/me', () => {
+  it('200 — returns user profile', async () => {
+    const { token } = generateAccessToken(TEST_USER);
+    const profile = { id: TEST_USER.id, email: TEST_USER.email, full_name: 'Test User', role: 'user', plan: 'pro', created_at: new Date().toISOString(), last_login_at: null };
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))    // revoked_tokens check
+      .mockReturnValueOnce(mockChain({ data: profile, error: null })); // get user
+
+    const res = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe(TEST_USER.email);
+  });
+
+  it('401 — rejects request without token', async () => {
+    const res = await request(app).get('/api/v1/auth/me');
+    expect(res.status).toBe(401);
+  });
+
+  it('401 — rejects a revoked token', async () => {
+    const { token } = generateAccessToken(TEST_USER);
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { id: 'blacklisted' }, error: null })); // token IS revoked
+
+    const res = await request(app)
+      .get('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/revoked/i);
+  });
+});

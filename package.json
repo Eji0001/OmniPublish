@@ -55,13 +55,17 @@
   },
   "jest": {
     "testEnvironment": "node",
+    "setupFiles": [
+      "./tests/setup.js"
+    ],
     "testMatch": [
       "**/tests/**/*.test.js"
     ],
     "collectCoverageFrom": [
       "**/*.js",
       "!node_modules/**",
-      "!tests/**"
+      "!tests/**",
+      "!db/**"
     ]
   }
 }
