@@ -14,7 +14,6 @@ const cors        = require('cors');
 const compression = require('compression');
 const morgan      = require('morgan');
 const hpp         = require('hpp');
-const path        = require('path');
 const cron        = require('node-cron');
 
 const cookieParser                 = require('cookie-parser');

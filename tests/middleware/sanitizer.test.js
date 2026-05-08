@@ -1,6 +1,6 @@
 'use strict';
 
-const { sanitizeObject, validateBody, schemas } = require('../../middleware/sanitizer');
+const { sanitizeObject, validateBody } = require('../../middleware/sanitizer');
 
 // ── sanitizeObject ─────────────────────────────────────────
 describe('sanitizeObject', () => {

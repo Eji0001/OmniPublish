@@ -13,7 +13,6 @@ const { supabase } = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
 const { mediaRateLimiter } = require('../middleware/rateLimit');
 const { ALLOWED_MEDIA_TYPES, MAX_FILE_SIZE } = require('../config/security');
-const { logger } = require('../utils/logger');
 
 const router = express.Router();
 router.use(verifyToken);

@@ -51,14 +51,6 @@ function authHeader() {
   return { Authorization: `Bearer ${token}` };
 }
 
-// verifyToken always calls from('revoked_tokens') first —
-// this helper stacks the "not revoked" response then the test-specific one
-function setupAuth(...subsequentChains) {
-  supabase.from
-    .mockReturnValueOnce(mockChain({ data: null, error: null })) // revoked_tokens check
-    .mockReturnValueOnce(...subsequentChains);
-}
-
 beforeEach(() => jest.clearAllMocks());
 
 // ── GET /api/v1/posts ──────────────────────────────────────

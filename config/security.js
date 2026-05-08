@@ -65,7 +65,7 @@ const validatePassword = (password) => {
   if (PASSWORD_POLICY.requireNumber && !/\d/.test(password))
     errors.push('Must contain at least one number');
   if (PASSWORD_POLICY.requireSpecial &&
-      !new RegExp(`[${PASSWORD_POLICY.specialChars.replace(/[\[\]\\^]/g, '\\$&')}]`).test(password))
+      !new RegExp(`[${PASSWORD_POLICY.specialChars.replace(/[[\]\\^]/g, '\\$&')}]`).test(password))
     errors.push('Must contain at least one special character');
   return errors;
 };
