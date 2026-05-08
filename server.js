@@ -17,6 +17,7 @@ const hpp         = require('hpp');
 const path        = require('path');
 const cron        = require('node-cron');
 
+const cookieParser                 = require('cookie-parser');
 const { logger, httpLogStream }    = require('./utils/logger');
 const { globalRateLimiter }        = require('./middleware/rateLimit');
 const { errorHandler }             = require('./middleware/errorHandler');
@@ -121,6 +122,7 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: false, limit: '512kb' }));
 app.use(hpp());         // HTTP Parameter Pollution guard
+app.use(cookieParser()); // Required for CSRF cookie reading
 
 /* ─────────────────────────────────────────
    LAYER 4 — Compression
@@ -173,6 +175,15 @@ app.use('/api/v1/posts',      postsRoutes);
 app.use('/api/v1/platforms',  platformsRoutes);
 app.use('/api/v1/publish',    publishRoutes);
 app.use('/api/v1/media',      mediaRoutes);
+
+// AI adapt endpoint (secure — keeps API key server-side)
+app.post('/api/v1/ai/adapt', require('./middleware/auth').verifyToken, require('./middleware/rateLimit').aiRateLimiter, async (req, res) => {
+  const { content, platforms, format, ratio } = req.body;
+  if (!content || !platforms?.length) return res.status(422).json({ error: 'content and platforms required' });
+  const { aiAdaptContent } = require('./services/aiService');
+  const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
+  res.json({ adapted });
+});
 
 // Catch-all 404
 app.use((req, res) => {

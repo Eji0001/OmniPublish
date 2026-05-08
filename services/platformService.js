@@ -1,0 +1,249 @@
+/**
+ * services/platformService.js — Platform API publishing handlers
+ * Covers: Facebook, X, LinkedIn, Bluesky, Telegram, TikTok, YouTube,
+ *         Instagram, Reddit, Threads, Pinterest, Rumble, Twitch, Snapchat
+ */
+
+'use strict';
+
+const { decrypt }  = require('../utils/encryption');
+const { logger }   = require('../utils/logger');
+
+/**
+ * publishToPlatform — dispatches content to the appropriate platform API.
+ * @param {Object} params - { platform, content, post, conn }
+ * @returns {Object} { postId, url }
+ */
+const publishToPlatform = async ({ platform, content, post, conn }) => {
+  const accessToken = decrypt(conn.access_token_enc);
+
+  const handlers = {
+
+    /* ── Facebook Graph API ── */
+    facebook: async () => {
+      const res  = await fetch(`https://graph.facebook.com/v19.0/me/feed`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: content, access_token: accessToken }),
+      });
+      const data = await res.json();
+      if (data.error) throw Object.assign(new Error(data.error.message), { platform: 'facebook' });
+      return { postId: data.id, url: `https://www.facebook.com/${data.id}` };
+    },
+
+    /* ── X (Twitter) API v2 ── */
+    x: async () => {
+      const res  = await fetch('https://api.twitter.com/2/tweets', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: content }),
+      });
+      const data = await res.json();
+      if (data.errors) throw Object.assign(new Error(data.errors[0]?.message), { platform: 'x' });
+      return { postId: data.data.id, url: `https://x.com/i/web/status/${data.data.id}` };
+    },
+
+    /* ── LinkedIn API ── */
+    linkedin: async () => {
+      const res  = await fetch('https://api.linkedin.com/v2/shares', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          owner: `urn:li:person:${conn.platform_user_id}`,
+          text:  { text: content },
+          distribution: { linkedInDistributionTarget: { visibleToGuest: true } },
+        }),
+      });
+      const data = await res.json();
+      return { postId: data.id, url: `https://www.linkedin.com/feed/update/${data.id}` };
+    },
+
+    /* ── Bluesky AT Protocol ── */
+    bluesky: async () => {
+      const res  = await fetch('https://bsky.social/xrpc/com.atproto.repo.createRecord', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repo:       conn.platform_user_id,
+          collection: 'app.bsky.feed.post',
+          record:     { $type: 'app.bsky.feed.post', text: content, createdAt: new Date().toISOString() },
+        }),
+      });
+      const data = await res.json();
+      return { postId: data.uri, url: `https://bsky.app/profile/${conn.platform_user_id}` };
+    },
+
+    /* ── Telegram Bot API ── */
+    telegram: async () => {
+      const res  = await fetch(`https://api.telegram.org/bot${accessToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: conn.platform_user_id, text: content, parse_mode: 'HTML' }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw Object.assign(new Error(data.description), { platform: 'telegram' });
+      return { postId: String(data.result.message_id), url: `https://t.me/c/${conn.platform_user_id}` };
+    },
+
+    /* ── TikTok Content Posting API ── */
+    tiktok: async () => {
+      // TikTok requires a two-step: init upload → publish
+      // Using Direct Post API (requires approved app)
+      const res  = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({
+          post_info:    { title: content.slice(0, 150), privacy_level: 'PUBLIC_TO_EVERYONE', disable_duet: false, disable_comment: false, disable_stitch: false },
+          source_info:  { source: 'PULL_FROM_URL', video_url: post.media_url || '' },
+        }),
+      });
+      const data = await res.json();
+      if (data.error?.code && data.error.code !== 'ok')
+        throw Object.assign(new Error(data.error.message), { platform: 'tiktok' });
+      return { postId: data.data?.publish_id || 'pending', url: `https://www.tiktok.com/@${conn.platform_user_id}` };
+    },
+
+    /* ── YouTube Data API v3 ── */
+    youtube: async () => {
+      const res  = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,status', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          snippet: { title: post.title || content.slice(0, 100), description: content, tags: [] },
+          status:  { privacyStatus: 'public' },
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw Object.assign(new Error(data.error.message), { platform: 'youtube' });
+      return { postId: data.id, url: `https://www.youtube.com/watch?v=${data.id}` };
+    },
+
+    /* ── Instagram Graph API ── */
+    instagram: async () => {
+      // Step 1: Create media container
+      const containerRes = await fetch(
+        `https://graph.facebook.com/v19.0/${conn.platform_user_id}/media`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ caption: content, access_token: accessToken, media_type: 'IMAGE', image_url: post.media_url }),
+        }
+      );
+      const container = await containerRes.json();
+      if (container.error) throw Object.assign(new Error(container.error.message), { platform: 'instagram' });
+
+      // Step 2: Publish the container
+      const publishRes = await fetch(
+        `https://graph.facebook.com/v19.0/${conn.platform_user_id}/media_publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creation_id: container.id, access_token: accessToken }),
+        }
+      );
+      const published = await publishRes.json();
+      return { postId: published.id, url: `https://www.instagram.com/p/${published.id}` };
+    },
+
+    /* ── Reddit API v1 ── */
+    reddit: async () => {
+      const res  = await fetch('https://oauth.reddit.com/api/submit', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type':  'application/x-www-form-urlencoded',
+          'User-Agent':    'OmniPublish/2.0',
+        },
+        body: new URLSearchParams({
+          api_type: 'json', kind: 'self',
+          sr:       conn.platform_user_id,   // subreddit name
+          title:    post.title || content.slice(0, 300),
+          text:     content,
+        }),
+      });
+      const data = await res.json();
+      const name = data.json?.data?.name;
+      if (!name) throw Object.assign(new Error(data.json?.errors?.[0]?.[1] || 'Reddit post failed'), { platform: 'reddit' });
+      return { postId: name, url: `https://www.reddit.com/${name}` };
+    },
+
+    /* ── Threads (Meta) API ── */
+    threads: async () => {
+      // Step 1: Create container
+      const containerRes = await fetch(
+        `https://graph.threads.net/v1.0/${conn.platform_user_id}/threads`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: content, media_type: 'TEXT', access_token: accessToken }),
+        }
+      );
+      const container = await containerRes.json();
+      if (container.error) throw Object.assign(new Error(container.error.message), { platform: 'threads' });
+
+      // Step 2: Publish
+      const publishRes = await fetch(
+        `https://graph.threads.net/v1.0/${conn.platform_user_id}/threads_publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creation_id: container.id, access_token: accessToken }),
+        }
+      );
+      const published = await publishRes.json();
+      return { postId: published.id, url: `https://www.threads.net/@${conn.platform_user_id}` };
+    },
+
+    /* ── Pinterest API v5 ── */
+    pinterest: async () => {
+      const res  = await fetch('https://api.pinterest.com/v5/pins', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          board_id:    conn.platform_user_id,
+          title:       post.title || content.slice(0, 100),
+          description: content,
+          link:        post.link_url || null,
+          media_source: post.media_url
+            ? { source_type: 'image_url', url: post.media_url }
+            : { source_type: 'image_base64', content_type: 'image/jpeg', data: '' },
+        }),
+      });
+      const data = await res.json();
+      if (data.code) throw Object.assign(new Error(data.message), { platform: 'pinterest' });
+      return { postId: data.id, url: `https://www.pinterest.com/pin/${data.id}` };
+    },
+
+    /* ── Rumble (unofficial/RSS-based) ── */
+    rumble: async () => {
+      // Rumble does not have a public API; log and return placeholder
+      logger.warn('Rumble does not have a public publish API. Manual upload required.', { userId: conn.user_id });
+      return { postId: 'manual', url: 'https://rumble.com/upload' };
+    },
+
+    /* ── Twitch (update stream info) ── */
+    twitch: async () => {
+      const res  = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${conn.platform_user_id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization':  `Bearer ${accessToken}`,
+          'Client-Id':       process.env.TWITCH_CLIENT_ID || '',
+          'Content-Type':    'application/json',
+        },
+        body: JSON.stringify({ title: content.slice(0, 140) }),
+      });
+      if (!res.ok) throw Object.assign(new Error(`Twitch update failed: ${res.status}`), { platform: 'twitch' });
+      return { postId: conn.platform_user_id, url: `https://www.twitch.tv/${conn.platform_user_id}` };
+    },
+
+    /* ── Snapchat Snapkit ── */
+    snapchat: async () => {
+      // Snapchat requires the Snap Creative Kit / Story Kit
+      // For now this logs the intent and returns a placeholder
+      logger.warn('Snapchat publish requires Snap Creative Kit approval.', { userId: conn.user_id });
+      return { postId: 'pending', url: 'https://snapchat.com' };
+    },
+  };
+
+  const handler = handlers[platform];
+  if (!handler) throw Object.assign(new Error(`Platform ${platform} not implemented`), { platform });
+  return handler();
+};
+
+module.exports = { publishToPlatform };

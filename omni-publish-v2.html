@@ -280,6 +280,33 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @keyframes themeSwitch{0%{transform:scale(0.97)}50%{transform:scale(1.01)}100%{transform:scale(1)}}
 .theme-anim{animation:themeSwitch 0.35s ease}
+/* ═══ MOBILE RESPONSIVE ═══ */
+@media (max-width: 900px) {
+  .app{grid-template-columns:1fr}
+  .panel{border-right:none;border-bottom:1px solid var(--bd);max-height:none}
+  .header{padding:0 1rem}
+}
+@media (max-width: 600px) {
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .plats-grid{grid-template-columns:1fr}
+  .format-grid{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ═══ SETTINGS MODAL ═══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;animation:fadeUp 0.2s ease}
+.modal{background:var(--s1);border:1px solid var(--bd2);border-radius:16px;padding:1.5rem;width:420px;max-width:calc(100vw - 2rem);box-shadow:0 24px 64px rgba(0,0,0,0.4)}
+.modal-title{font-size:15px;font-weight:800;margin-bottom:1rem;color:var(--tx)}
+.modal-field{margin-bottom:1rem}
+.modal-label{font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:5px;display:block;letter-spacing:0.5px;text-transform:uppercase}
+.modal-input{width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:9px;padding:9px 12px;color:var(--tx);font-size:13px;outline:none;font-family:inherit}
+.modal-input:focus{border-color:var(--ai-border);box-shadow:0 0 0 2px var(--glow)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.modal-btn{padding:8px 18px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all 0.2s}
+.modal-btn.cancel{background:var(--s3);color:var(--tx2)}
+.modal-btn.save{background:var(--btn-grad);color:#fff}
+.modal-btn:hover{opacity:0.85}
+.draft-bar{background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:7px 12px;font-size:11px;color:var(--tx3);margin-bottom:0.75rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.draft-bar-btn{background:none;border:none;color:var(--acc);font-size:11px;font-weight:700;cursor:pointer;padding:0;font-family:inherit}
 </style>
 </head>
 <body>
@@ -293,6 +320,11 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
   </div>
   <div class="header-right">
     <div class="status-pill"><div class="pulse-dot"></div><span id="ai-status">AI Engine Online</span></div>
+
+    <!-- SETTINGS BUTTON -->
+    <button class="theme-toggle" onclick="openSettings()" title="Settings" style="gap:4px">
+      ⚙️ <span>Settings</span>
+    </button>
 
     <!-- THEME TOGGLE -->
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
@@ -312,11 +344,17 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
   <div class="panel">
     <div class="panel-head">Compose</div>
 
+    <!-- DRAFT INDICATOR -->
+    <div class="draft-bar" id="draft-bar" style="display:none">
+      <span id="draft-bar-txt">Draft auto-saved</span>
+      <button class="draft-bar-btn" onclick="clearDraft()">✕ Discard</button>
+    </div>
+
     <!-- TEXT AREA -->
     <div class="compose-box">
       <textarea class="compose-ta" id="content" rows="6"
         placeholder="Write your content here. The AI will adapt it to each platform's tone, culture, and character limits."
-        oninput="onContentChange()"></textarea>
+        oninput="onContentChange(); autosaveDraft()"></textarea>
       <div class="compose-toolbar">
         <div class="tbar-left">
           <button class="tbar-btn" onclick="addMedia()">📎 Media</button>
@@ -476,6 +514,27 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 
 <div class="toast" id="toast"></div>
 
+<!-- ═══ SETTINGS MODAL ═══ -->
+<div id="settings-modal" style="display:none">
+  <div class="modal-overlay" onclick="closeSettings(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">⚙️ Settings</div>
+      <div class="modal-field">
+        <label class="modal-label" for="api-key-input">Anthropic API Key (optional — uses server key if blank)</label>
+        <input class="modal-input" id="api-key-input" type="password" placeholder="sk-ant-..." autocomplete="off">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label" for="backend-url-input">Backend URL</label>
+        <input class="modal-input" id="backend-url-input" type="text" placeholder="http://localhost:4000">
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeSettings()">Cancel</button>
+        <button class="modal-btn save" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════ JAVASCRIPT ═══════════════════════════ -->
 <script>
 /* ── PLATFORM DATA ── */
@@ -529,6 +588,10 @@ let currentFormat = 'post';
 let currentRatio = '16:9';
 let currentTheme = 'dark';
 
+// Settings stored in localStorage
+let BACKEND_URL = localStorage.getItem('omni_backend_url') || '';
+let USER_API_KEY = localStorage.getItem('omni_api_key') || '';   // optional override; never sent to prod Anthropic directly
+
 /* ── INIT ── */
 document.addEventListener('DOMContentLoaded', () => {
   renderPlatforms();
@@ -538,6 +601,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const now = new Date();
   document.getElementById('s-date').value = now.toISOString().split('T')[0];
   document.getElementById('s-time').value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  // Restore draft
+  const draft = localStorage.getItem('omni_draft');
+  if (draft) {
+    document.getElementById('content').value = draft;
+    document.getElementById('draft-bar').style.display = 'flex';
+    document.getElementById('draft-bar-txt').textContent = 'Draft restored — ' + new Date(parseInt(localStorage.getItem('omni_draft_ts') || '0')).toLocaleTimeString();
+    onContentChange();
+  }
 });
 
 /* ── THEME TOGGLE ── */
@@ -760,43 +831,102 @@ function useTemplate(key) {
   toast('Template loaded!','ok');
 }
 
+/* ── SETTINGS ── */
+function openSettings() {
+  document.getElementById('api-key-input').value = USER_API_KEY;
+  document.getElementById('backend-url-input').value = BACKEND_URL;
+  document.getElementById('settings-modal').style.display = 'block';
+}
+function closeSettings(e) {
+  if (!e || e.target === e.currentTarget) document.getElementById('settings-modal').style.display = 'none';
+}
+function saveSettings() {
+  USER_API_KEY = document.getElementById('api-key-input').value.trim();
+  BACKEND_URL  = document.getElementById('backend-url-input').value.trim().replace(/\/$/, '');
+  localStorage.setItem('omni_api_key',    USER_API_KEY);
+  localStorage.setItem('omni_backend_url', BACKEND_URL);
+  document.getElementById('settings-modal').style.display = 'none';
+  toast('Settings saved!', 'ok');
+}
+
+/* ── DRAFT AUTO-SAVE ── */
+let _draftTimer;
+function autosaveDraft() {
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(() => {
+    const txt = document.getElementById('content').value;
+    if (txt.trim()) {
+      localStorage.setItem('omni_draft', txt);
+      localStorage.setItem('omni_draft_ts', Date.now());
+      const bar = document.getElementById('draft-bar');
+      bar.style.display = 'flex';
+      document.getElementById('draft-bar-txt').textContent = 'Draft auto-saved — ' + new Date().toLocaleTimeString();
+    }
+  }, 1500);
+}
+function clearDraft() {
+  localStorage.removeItem('omni_draft');
+  localStorage.removeItem('omni_draft_ts');
+  document.getElementById('content').value = '';
+  document.getElementById('draft-bar').style.display = 'none';
+  onContentChange();
+  toast('Draft discarded', 'ok');
+}
+
 /* ── AI ADAPT ── */
 async function runAIAdapt() {
   const txt = document.getElementById('content').value.trim();
   const sel = getSelected();
-  if (!txt) { toast('Write some content first!','err'); return; }
-  if (!sel.length) { toast('Select at least one platform!','err'); return; }
+  if (!txt) { toast('Write some content first!', 'err'); return; }
+  if (!sel.length) { toast('Select at least one platform!', 'err'); return; }
 
   const btn = document.getElementById('ai-btn');
   btn.disabled = true;
   document.getElementById('ai-ico').outerHTML = '<span class="spin" id="ai-ico"></span>';
   document.getElementById('ai-lbl').textContent = 'Adapting with AI...';
 
-  const fmt = FORMAT_COMPAT[currentFormat]?.name || currentFormat;
-  const specs = sel.map(p => `- ${p.name} [id:"${p.id}"] max ${p.limit} chars, format: ${fmt}, ratio: ${currentRatio}`).join('\n');
+  const fmt   = FORMAT_COMPAT[currentFormat]?.name || currentFormat;
+  const base  = BACKEND_URL || window.location.origin;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:2500,
-        system:`You are an expert social media strategist. Adapt the given content for each platform. The format type is "${fmt}" and aspect ratio is "${currentRatio}". Return ONLY a raw valid JSON object — no markdown, no code fences, no explanation. Keys are platform IDs (strings), values are the adapted content strings. Strictly stay within each character limit. Match platform culture (X=punchy, LinkedIn=professional, TikTok=trendy, Reddit=authentic, YouTube=descriptive for SEO, Pinterest=visual description). Add emojis and hashtags where platform-appropriate.`,
-        messages:[{role:'user',content:`Platforms:\n${specs}\n\nOriginal content:\n"${txt}"\n\nReturn JSON: {"facebook":"...","x":"...",...}`}]
-      })
-    });
-    const data = await res.json();
-    const raw = data.content.find(c=>c.type==='text')?.text || '{}';
-    adapted = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    let responseData;
+
+    if (USER_API_KEY) {
+      // User has provided their own API key — call Anthropic directly (client-side)
+      const specs = sel.map(p => `- ${p.name} [id:"${p.id}"] max ${p.limit} chars, format: ${fmt}, ratio: ${currentRatio}`).join('\n');
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': USER_API_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514', max_tokens: 2500,
+          system: `You are an expert social media strategist. Return ONLY raw JSON. Keys are platform IDs, values are adapted content strings.`,
+          messages: [{ role: 'user', content: `Platforms:\n${specs}\n\nOriginal:\n"${txt}"\n\nReturn JSON.` }]
+        })
+      });
+      const data = await res.json();
+      const raw = data.content?.find(c => c.type === 'text')?.text || '{}';
+      responseData = { adapted: JSON.parse(raw.replace(/```json|```/g, '').trim()) };
+    } else {
+      // ✅ SECURE PATH: call backend (API key stays on server)
+      const res = await fetch(`${base}/api/v1/ai/adapt`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('omni_token') || ''}` },
+        body: JSON.stringify({ content: txt, platforms: sel.map(p => p.id), format: currentFormat, ratio: currentRatio })
+      });
+      if (!res.ok) throw new Error(`Backend error ${res.status}`);
+      responseData = await res.json();
+    }
+
+    adapted = responseData.adapted || {};
     renderAdapted(sel);
-    toast(`✦ Content adapted for ${sel.length} platforms!`,'ok');
+    toast(`✦ Content adapted for ${sel.length} platforms!`, 'ok');
     document.querySelector('#right-tabs .tab-btn:first-child').click();
-  } catch(err) {
+  } catch (err) {
     console.error(err);
-    sel.forEach(p => { adapted[p.id] = txt.length>p.limit ? txt.slice(0,p.limit-4)+'...' : txt; });
+    // Graceful fallback: truncate
+    sel.forEach(p => { adapted[p.id] = txt.length > p.limit ? txt.slice(0, p.limit - 4) + '...' : txt; });
     renderAdapted(sel);
-    toast('Showing trimmed fallback (AI unavailable)','err');
+    toast('Showing trimmed fallback (AI unavailable)', 'err');
   }
 
   btn.disabled = false;

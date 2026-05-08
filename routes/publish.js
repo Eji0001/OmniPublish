@@ -1,0 +1,82 @@
+/**
+ * routes/publish.js — Cross-platform publishing orchestration
+ */
+
+'use strict';
+
+const express                  = require('express');
+const { supabase }             = require('../config/database');
+const { verifyToken }          = require('../middleware/auth');
+const { validateBody }         = require('../middleware/sanitizer');
+const { publishRateLimiter }   = require('../middleware/rateLimit');
+const { publishToPlatform }    = require('../services/platformService');
+const { logger }               = require('../utils/logger');
+
+const router = express.Router();
+router.use(verifyToken);
+
+/**
+ * POST /publish — publish a post to all selected platforms concurrently.
+ * Uses Promise.allSettled so one failure doesn't block others.
+ */
+router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, res) => {
+  const { postId, platforms } = req.body;
+
+  // Ownership check
+  const { data: post } = await supabase.from('posts')
+    .select('*, post_platforms(*)')
+    .eq('id', postId).eq('user_id', req.user.id).single();
+  if (!post) return res.status(404).json({ error: 'Post not found' });
+
+  // Fetch connected platform tokens
+  const { data: connections } = await supabase.from('platform_connections')
+    .select('platform, access_token_enc, platform_user_id')
+    .eq('user_id', req.user.id).in('platform', platforms).eq('is_active', true);
+
+  const connectedMap = Object.fromEntries((connections || []).map(c => [c.platform, c]));
+
+  // Mark all targets as "publishing"
+  await supabase.from('post_platforms').update({ status: 'publishing' }).eq('post_id', postId).in('platform', platforms);
+
+  // Publish concurrently
+  const results = await Promise.allSettled(
+    platforms.map(async (platform) => {
+      const conn = connectedMap[platform];
+      if (!conn) throw Object.assign(new Error(`${platform} not connected`), { platform });
+
+      const platformPost = post.post_platforms?.find(p => p.platform === platform);
+      const content      = platformPost?.adapted_content || post.content;
+      const result       = await publishToPlatform({ platform, content, post, conn });
+
+      await supabase.from('post_platforms').update({
+        status: 'published', platform_post_id: result.postId,
+        platform_post_url: result.url, published_at: new Date(), error_message: null,
+      }).eq('post_id', postId).eq('platform', platform);
+
+      return { platform, status: 'published', url: result.url };
+    })
+  );
+
+  // Update failed platforms
+  const failed = results.filter(r => r.status === 'rejected');
+  for (const r of failed) {
+    const platform = r.reason?.platform || 'unknown';
+    await supabase.from('post_platforms').update({
+      status: 'failed', error_message: r.reason?.message?.slice(0, 500),
+    }).eq('post_id', postId).eq('platform', platform);
+  }
+
+  const succeeded = results.filter(r => r.status === 'fulfilled');
+  if (succeeded.length > 0) {
+    await supabase.from('posts').update({ status: 'published', published_at: new Date() }).eq('id', postId);
+  }
+
+  const summary = results.map(r =>
+    r.status === 'fulfilled' ? r.value : { platform: r.reason?.platform || 'unknown', status: 'failed', error: r.reason?.message }
+  );
+
+  logger.info('Publish completed', { postId, userId: req.user.id, succeeded: succeeded.length, failed: failed.length });
+  res.json({ summary, succeeded: succeeded.length, failed: failed.length, total: platforms.length });
+});
+
+module.exports = router;
