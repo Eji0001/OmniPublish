@@ -32,7 +32,7 @@ CREATE TABLE users (
   plan                  user_plan   DEFAULT 'free'        NOT NULL,
   is_verified           BOOLEAN     DEFAULT FALSE         NOT NULL,
   is_active             BOOLEAN     DEFAULT TRUE          NOT NULL,
-  last_login            TIMESTAMPTZ,
+  last_login_at         TIMESTAMPTZ,
   failed_login_attempts INT         DEFAULT 0             NOT NULL,
   locked_until          TIMESTAMPTZ,
   -- GDPR: track consent
