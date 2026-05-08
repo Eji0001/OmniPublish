@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OmniPublish API Tester</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --border: #2d3148;
+      --accent: #6c63ff; --accent2: #00d4aa; --error: #ff5b5b;
+      --text: #e2e8f0; --muted: #64748b; --success: #22c55e;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background .3s; }
+    .status-dot.online { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .status-dot.offline { background: var(--error); }
+    #status-text { font-size: .8rem; color: var(--muted); margin-left: auto; }
+
+    .layout { display: grid; grid-template-columns: 240px 1fr; height: calc(100vh - 57px); }
+    nav { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; }
+    .nav-group { margin-bottom: 4px; }
+    .nav-label { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 8px 16px 4px; }
+    .nav-btn { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text); padding: 7px 16px; cursor: pointer; font-size: .82rem; border-left: 3px solid transparent; transition: all .15s; }
+    .nav-btn:hover { background: rgba(108,99,255,.08); color: var(--accent); }
+    .nav-btn.active { background: rgba(108,99,255,.14); border-left-color: var(--accent); color: var(--accent); }
+    .method { font-size: .65rem; font-weight: 700; padding: 2px 5px; border-radius: 3px; margin-right: 6px; }
+    .GET { background: rgba(0,212,170,.18); color: var(--accent2); }
+    .POST { background: rgba(108,99,255,.22); color: #a5a0ff; }
+    .PATCH { background: rgba(251,191,36,.18); color: #fbbf24; }
+    .DELETE { background: rgba(255,91,91,.18); color: var(--error); }
+
+    main { display: flex; flex-direction: column; overflow: hidden; }
+    .panel { padding: 24px; flex: 1; overflow-y: auto; }
+    .panel-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .badge { font-size: .7rem; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
+    .form-group { margin-bottom: 14px; }
+    label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: 5px; }
+    input, textarea, select { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 9px 12px; font-size: .85rem; font-family: inherit; transition: border-color .15s; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 80px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: .78rem; }
+    .btn { padding: 9px 20px; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #7c75ff; }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-sm { padding: 5px 12px; font-size: .75rem; }
+    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+    .response-box { margin-top: 20px; }
+    .response-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .response-status { font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 4px; }
+    .s2xx { background: rgba(34,197,94,.2); color: var(--success); }
+    .s4xx { background: rgba(251,191,36,.2); color: #fbbf24; }
+    .s5xx { background: rgba(255,91,91,.2); color: var(--error); }
+    pre { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: 'Cascadia Code','Fira Code',monospace; font-size: .75rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .token-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 8px 16px; font-size: .73rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .token-chip { background: rgba(108,99,255,.15); border: 1px solid rgba(108,99,255,.3); border-radius: 4px; padding: 3px 8px; font-family: monospace; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .divider { height: 1px; background: var(--border); margin: 16px 0; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .checkbox-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .checkbox-row label { display: flex; align-items: center; gap: 5px; color: var(--text); cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 5px 10px; font-size: .78rem; transition: all .15s; }
+    .checkbox-row input[type=checkbox] { width: auto; accent-color: var(--accent); }
+    .checkbox-row label:has(input:checked) { border-color: var(--accent); background: rgba(108,99,255,.12); }
+    .info-box { background: rgba(0,212,170,.07); border: 1px solid rgba(0,212,170,.25); border-radius: 6px; padding: 10px 14px; font-size: .78rem; color: var(--accent2); margin-bottom: 14px; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="status-dot" id="dot"></div>
+  <h1>OmniPublish API</h1>
+  <span id="status-text">Checking server…</span>
+</header>
+
+<div class="layout">
+  <nav>
+    <div class="nav-group">
+      <div class="nav-label">System</div>
+      <button class="nav-btn active" onclick="show('health')"><span class="method GET">GET</span>Health</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Auth</div>
+      <button class="nav-btn" onclick="show('register')"><span class="method POST">POST</span>Register</button>
+      <button class="nav-btn" onclick="show('login')"><span class="method POST">POST</span>Login</button>
+      <button class="nav-btn" onclick="show('me')"><span class="method GET">GET</span>Me</button>
+      <button class="nav-btn" onclick="show('refresh')"><span class="method POST">POST</span>Refresh Token</button>
+      <button class="nav-btn" onclick="show('logout')"><span class="method POST">POST</span>Logout</button>
+      <button class="nav-btn" onclick="show('forgot')"><span class="method POST">POST</span>Forgot Password</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Posts</div>
+      <button class="nav-btn" onclick="show('create-post')"><span class="method POST">POST</span>Create Post</button>
+      <button class="nav-btn" onclick="show('list-posts')"><span class="method GET">GET</span>List Posts</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">AI</div>
+      <button class="nav-btn" onclick="show('ai-adapt')"><span class="method POST">POST</span>AI Adapt Content</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Platforms</div>
+      <button class="nav-btn" onclick="show('list-platforms')"><span class="method GET">GET</span>List Connections</button>
+    </div>
+  </nav>
+
+  <main>
+    <div class="panel" id="panel"></div>
+    <div class="token-bar" id="token-bar" style="display:none">
+      <span style="color:var(--muted)">Token:</span>
+      <span class="token-chip" id="token-display"></span>
+      <button class="btn btn-ghost btn-sm" onclick="clearSession()">Clear Session</button>
+    </div>
+  </main>
+</div>
+
+<script>
+const BASE = 'http://localhost:4000/api/v1';
+let session = { accessToken: null, refreshToken: null, csrfToken: null, user: null };
+
+function getAuthHeaders() {
+  const h = { 'Content-Type': 'application/json' };
+  if (session.accessToken) h['Authorization'] = `Bearer ${session.accessToken}`;
+  if (session.csrfToken)   h['X-CSRF-Token']  = session.csrfToken;
+  return h;
+}
+
+async function callApi(method, path, body) {
+  const opts = { method, headers: getAuthHeaders() };
+  if (body) opts.body = JSON.stringify(body);
+  const res  = await fetch(BASE + path, opts);
+  const data = await res.json().catch(() => ({ raw: await res.text() }));
+  return { status: res.status, data };
+}
+
+function showResponse(status, data, ms) {
+  const cls  = status < 300 ? 's2xx' : status < 500 ? 's4xx' : 's5xx';
+  const box  = document.getElementById('response-area');
+  box.innerHTML = `
+    <div class="response-header">
+      <span class="response-status ${cls}">${status}</span>
+      <span style="color:var(--muted);font-size:.75rem">${ms}ms</span>
+    </div>
+    <pre>${JSON.stringify(data, null, 2)}</pre>`;
+}
+
+function storeSession(data) {
+  if (data.accessToken)  session.accessToken  = data.accessToken;
+  if (data.refreshToken) session.refreshToken = data.refreshToken;
+  if (data.csrfToken)    session.csrfToken    = data.csrfToken;
+  if (data.user)         session.user         = data.user;
+  updateTokenBar();
+}
+
+function updateTokenBar() {
+  const bar = document.getElementById('token-bar');
+  const td  = document.getElementById('token-display');
+  if (session.accessToken) {
+    bar.style.display = 'flex';
+    td.textContent = session.accessToken.slice(0, 60) + '…';
+    td.title = session.accessToken;
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function clearSession() {
+  session = { accessToken: null, refreshToken: null, csrfToken: null, user: null };
+  updateTokenBar();
+}
+
+async function checkHealth() {
+  try {
+    const r = await fetch(BASE + '/health');
+    const d = await r.json();
+    const dot  = document.getElementById('dot');
+    const txt  = document.getElementById('status-text');
+    if (r.ok) {
+      dot.className = 'status-dot online';
+      txt.textContent = `Server online · DB ${d.database || 'ok'} · uptime ${Math.round((d.uptime||0)/60)}m`;
+    } else {
+      dot.className = 'status-dot offline';
+      txt.textContent = 'Server returned error';
+    }
+  } catch {
+    document.getElementById('dot').className = 'status-dot offline';
+    document.getElementById('status-text').textContent = 'Server offline';
+  }
+}
+
+const PANELS = {
+  health: () => `
+    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> Health Check</div>
+    <div class="info-box">Checks server status, database connectivity, uptime, and memory usage.</div>
+    <button class="btn btn-primary" onclick="runHealth()">Send Request</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  register: () => `
+    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Register</div>
+    <div class="form-group"><label>Email</label><input id="r-email" value="test${Date.now()}@example.com" /></div>
+    <div class="form-group"><label>Password <span style="color:var(--muted)">(min 12 chars, upper+lower+number+symbol)</span></label><input id="r-pw" value="TestPass123!" /></div>
+    <div class="form-group"><label>Full Name</label><input id="r-name" value="Test User" /></div>
+    <button class="btn btn-primary" onclick="runRegister()">Register</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  login: () => `
+    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Login</div>
+    <div class="form-group"><label>Email</label><input id="l-email" value="" placeholder="you@example.com" /></div>
+    <div class="form-group"><label>Password</label><input id="l-pw" type="password" placeholder="••••••••••••" /></div>
+    <button class="btn btn-primary" onclick="runLogin()">Login</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  me: () => `
+    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> Me (current user)</div>
+    <div class="info-box">Requires a valid access token. Register or login first.</div>
+    <button class="btn btn-primary" onclick="runMe()">Get My Profile</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  refresh: () => `
+    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Refresh Token</div>
+    <div class="info-box">Uses the refresh token stored in session to obtain a new access token.</div>
+    <button class="btn btn-primary" onclick="runRefresh()">Refresh</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  logout: () => `
+    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Logout</div>
+    <div class="info-box">Revokes the current access token (adds JTI to blacklist).</div>
+    <button class="btn btn-primary" onclick="runLogout()">Logout</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  forgot: () => `
+    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Forgot Password</div>
+    <div class="info-box">Always returns 200 (no email enumeration). Check server logs for the reset token in dev mode.</div>
+    <div class="form-group"><label>Email</label><input id="fp-email" placeholder="you@example.com" /></div>
+    <button class="btn btn-primary" onclick="runForgot()">Send Reset Link</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  'create-post': () => `
+    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Create Post</div>
+    <div class="form-group"><label>Content</label><textarea id="cp-content">Check out OmniPublish — the easiest way to publish everywhere at once! 🚀</textarea></div>
+    <div class="form-group"><label>Title (optional)</label><input id="cp-title" value="My First Post" /></div>
+    <div class="grid2">
+      <div class="form-group"><label>Format</label>
+        <select id="cp-format"><option>post</option><option>video</option><option>short</option><option>story</option><option>article</option></select>
+      </div>
+      <div class="form-group"><label>Aspect Ratio</label>
+        <select id="cp-ratio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option><option>2:3</option></select>
+      </div>
+    </div>
+    <div class="form-group"><label>Platforms</label>
+      <div class="checkbox-row">
+        ${['facebook','instagram','x','linkedin','youtube','tiktok','threads','reddit','telegram','bluesky','snapchat','pinterest'].map(p =>
+          `<label><input type="checkbox" name="plat" value="${p}" ${['x','instagram','linkedin'].includes(p)?'checked':''}>${p}</label>`
+        ).join('')}
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="runCreatePost()">Create Post</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  'list-posts': () => `
+    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> List Posts</div>
+    <div class="info-box">Returns paginated posts for the authenticated user.</div>
+    <div class="grid2">
+      <div class="form-group"><label>Status filter</label>
+        <select id="lp-status"><option value="">all</option><option>draft</option><option>scheduled</option><option>published</option><option>failed</option></select>
+      </div>
+      <div class="form-group"><label>Limit</label><input id="lp-limit" value="10" type="number" /></div>
+    </div>
+    <button class="btn btn-primary" onclick="runListPosts()">Fetch Posts</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  'ai-adapt': () => `
+    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> AI Adapt Content</div>
+    <div class="info-box">Uses Claude to rewrite your content for each selected platform. Requires auth.</div>
+    <div class="form-group"><label>Original Content</label><textarea id="ai-content">OmniPublish just launched — the easiest way to reach every social platform with one click. Try it today!</textarea></div>
+    <div class="form-group"><label>Platforms</label>
+      <div class="checkbox-row">
+        ${['facebook','instagram','x','linkedin','tiktok','threads','reddit','bluesky'].map(p =>
+          `<label><input type="checkbox" name="ai-plat" value="${p}" ${['x','linkedin'].includes(p)?'checked':''}>${p}</label>`
+        ).join('')}
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="runAiAdapt()">Adapt with AI</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+
+  'list-platforms': () => `
+    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> Platform Connections</div>
+    <div class="info-box">Lists all social platform OAuth connections for the current user.</div>
+    <button class="btn btn-primary" onclick="runListPlatforms()">Fetch Connections</button>
+    <div class="response-box"><div id="response-area"></div></div>`,
+};
+
+async function timed(fn) {
+  const t = Date.now();
+  const r = await fn();
+  return { ...r, ms: Date.now() - t };
+}
+
+async function runHealth() {
+  const btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
+  const t = Date.now();
+  try {
+    const res = await fetch(BASE + '/health');
+    const data = await res.json();
+    showResponse(res.status, data, Date.now()-t);
+    storeSession(data);
+  } catch(e) { showResponse(0, { error: e.message }, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Send Request';
+}
+
+async function runRegister() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  try {
+    const r = await callApi('POST', '/auth/register', {
+      email: document.getElementById('r-email').value,
+      password: document.getElementById('r-pw').value,
+      fullName: document.getElementById('r-name').value,
+    });
+    showResponse(r.status, r.data, Date.now()-t);
+    storeSession(r.data);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Register';
+}
+
+async function runLogin() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  try {
+    const r = await callApi('POST', '/auth/login', {
+      email: document.getElementById('l-email').value,
+      password: document.getElementById('l-pw').value,
+    });
+    showResponse(r.status, r.data, Date.now()-t);
+    storeSession(r.data);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Login';
+}
+
+async function runMe() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  try {
+    const r = await callApi('GET', '/auth/me');
+    showResponse(r.status, r.data, Date.now()-t);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Get My Profile';
+}
+
+async function runRefresh() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  if (!session.refreshToken) { showResponse(0, {error:'No refresh token in session — login first'}, 0); btn.disabled=false; btn.textContent='Refresh'; return; }
+  try {
+    const r = await callApi('POST', '/auth/refresh', { refreshToken: session.refreshToken });
+    showResponse(r.status, r.data, Date.now()-t);
+    storeSession(r.data);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Refresh';
+}
+
+async function runLogout() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  try {
+    const r = await callApi('POST', '/auth/logout');
+    showResponse(r.status, r.data, Date.now()-t);
+    if (r.status === 200) clearSession();
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Logout';
+}
+
+async function runForgot() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  try {
+    const r = await callApi('POST', '/auth/forgot-password', { email: document.getElementById('fp-email').value });
+    showResponse(r.status, r.data, Date.now()-t);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Send Reset Link';
+}
+
+async function runCreatePost() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  const platforms = [...document.querySelectorAll('input[name="plat"]:checked')].map(el=>el.value);
+  try {
+    const r = await callApi('POST', '/posts', {
+      content: document.getElementById('cp-content').value,
+      title:   document.getElementById('cp-title').value || undefined,
+      format:  document.getElementById('cp-format').value,
+      aspectRatio: document.getElementById('cp-ratio').value,
+      platforms,
+    });
+    showResponse(r.status, r.data, Date.now()-t);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Create Post';
+}
+
+async function runListPosts() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  const status = document.getElementById('lp-status').value;
+  const limit  = document.getElementById('lp-limit').value;
+  const qs = new URLSearchParams();
+  if (status) qs.set('status', status);
+  if (limit)  qs.set('limit', limit);
+  try {
+    const r = await callApi('GET', '/posts?' + qs.toString());
+    showResponse(r.status, r.data, Date.now()-t);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Fetch Posts';
+}
+
+async function runAiAdapt() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Calling Claude…';
+  const t = Date.now();
+  const platforms = [...document.querySelectorAll('input[name="ai-plat"]:checked')].map(el=>el.value);
+  try {
+    const r = await callApi('POST', '/ai/adapt', {
+      content: document.getElementById('ai-content').value,
+      platforms,
+    });
+    showResponse(r.status, r.data, Date.now()-t);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Adapt with AI';
+}
+
+async function runListPlatforms() {
+  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
+  const t = Date.now();
+  try {
+    const r = await callApi('GET', '/platforms');
+    showResponse(r.status, r.data, Date.now()-t);
+  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
+  btn.disabled=false; btn.textContent='Fetch Connections';
+}
+
+function show(key) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  document.getElementById('panel').innerHTML = PANELS[key]?.() || '<p>Panel not found</p>';
+}
+
+// Init
+show('health'); document.querySelector('.nav-btn').classList.add('active');
+checkHealth();
+setInterval(checkHealth, 10000);
+</script>
+</body>
+</html>

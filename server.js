@@ -184,6 +184,9 @@ app.post('/api/v1/ai/adapt', require('./middleware/auth').verifyToken, require('
   const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
   res.json({ adapted });
 });
+// Serve static test UI
+app.use(express.static('public'));
+
 // Catch-all 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found', path: req.path });
