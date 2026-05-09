@@ -76,4 +76,11 @@ const processScheduledPosts = async () => {
   }
 };
 
-module.exports = { processScheduledPosts };
+const cleanupRevokedTokens = async () => {
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const { error } = await supabase.from('revoked_tokens').delete().lt('revoked_at', cutoff.toISOString());
+  if (error) logger.error('Token cleanup failed', { err: error.message });
+  else logger.debug('Revoked token cleanup ran');
+};
+
+module.exports = { processScheduledPosts, cleanupRevokedTokens };

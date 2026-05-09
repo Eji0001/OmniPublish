@@ -5,6 +5,18 @@
 
 'use strict';
 
+// Production boot guard — refuse to start with dev default secrets
+if (process.env.NODE_ENV === 'production') {
+  const DEV_ACCESS  = 'dev-access-secret-change-in-prod';
+  const DEV_REFRESH = 'dev-refresh-secret-change-in-prod';
+  if (!process.env.JWT_ACCESS_SECRET  || process.env.JWT_ACCESS_SECRET  === DEV_ACCESS ||
+      !process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET === DEV_REFRESH ||
+      !process.env.ENCRYPTION_KEY     || process.env.ENCRYPTION_KEY     === 'your_64_character_hex_string_here') {
+    console.error('FATAL: production secrets not configured. Set JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, and ENCRYPTION_KEY.');
+    process.exit(1);
+  }
+}
+
 const securityHeaders = (req, res, next) => {
   res.setHeader('Permissions-Policy', [
     'accelerometer=()', 'ambient-light-sensor=()', 'autoplay=()', 'battery=()',

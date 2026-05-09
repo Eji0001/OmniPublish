@@ -2,17 +2,19 @@
 
 const express = require('express');
 const router  = express.Router();
+const crypto  = require('crypto');
+const { v4: uuidv4 } = require('uuid');
+const { supabase }   = require('../config/database');
+const { generateCSRFToken } = require('../middleware/csrf');
+const { logger }            = require('../utils/logger');
+
+const isProd = process.env.NODE_ENV === 'production';
 
 const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
 if (hasGoogle) {
   const passport       = require('passport');
   const GoogleStrategy = require('passport-google-oauth20').Strategy;
-  const { v4: uuidv4 } = require('uuid');
-  const { supabase }   = require('../config/database');
-  const { issueTokens }       = require('../middleware/auth');
-  const { generateCSRFToken } = require('../middleware/csrf');
-  const { logger }            = require('../utils/logger');
 
   passport.use(new GoogleStrategy({
     clientID:     process.env.GOOGLE_CLIENT_ID,
@@ -56,21 +58,31 @@ if (hasGoogle) {
 
   router.get('/google/callback',
     passport.authenticate('google', { session: false, failureRedirect: '/?oauth_error=1' }),
-    (req, res) => {
-      const tokens    = issueTokens(req.user);
-      const csrfToken = generateCSRFToken();
-      res.cookie('csrf_token', csrfToken, {
-        httpOnly: false,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'Strict',
-        maxAge: 15 * 60 * 1000,
-      });
-      const payload = encodeURIComponent(JSON.stringify({ ...tokens, csrfToken, user: req.user }));
-      res.redirect(`/?oauth=${payload}#onboarding`);
+    async (req, res) => {
+      try {
+        // Issue a short-lived one-time exchange code (5 min) stored in password_resets
+        const code     = crypto.randomBytes(24).toString('hex');
+        const codeHash = crypto.createHash('sha256').update(code).digest('hex');
+        await supabase.from('password_resets').insert({
+          id: uuidv4(), user_id: req.user.id,
+          token_hash: codeHash,
+          expires_at: new Date(Date.now() + 5 * 60 * 1000),
+        });
+
+        // Set CSRF cookie now so frontend can use it immediately after exchange
+        const csrfToken = generateCSRFToken();
+        res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+
+        // Redirect with opaque code only — no tokens in URL
+        res.redirect(`/?oauth_code=${code}#onboarding`);
+      } catch (err) {
+        logger.error('OAuth callback error', { err: err.message });
+        res.redirect('/?oauth_error=1');
+      }
     }
   );
 } else {
-  // Stub — tells the frontend to show "coming soon" toast
+  // Stub — frontend shows "coming soon" toast
   router.get('/google', (_req, res) => {
     res.redirect('/?oauth_error=not_configured');
   });

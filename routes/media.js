@@ -22,7 +22,7 @@ const fileFilter = (req, file, cb) => {
   const all = [...ALLOWED_MEDIA_TYPES.image, ...ALLOWED_MEDIA_TYPES.video];
   all.includes(file.mimetype) ? cb(null, true) : cb(new Error(`File type ${file.mimetype} not allowed`), false);
 };
-const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_FILE_SIZE.video, files: 10 } });
+const upload = multer({ storage, fileFilter, limits: { fileSize: MAX_FILE_SIZE.image, files: 5 } });
 
 /* ── POST /media/upload ── */
 router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, res) => {

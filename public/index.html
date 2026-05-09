@@ -830,15 +830,14 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 ══════════════════════════════════════ */
 const auth = {
   get token()   { return localStorage.getItem('omni_token'); },
-  get refresh() { return localStorage.getItem('omni_refresh'); },
   get user()    { return JSON.parse(localStorage.getItem('omni_user') || 'null'); },
   set(data) {
-    if (data.accessToken)  localStorage.setItem('omni_token',   data.accessToken);
-    if (data.refreshToken) localStorage.setItem('omni_refresh', data.refreshToken);
-    if (data.user)         localStorage.setItem('omni_user',    JSON.stringify(data.user));
+    if (data.accessToken) localStorage.setItem('omni_token', data.accessToken);
+    if (data.user)        localStorage.setItem('omni_user',  JSON.stringify(data.user));
+    // refreshToken is now stored in httpOnly cookie by the server — not in localStorage
   },
   clear() {
-    ['omni_token','omni_refresh','omni_user','omni_draft','omni_draft_ts'].forEach(k => localStorage.removeItem(k));
+    ['omni_token','omni_user','omni_draft','omni_draft_ts'].forEach(k => localStorage.removeItem(k));
   }
 };
 
@@ -861,11 +860,11 @@ async function api(method, path, body, skipCsrf = false) {
   const opts = { method, headers };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(base() + path, opts);
-  if (res.status === 401 && auth.refresh) {
+  if (res.status === 401 && auth.token) {
     try {
+      // refreshToken lives in httpOnly cookie — send no body, server reads cookie
       const rr = await fetch(base() + '/api/v1/auth/refresh', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: auth.refresh })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       });
       if (rr.ok) {
         const rd = await rr.json();
@@ -873,7 +872,7 @@ async function api(method, path, body, skipCsrf = false) {
         headers['Authorization'] = `Bearer ${rd.accessToken}`;
         const csrf2 = getCsrf();
         if (csrf2) headers['X-CSRF-Token'] = csrf2;
-        return fetch(base() + path, { ...opts, headers });
+        return fetch(base() + path, { ...opts, headers, credentials: 'include' });
       }
     } catch {}
     auth.clear();
@@ -1471,7 +1470,10 @@ async function doMagicLink() {
 
 async function verifyMagicToken(token) {
   try {
-    const res  = await fetch(base() + '/api/v1/auth/magic-link/verify?token=' + encodeURIComponent(token));
+    const res  = await fetch(base() + '/api/v1/auth/magic-link/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', body: JSON.stringify({ token }),
+    });
     const data = await res.json();
     if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
     auth.set({ ...data, user: data.user });
@@ -1536,6 +1538,7 @@ function selectRole(card, role) {
   document.querySelectorAll('.ob-role-card').forEach(c => c.classList.remove('selected'));
   card.classList.add('selected');
   localStorage.setItem('omni_user_role', role);
+  api('PATCH', '/api/v1/auth/me/profile', { userType: role }).catch(() => {});
   setTimeout(() => obGoStep(2), 300);
 }
 
@@ -1577,8 +1580,9 @@ function connectPlatform() {
   toast(p.name + ' connected! (dev mode)', 'ok');
 }
 
-function finishOnboarding() {
+async function finishOnboarding() {
   localStorage.setItem('omni_onboarding_done', '1');
+  await api('PATCH', '/api/v1/auth/me/profile', { onboardingCompleted: true }).catch(() => {});
   showPage('dashboard');
 }
 
@@ -1589,16 +1593,15 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTheme(currentTheme);
   buildMarquee();
 
-  // Handle Google OAuth redirect (?oauth=<encoded-payload>)
+  // Handle Google OAuth redirect (?oauth_code=<opaque-code>)
   const params = new URLSearchParams(window.location.search);
-  const oauthPayload = params.get('oauth');
-  const oauthError   = params.get('oauth_error');
-  const magicToken   = params.get('magic');
+  const oauthCode  = params.get('oauth_code');
+  const oauthError = params.get('oauth_error');
+  const magicToken = params.get('magic');
 
   if (oauthError) {
     history.replaceState(null, '', '/');
     if (oauthError === 'not_configured') {
-      // Show signup page with a message
       showPage('signup');
       setTimeout(() => toast('Google OAuth coming soon — use email link for now', 'err'), 400);
     } else {
@@ -1608,20 +1611,22 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  if (oauthPayload) {
-    try {
-      const data = JSON.parse(decodeURIComponent(oauthPayload));
-      auth.set({ ...data, user: data.user });
-      history.replaceState(null, '', '/');
-      if (!localStorage.getItem('omni_onboarding_done')) {
-        showPage('onboarding');
-      } else {
-        showPage('dashboard');
+  if (oauthCode) {
+    history.replaceState(null, '', '/');
+    (async () => {
+      try {
+        const data = await api('POST', '/api/v1/auth/oauth/exchange', { code: oauthCode });
+        auth.set(data);
+        if (!data.user?.onboarding_completed_at && !localStorage.getItem('omni_onboarding_done')) {
+          showPage('onboarding');
+        } else {
+          showPage('dashboard');
+        }
+      } catch {
+        showPage('home');
+        setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
       }
-    } catch {
-      history.replaceState(null, '', '/');
-      showPage('home');
-    }
+    })();
     return;
   }
 

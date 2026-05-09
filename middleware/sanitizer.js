@@ -85,6 +85,16 @@ const schemas = {
   magicLink: z.object({
     email: z.string().email().max(255),
   }),
+  magicLinkVerify: z.object({
+    token: z.string().min(64).max(64),
+  }),
+  oauthExchange: z.object({
+    code: z.string().min(48).max(48),
+  }),
+  userProfile: z.object({
+    userType: z.enum(['founder', 'creator', 'agency', 'enterprise', 'small_business', 'personal']).optional(),
+    onboardingCompleted: z.boolean().optional(),
+  }),
 };
 
 const validateBody = (schemaKey) => (req, res, next) => {

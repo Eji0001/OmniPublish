@@ -35,7 +35,7 @@ const publishRoutes   = require('./routes/publish');
 const mediaRoutes     = require('./routes/media');
 const healthRoutes    = require('./routes/health');
 
-const { processScheduledPosts }    = require('./services/schedulerService');
+const { processScheduledPosts, cleanupRevokedTokens } = require('./services/schedulerService');
 
 /* ─────────────────────────────────────────
    App bootstrap
@@ -215,6 +215,11 @@ if (require.main === module) {
   cron.schedule('* * * * *', async () => {
     try { await processScheduledPosts(); }
     catch (e) { logger.error('Scheduler error', { err: e.message }); }
+  });
+
+  cron.schedule('0 * * * *', async () => {
+    try { await cleanupRevokedTokens(); }
+    catch (e) { logger.error('Token cleanup error', { err: e.message }); }
   });
 
   const PORT = parseInt(process.env.PORT || '4000', 10);
