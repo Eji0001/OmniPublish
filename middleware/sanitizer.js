@@ -82,6 +82,9 @@ const schemas = {
     scheduled_at: z.string().datetime().nullable().optional(),
     status:       z.enum(['draft', 'scheduled']).optional(),
   }).strict(),
+  magicLink: z.object({
+    email: z.string().email().max(255),
+  }),
 };
 
 const validateBody = (schemaKey) => (req, res, next) => {

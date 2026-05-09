@@ -28,6 +28,7 @@ const { securityHeaders }          = require('./config/security');
 const { requireApiKey, requireJwtOrApiKey } = require('./middleware/apiKey');
 
 const authRoutes      = require('./routes/auth');
+const oauthRoutes     = require('./routes/oauth');
 const postsRoutes     = require('./routes/posts');
 const platformsRoutes = require('./routes/platforms');
 const publishRoutes   = require('./routes/publish');
@@ -172,6 +173,7 @@ app.use(auditLogger);
 ───────────────────────────────────────── */
 app.use('/api/v1/health',     healthRoutes);
 app.use('/api/v1/auth',       authRoutes);
+app.use('/api/v1/auth',       oauthRoutes);
 app.use('/api/v1/posts',      postsRoutes);
 app.use('/api/v1/platforms',  platformsRoutes);
 app.use('/api/v1/publish',    publishRoutes);

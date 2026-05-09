@@ -21,6 +21,7 @@ const CSRF_SKIP = new Set([
   '/api/v1/health',                '/v1/health',
   '/api/v1/health/live',           '/v1/health/live',
   '/api/v1/health/ready',          '/v1/health/ready',
+  '/api/v1/auth/magic-link',       '/v1/auth/magic-link',
 ]);
 
 const verifyCSRF = (req, res, next) => {

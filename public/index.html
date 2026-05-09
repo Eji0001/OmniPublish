@@ -281,6 +281,95 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:900px){.app{grid-template-columns:1fr}.panel{border-right:none;border-bottom:1px solid var(--bd);max-height:none}.features-grid{grid-template-columns:1fr 1fr}.dash-header{padding:0 1rem}}
 @media(max-width:600px){.stats-inner{grid-template-columns:repeat(2,1fr)}.plats-grid{grid-template-columns:1fr}.format-grid{grid-template-columns:repeat(3,1fr)}.features-grid{grid-template-columns:1fr}.hero{padding:120px 1.25rem 60px}}
+
+/* ═══ SIGNUP PAGE ═══ */
+#page-signup{display:none;min-height:100vh;align-items:center;justify-content:center;padding:2rem;background:var(--bg)}
+#page-signup.active{display:flex}
+.su-wrap{width:100%;max-width:440px;animation:fadeUp .5s var(--ease-out) both}
+.su-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:2rem}
+.su-logo-icon{width:38px;height:38px;border-radius:11px;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:18px}
+.su-logo-text{font-size:20px;font-weight:900;background:var(--btn-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.su-card{background:var(--s1);border:1px solid var(--bd2);border-radius:20px;padding:2.25rem;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.su-heading{font-size:22px;font-weight:900;text-align:center;margin-bottom:.4rem;letter-spacing:-.5px}
+.su-sub{font-size:13px;color:var(--tx2);text-align:center;margin-bottom:1.75rem;line-height:1.5}
+.su-google-btn{width:100%;padding:13px 16px;border-radius:12px;background:transparent;border:2px solid transparent;background-image:linear-gradient(var(--s1),var(--s1)),var(--btn-grad);background-origin:border-box;background-clip:padding-box,border-box;color:var(--tx);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:1.25rem}
+.su-google-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px var(--glow)}
+.su-google-icon{width:20px;height:20px;flex-shrink:0}
+.su-divider{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;color:var(--tx3);font-size:12px;font-weight:700}
+.su-divider::before,.su-divider::after{content:'';flex:1;height:1px;background:var(--bd2)}
+.su-label{font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.su-email-row{display:flex;gap:8px;margin-bottom:.75rem}
+.su-email-input{flex:1;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px;outline:none;font-family:inherit;transition:all .2s}
+.su-email-input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow)}
+.su-link-btn{padding:10px 16px;border-radius:10px;background:var(--btn-grad);color:#fff;font-size:13px;font-weight:800;border:none;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .2s}
+.su-link-btn:hover{opacity:.88;transform:translateY(-1px)}
+.su-link-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.su-turnstile{margin-bottom:.75rem;display:flex;justify-content:center}
+.su-switch{text-align:center;margin-top:1.25rem;font-size:13px;color:var(--tx2)}
+.su-switch a{color:var(--acc);cursor:pointer;font-weight:700;text-decoration:none}
+.su-switch a:hover{text-decoration:underline}
+.su-back{position:fixed;top:1.25rem;left:1.5rem;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--tx2);cursor:pointer;background:none;border:none;font-family:inherit;transition:color .2s;z-index:10}
+.su-back:hover{color:var(--tx)}
+.su-msg{font-size:12px;text-align:center;margin-top:.5rem;min-height:18px}
+.su-msg.ok{color:var(--acc3)}.su-msg.err{color:var(--err)}
+
+/* ═══ ONBOARDING PAGE ═══ */
+#page-onboarding{display:none;min-height:100vh;background:var(--bg);padding:3rem 2rem}
+#page-onboarding.active{display:block}
+.ob-wrap{max-width:620px;margin:0 auto}
+.ob-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.5rem}
+.ob-steps{display:flex;align-items:center;gap:0}
+.ob-step{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.ob-step-circle{width:32px;height:32px;border-radius:50%;border:2px solid var(--bd3);background:var(--s2);color:var(--tx3);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .35s}
+.ob-step.done .ob-step-circle{background:#00b894;border-color:#00b894;color:#fff}
+.ob-step.active .ob-step-circle{background:var(--btn-grad);border-color:transparent;color:#fff;box-shadow:0 4px 12px rgba(108,92,231,.4)}
+.ob-step-label{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px}
+.ob-step.active .ob-step-label,.ob-step.done .ob-step-label{color:var(--tx2)}
+.ob-connector{width:60px;height:2px;background:var(--bd2);margin:0 4px;margin-bottom:14px;transition:background .35s}
+.ob-connector.done{background:#00b894}
+.ob-avatar{width:36px;height:36px;border-radius:50%;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff}
+.ob-panel{display:none;animation:fadeUp .4s var(--ease-out) both}
+.ob-panel.active{display:block}
+.ob-accent{font-size:12px;font-weight:700;color:#00b894;text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem}
+.ob-title{font-size:clamp(1.5rem,4vw,2rem);font-weight:900;letter-spacing:-.5px;margin-bottom:2rem}
+.ob-roles{display:flex;flex-direction:column;gap:8px}
+.ob-role-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--s1);border:1.5px solid var(--bd2);border-radius:12px;cursor:pointer;transition:all .2s;position:relative}
+.ob-role-card:hover{border-color:var(--acc);background:var(--s2)}
+.ob-role-card.selected{border-color:#00b894;background:rgba(0,184,148,.06)}
+.ob-role-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--bd3);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.ob-role-card.selected .ob-role-radio{border-color:#00b894;background:#00b894}
+.ob-role-card.selected .ob-role-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
+.ob-role-icon{font-size:1.3rem;flex-shrink:0}
+.ob-role-text{flex:1}
+.ob-role-name{font-size:14px;font-weight:800;color:var(--tx)}
+.ob-role-desc{font-size:12px;color:var(--tx3);margin-top:1px}
+.ob-plat-sub{font-size:14px;color:var(--tx2);margin-bottom:1.75rem;line-height:1.5}
+.ob-plats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:2rem}
+.ob-plat-card{background:var(--s1);border:1px solid var(--bd2);border-radius:12px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s}
+.ob-plat-card:hover{border-color:var(--bd3);box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.ob-plat-icon{font-size:1.8rem;line-height:1}
+.ob-plat-name{font-size:12px;font-weight:700;color:var(--tx);text-align:center}
+.ob-add-btn{width:100%;padding:7px;border-radius:8px;background:#00b894;color:#fff;font-size:12px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+.ob-add-btn:hover{background:#00a381;transform:translateY(-1px)}
+.ob-add-btn.connected{background:rgba(0,184,148,.15);color:#00b894;border:1px solid rgba(0,184,148,.4);cursor:default}
+.ob-continue{padding:12px 28px;border-radius:12px;background:var(--btn-grad);color:#fff;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;float:right;transition:all .25s;box-shadow:0 6px 20px var(--glow)}
+.ob-continue:hover{transform:translateY(-1px);box-shadow:0 10px 28px var(--glow)}
+.ob-clearfix{clear:both;padding-bottom:2rem}
+
+/* Platform connect modal */
+.pm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:600;display:flex;align-items:center;justify-content:center;animation:fadeUp .2s ease}
+.pm-card{background:var(--s1);border:1px solid var(--bd2);border-radius:18px;padding:1.75rem;width:400px;max-width:calc(100vw - 2rem);box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.pm-header{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
+.pm-plat-icon{font-size:2rem;line-height:1}
+.pm-title{font-size:17px;font-weight:900;color:var(--tx)}
+.pm-reqs{list-style:none;margin-bottom:1.5rem;display:flex;flex-direction:column;gap:8px}
+.pm-req{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--tx2);line-height:1.5}
+.pm-req::before{content:'•';color:#00b894;font-weight:900;flex-shrink:0;margin-top:1px}
+.pm-actions{display:flex;gap:8px;justify-content:flex-end}
+.pm-cancel{padding:9px 18px;border-radius:10px;background:var(--s3);border:none;color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.pm-cancel:hover{background:var(--s4)}
+.pm-connect{padding:9px 18px;border-radius:10px;background:#00b894;border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s}
+.pm-connect:hover{background:#00a381;transform:translateY(-1px)}
 </style>
 </head>
 <body>
@@ -295,7 +384,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
     <div class="nav-right">
       <button class="theme-pill" onclick="toggleTheme()" id="home-theme-btn">☀️ Sky Blue</button>
       <button class="nav-btn nav-btn-ghost" onclick="goAuth('login')">Login</button>
-      <button class="nav-btn nav-btn-fill" onclick="goAuth('register')">Get Started →</button>
+      <button class="nav-btn nav-btn-fill" onclick="showPage('signup')">Sign Up →</button>
     </div>
   </nav>
 
@@ -304,7 +393,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
     <h1 class="hero-title">Publish Everywhere.<br>Instantly.</h1>
     <p class="hero-sub">Claude AI rewrites your content for each platform's unique tone, culture, and character limits. One post — 14 platforms — 5.8 billion people.</p>
     <div class="hero-ctas">
-      <button class="hero-btn-primary" onclick="goAuth('register')">Start for Free →</button>
+      <button class="hero-btn-primary" onclick="showPage('signup')">Start for Free →</button>
       <button class="hero-btn-ghost" onclick="goAuth('login')">Login</button>
     </div>
     <div class="hero-platforms">
@@ -349,7 +438,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
     <div class="cta-card" id="cta-card">
       <div class="cta-title">Ready to reach 5.8 billion people?</div>
       <div class="cta-sub">Join creators and brands using OmniPublish to publish smarter. Start free — no credit card required.</div>
-      <button class="cta-btn" onclick="goAuth('register')">Start Publishing Today →</button>
+      <button class="cta-btn" onclick="showPage('signup')">Start Publishing Today →</button>
     </div>
   </section>
 
@@ -431,6 +520,157 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <button class="auth-submit" id="forgot-btn" onclick="doForgot()">Send Reset Link →</button>
       <div class="auth-err" id="forgot-err"></div>
       <div class="auth-ok" id="forgot-ok" style="display:none">✓ Check your email for the reset link.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SIGNUP PAGE ═══════════ -->
+<div id="page-signup" class="page">
+  <button class="su-back" onclick="showPage('home')">← Back</button>
+
+  <div class="su-wrap">
+    <div class="su-logo">
+      <div class="su-logo-icon">⬡</div>
+      <span class="su-logo-text">OmniPublish</span>
+    </div>
+
+    <div class="su-card">
+      <div class="su-heading">Sign-up in seconds…</div>
+      <div class="su-sub">Then start publishing to 14 platforms in minutes.</div>
+
+      <!-- Google Button -->
+      <button class="su-google-btn" onclick="doGoogleSignup()">
+        <svg class="su-google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+        Sign-up with Google
+      </button>
+
+      <div class="su-divider">— or —</div>
+
+      <label class="su-label">Sign-up with email</label>
+      <div class="su-email-row">
+        <input class="su-email-input" type="email" id="su-email" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')doMagicLink()">
+        <button class="su-link-btn" id="su-link-btn" onclick="doMagicLink()">Send login link →</button>
+      </div>
+
+      <!-- Cloudflare Turnstile placeholder (render in prod) -->
+      <div class="su-turnstile" id="su-turnstile" style="display:none">
+        <div class="cf-turnstile" data-sitekey="" data-theme="dark"></div>
+      </div>
+
+      <div class="su-msg" id="su-msg"></div>
+
+      <div class="su-switch">Already have an account? <a onclick="showPage('auth',{tab:'login'})">Sign in here</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ ONBOARDING PAGE ═══════════ -->
+<div id="page-onboarding" class="page">
+  <div class="ob-wrap">
+    <div class="ob-header">
+      <div class="ob-steps">
+        <div class="ob-step active" id="ob-step-1">
+          <div class="ob-step-circle">1</div>
+          <div class="ob-step-label">Role</div>
+        </div>
+        <div class="ob-connector" id="ob-conn-1"></div>
+        <div class="ob-step" id="ob-step-2">
+          <div class="ob-step-circle">2</div>
+          <div class="ob-step-label">Accounts</div>
+        </div>
+        <div class="ob-connector" id="ob-conn-2"></div>
+        <div class="ob-step" id="ob-step-3">
+          <div class="ob-step-circle">3</div>
+          <div class="ob-step-label">Done</div>
+        </div>
+      </div>
+      <div class="ob-avatar" id="ob-avatar">?</div>
+    </div>
+
+    <!-- Step 1: Role -->
+    <div class="ob-panel active" id="ob-panel-1">
+      <div class="ob-accent">almost ready</div>
+      <div class="ob-title">What sounds most like you?</div>
+      <div class="ob-roles" id="ob-roles">
+        <div class="ob-role-card" onclick="selectRole(this,'founder')">
+          <div class="ob-role-radio"></div>
+          <div class="ob-role-icon">🚀</div>
+          <div class="ob-role-text">
+            <div class="ob-role-name">Founder</div>
+            <div class="ob-role-desc">Building a business</div>
+          </div>
+        </div>
+        <div class="ob-role-card" onclick="selectRole(this,'creator')">
+          <div class="ob-role-radio"></div>
+          <div class="ob-role-icon">🎨</div>
+          <div class="ob-role-text">
+            <div class="ob-role-name">Creator</div>
+            <div class="ob-role-desc">Growing an audience</div>
+          </div>
+        </div>
+        <div class="ob-role-card" onclick="selectRole(this,'agency')">
+          <div class="ob-role-radio"></div>
+          <div class="ob-role-icon">🏢</div>
+          <div class="ob-role-text">
+            <div class="ob-role-name">Agency</div>
+            <div class="ob-role-desc">Managing client accounts</div>
+          </div>
+        </div>
+        <div class="ob-role-card" onclick="selectRole(this,'enterprise')">
+          <div class="ob-role-radio"></div>
+          <div class="ob-role-icon">🏗️</div>
+          <div class="ob-role-text">
+            <div class="ob-role-name">Enterprise</div>
+            <div class="ob-role-desc">Big company team</div>
+          </div>
+        </div>
+        <div class="ob-role-card" onclick="selectRole(this,'small_business')">
+          <div class="ob-role-radio"></div>
+          <div class="ob-role-icon">🛍️</div>
+          <div class="ob-role-text">
+            <div class="ob-role-name">Small Business</div>
+            <div class="ob-role-desc">Running a small business</div>
+          </div>
+        </div>
+        <div class="ob-role-card" onclick="selectRole(this,'personal')">
+          <div class="ob-role-radio"></div>
+          <div class="ob-role-icon">👤</div>
+          <div class="ob-role-text">
+            <div class="ob-role-name">Personal</div>
+            <div class="ob-role-desc">Just for me</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Platforms -->
+    <div class="ob-panel" id="ob-panel-2">
+      <div class="ob-accent">step 2 of 3</div>
+      <div class="ob-title">Add all your accounts</div>
+      <div class="ob-plat-sub">Connect your social media accounts to post to all of them at once.</div>
+      <div class="ob-plats-grid" id="ob-plats-grid"></div>
+      <button class="ob-continue" onclick="finishOnboarding()">Continue →</button>
+      <div class="ob-clearfix"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Platform Connect Modal -->
+<div class="pm-overlay" id="pm-overlay" style="display:none" onclick="if(event.target===this)closePlatModal()">
+  <div class="pm-card">
+    <div class="pm-header">
+      <span class="pm-plat-icon" id="pm-icon"></span>
+      <span class="pm-title" id="pm-title">Connect Platform</span>
+    </div>
+    <ul class="pm-reqs" id="pm-reqs"></ul>
+    <div class="pm-actions">
+      <button class="pm-cancel" onclick="closePlatModal()">Cancel</button>
+      <button class="pm-connect" id="pm-connect-btn" onclick="connectPlatform()">Connect</button>
     </div>
   </div>
 </div>
@@ -666,11 +906,22 @@ function showPage(name, opts = {}) {
     if (name === 'home') {
       initScrollAnimations();
     }
+    if (name === 'signup') {
+      document.getElementById('su-email').value = '';
+      document.getElementById('su-msg').textContent = '';
+      document.getElementById('su-msg').className = 'su-msg';
+    }
+    if (name === 'onboarding') {
+      initOnboarding();
+    }
     window.scrollTo(0, 0);
   });
 }
 
-function goAuth(tab) { showPage('auth', { tab }); }
+function goAuth(tab) {
+  if (tab === 'register') { showPage('signup'); return; }
+  showPage('auth', { tab });
+}
 
 function updateDashboardUser() {
   const u = auth.user;
@@ -764,7 +1015,11 @@ async function doRegister() {
     if (!res.ok) { errEl.textContent = data.errors?.[0]?.message || data.error || 'Registration failed.'; return; }
     auth.set({ ...data, user: data.user });
     toast('Welcome to OmniPublish! 🚀', 'ok');
-    showPage('dashboard');
+    if (!localStorage.getItem('omni_onboarding_done')) {
+      showPage('onboarding');
+    } else {
+      showPage('dashboard');
+    }
   } catch (e) {
     errEl.textContent = 'Connection error. Is the server running?';
   } finally {
@@ -1184,11 +1439,196 @@ function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
 /* ══════════════════════════════════════
+   SIGNUP & MAGIC LINK
+══════════════════════════════════════ */
+function doGoogleSignup() {
+  window.location.href = base() + '/api/v1/auth/google';
+}
+
+async function doMagicLink() {
+  const email  = document.getElementById('su-email').value.trim();
+  const msgEl  = document.getElementById('su-msg');
+  const btn    = document.getElementById('su-link-btn');
+  msgEl.className = 'su-msg';
+  msgEl.textContent = '';
+  if (!email) { msgEl.className = 'su-msg err'; msgEl.textContent = 'Enter your email first.'; return; }
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res  = await fetch(base() + '/api/v1/auth/magic-link', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    await res.json();
+    msgEl.className = 'su-msg ok';
+    msgEl.textContent = '✓ Check your email — login link sent!';
+    btn.textContent = 'Sent ✓';
+  } catch {
+    msgEl.className = 'su-msg err';
+    msgEl.textContent = 'Connection error. Is the server running?';
+    btn.disabled = false; btn.textContent = 'Send login link →';
+  }
+}
+
+async function verifyMagicToken(token) {
+  try {
+    const res  = await fetch(base() + '/api/v1/auth/magic-link/verify?token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
+    auth.set({ ...data, user: data.user });
+    toast('Welcome to OmniPublish! 🚀', 'ok');
+    // Clean URL
+    history.replaceState(null, '', '/');
+    if (!localStorage.getItem('omni_onboarding_done')) {
+      showPage('onboarding');
+    } else {
+      showPage('dashboard');
+    }
+  } catch {
+    toast('Connection error verifying link.', 'err');
+    showPage('home');
+  }
+}
+
+/* ══════════════════════════════════════
+   ONBOARDING
+══════════════════════════════════════ */
+const OB_PLATFORMS = [
+  { id: 'instagram', name: 'Instagram', icon: '📷', reqs: ['Must be a Business or Creator profile', 'Be logged into the account you want to connect'] },
+  { id: 'twitter',   name: 'X (Twitter)', icon: '𝕏',  reqs: ['Must have a verified phone number', 'Account must be in good standing'] },
+  { id: 'tiktok',    name: 'TikTok',    icon: '🎵', reqs: ['Must be a Business or Creator profile', 'Account must be older than 48 hours', 'Be logged into the account you want to connect'] },
+  { id: 'youtube',   name: 'YouTube',   icon: '▶️', reqs: ['Must have a Google account linked', 'Channel must be verified for uploads > 15 min'] },
+  { id: 'facebook',  name: 'Facebook',  icon: '👍', reqs: ['Must be an Admin of the Page', 'Page must be published and not restricted'] },
+  { id: 'linkedin',  name: 'LinkedIn',  icon: '💼', reqs: ['Personal profile or Company Page', 'Must be signed in to the account to connect'] },
+  { id: 'bluesky',   name: 'Bluesky',   icon: '☁️', reqs: ['Bluesky account required', 'Use your handle and app password'] },
+  { id: 'threads',   name: 'Threads',   icon: '🧵', reqs: ['Must have an Instagram account linked', 'Threads app must be installed'] },
+  { id: 'pinterest', name: 'Pinterest', icon: '📌', reqs: ['Must be a Business account', 'Account must be verified'] },
+];
+
+let _obConnected = {};
+let _currentPlatId = null;
+
+function initOnboarding() {
+  const u = auth.user;
+  if (u) {
+    const initials = (u.full_name || u.email || 'U')[0].toUpperCase();
+    document.getElementById('ob-avatar').textContent = initials;
+  }
+  obGoStep(1);
+  _obConnected = {};
+  renderObPlatforms();
+}
+
+function obGoStep(n) {
+  [1, 2, 3].forEach(i => {
+    const stepEl = document.getElementById('ob-step-' + i);
+    const panelEl = document.getElementById('ob-panel-' + i);
+    if (!stepEl) return;
+    stepEl.className = 'ob-step' + (i < n ? ' done' : i === n ? ' active' : '');
+    if (panelEl) panelEl.className = 'ob-panel' + (i === n ? ' active' : '');
+  });
+  [1, 2].forEach(i => {
+    const conn = document.getElementById('ob-conn-' + i);
+    if (conn) conn.className = 'ob-connector' + (i < n ? ' done' : '');
+  });
+}
+
+function selectRole(card, role) {
+  document.querySelectorAll('.ob-role-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  localStorage.setItem('omni_user_role', role);
+  setTimeout(() => obGoStep(2), 300);
+}
+
+function renderObPlatforms() {
+  const grid = document.getElementById('ob-plats-grid');
+  grid.innerHTML = OB_PLATFORMS.map(p => `
+    <div class="ob-plat-card" id="ob-plat-${p.id}">
+      <div class="ob-plat-icon">${p.icon}</div>
+      <div class="ob-plat-name">${p.name}</div>
+      <button class="ob-add-btn" id="ob-add-${p.id}" onclick="openPlatModal('${p.id}')">Add</button>
+    </div>
+  `).join('');
+}
+
+function openPlatModal(platId) {
+  const p = OB_PLATFORMS.find(x => x.id === platId);
+  if (!p) return;
+  _currentPlatId = platId;
+  document.getElementById('pm-icon').textContent = p.icon;
+  document.getElementById('pm-title').textContent = 'Connect ' + p.name;
+  document.getElementById('pm-reqs').innerHTML = p.reqs.map(r => `<li class="pm-req">${escHtml(r)}</li>`).join('');
+  document.getElementById('pm-connect-btn').textContent = 'Connect ' + p.name;
+  document.getElementById('pm-overlay').style.display = 'flex';
+}
+
+function closePlatModal() {
+  document.getElementById('pm-overlay').style.display = 'none';
+  _currentPlatId = null;
+}
+
+function connectPlatform() {
+  if (!_currentPlatId) return;
+  const p = OB_PLATFORMS.find(x => x.id === _currentPlatId);
+  closePlatModal();
+  // In dev: mark as connected with a toast
+  _obConnected[_currentPlatId] = true;
+  const btn = document.getElementById('ob-add-' + _currentPlatId);
+  if (btn) { btn.textContent = '✓ Connected'; btn.className = 'ob-add-btn connected'; btn.onclick = null; }
+  toast(p.name + ' connected! (dev mode)', 'ok');
+}
+
+function finishOnboarding() {
+  localStorage.setItem('omni_onboarding_done', '1');
+  showPage('dashboard');
+}
+
+/* ══════════════════════════════════════
    INIT
 ══════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
   applyTheme(currentTheme);
   buildMarquee();
+
+  // Handle Google OAuth redirect (?oauth=<encoded-payload>)
+  const params = new URLSearchParams(window.location.search);
+  const oauthPayload = params.get('oauth');
+  const oauthError   = params.get('oauth_error');
+  const magicToken   = params.get('magic');
+
+  if (oauthError) {
+    history.replaceState(null, '', '/');
+    if (oauthError === 'not_configured') {
+      // Show signup page with a message
+      showPage('signup');
+      setTimeout(() => toast('Google OAuth coming soon — use email link for now', 'err'), 400);
+    } else {
+      showPage('home');
+      setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
+    }
+    return;
+  }
+
+  if (oauthPayload) {
+    try {
+      const data = JSON.parse(decodeURIComponent(oauthPayload));
+      auth.set({ ...data, user: data.user });
+      history.replaceState(null, '', '/');
+      if (!localStorage.getItem('omni_onboarding_done')) {
+        showPage('onboarding');
+      } else {
+        showPage('dashboard');
+      }
+    } catch {
+      history.replaceState(null, '', '/');
+      showPage('home');
+    }
+    return;
+  }
+
+  if (magicToken) {
+    verifyMagicToken(magicToken);
+    return;
+  }
 
   if (auth.token && auth.user) {
     showPage('dashboard');

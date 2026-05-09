@@ -166,4 +166,70 @@ router.post('/reset-password', authRateLimiter, validateBody('resetPassword'), a
   res.json({ message: 'Password updated successfully. Please log in with your new password.' });
 });
 
+/* ── POST /auth/magic-link ── */
+router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (req, res) => {
+  const { email } = req.body;
+
+  // Always return 200 — prevents email enumeration
+  const { data: user } = await supabase.from('users')
+    .select('id').eq('email', email).eq('is_active', true).single();
+
+  if (!user) {
+    logger.info('Magic link requested for unknown email (silently ignored)');
+    return res.json({ message: 'If that email is registered you will receive a login link shortly' });
+  }
+
+  // Invalidate old unused tokens for this user
+  await supabase.from('password_resets').delete().eq('user_id', user.id).is('used_at', null);
+
+  const plainToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');
+  const expiresAt  = new Date(Date.now() + (parseInt(process.env.MAGIC_LINK_EXPIRY_MINS || '15', 10)) * 60 * 1000);
+
+  await supabase.from('password_resets').insert({
+    id: uuidv4(), user_id: user.id, token_hash: tokenHash, expires_at: expiresAt,
+  });
+
+  const loginUrl = `${process.env.APP_URL || 'http://localhost:4000'}/?magic=${plainToken}`;
+
+  if (process.env.NODE_ENV !== 'production') {
+    logger.info('Magic link (dev only)', { userId: user.id, loginUrl });
+  }
+  // TODO: send loginUrl via email provider in production
+
+  logger.info('Magic link issued', { userId: user.id });
+  res.json({ message: 'If that email is registered you will receive a login link shortly' });
+});
+
+/* ── GET /auth/magic-link/verify ── */
+router.get('/magic-link/verify', async (req, res) => {
+  const { token } = req.query;
+  if (!token || typeof token !== 'string') return res.status(400).json({ error: 'token required' });
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+  const { data: record } = await supabase.from('password_resets')
+    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).single();
+
+  if (!record)                                    return res.status(400).json({ error: 'Invalid or expired link' });
+  if (record.used_at)                             return res.status(400).json({ error: 'Link already used' });
+  if (new Date(record.expires_at) < new Date())  return res.status(400).json({ error: 'Link has expired' });
+
+  // Mark used
+  await supabase.from('password_resets').update({ used_at: new Date() }).eq('id', record.id);
+
+  // Find or create user
+  const { data: user } = await supabase.from('users')
+    .select('id, email, role, plan, full_name').eq('id', record.user_id).single();
+  if (!user) return res.status(400).json({ error: 'User not found' });
+
+  await supabase.from('users').update({ last_login_at: new Date() }).eq('id', user.id);
+
+  const tokens    = issueTokens(user);
+  const csrfToken = generateCSRFToken();
+  res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: process.env.NODE_ENV === 'production', sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+  logger.info('Magic link login', { userId: user.id });
+  res.json({ user: { id: user.id, email: user.email, role: user.role, plan: user.plan }, ...tokens, csrfToken });
+});
+
 module.exports = router;
