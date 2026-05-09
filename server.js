@@ -25,6 +25,7 @@ const { requestSanitizer }         = require('./middleware/sanitizer');
 const { auditLogger }              = require('./middleware/audit');
 const { verifyCSRF }               = require('./middleware/csrf');
 const { securityHeaders }          = require('./config/security');
+const { requireApiKey, requireJwtOrApiKey } = require('./middleware/apiKey');
 
 const authRoutes      = require('./routes/auth');
 const postsRoutes     = require('./routes/posts');
@@ -184,7 +185,12 @@ app.post('/api/v1/ai/adapt', require('./middleware/auth').verifyToken, require('
   const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
   res.json({ adapted });
 });
-// Serve static test UI
+// Admin-only route group — requires API key
+app.use('/api/v1/admin', requireApiKey, (req, res) => {
+  res.json({ message: 'Admin API', user: req.user });
+});
+
+// Serve static UI
 app.use(express.static('public'));
 
 // Catch-all 404

@@ -11,7 +11,17 @@ const crypto = require('crypto');
 const { logger } = require('../utils/logger');
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
-const CSRF_SKIP    = new Set(['/api/v1/auth/login', '/api/v1/auth/register', '/api/v1/health']);
+// Include both full-path and mount-stripped variants so the check works regardless
+// of whether req.path is stripped by Express's app.use() mount prefix
+const CSRF_SKIP = new Set([
+  '/api/v1/auth/login',            '/v1/auth/login',
+  '/api/v1/auth/register',         '/v1/auth/register',
+  '/api/v1/auth/forgot-password',  '/v1/auth/forgot-password',
+  '/api/v1/auth/reset-password',   '/v1/auth/reset-password',
+  '/api/v1/health',                '/v1/health',
+  '/api/v1/health/live',           '/v1/health/live',
+  '/api/v1/health/ready',          '/v1/health/ready',
+]);
 
 const verifyCSRF = (req, res, next) => {
   if (SAFE_METHODS.has(req.method)) return next();

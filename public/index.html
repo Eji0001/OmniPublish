@@ -1,453 +1,1201 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OmniPublish API Tester</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0f1117; --surface: #1a1d27; --border: #2d3148;
-      --accent: #6c63ff; --accent2: #00d4aa; --error: #ff5b5b;
-      --text: #e2e8f0; --muted: #64748b; --success: #22c55e;
-    }
-    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
-    header h1 { font-size: 1.25rem; font-weight: 700; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); flex-shrink: 0; transition: background .3s; }
-    .status-dot.online { background: var(--success); box-shadow: 0 0 6px var(--success); }
-    .status-dot.offline { background: var(--error); }
-    #status-text { font-size: .8rem; color: var(--muted); margin-left: auto; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OmniPublish — AI Multi-Platform Publisher</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--spring:cubic-bezier(0.34,1.56,0.64,1);--ease-out:cubic-bezier(0.22,1,0.36,1)}
+[data-theme="dark"]{--bg:#07070f;--s1:#0d0d1a;--s2:#12121f;--s3:#1a1a2e;--s4:#22223a;--bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.14);--bd3:rgba(255,255,255,0.22);--tx:#e8e8ff;--tx2:#9090bb;--tx3:#5a5a80;--acc:#6c5ce7;--acc2:#fd79a8;--acc3:#00cec9;--warn:#fdcb6e;--err:#e17055;--card-shadow:0 2px 16px rgba(0,0,0,0.4);--glow:rgba(108,92,231,0.25);--badge-bg:rgba(108,92,231,0.22);--badge-tx:#a29bfe;--btn-grad:linear-gradient(135deg,#6c5ce7,#fd79a8);--ai-border:rgba(108,92,231,0.45);--ai-bg:linear-gradient(135deg,rgba(108,92,231,0.16),rgba(253,121,168,0.1))}
+[data-theme="sky"]{--bg:#daeeff;--s1:#ffffff;--s2:#f0f8ff;--s3:#e0f2ff;--s4:#c8e6ff;--bd:rgba(0,90,180,0.1);--bd2:rgba(0,90,180,0.18);--bd3:rgba(0,90,180,0.28);--tx:#0a1628;--tx2:#2a4a72;--tx3:#6a8aae;--acc:#0066dd;--acc2:#e91e8c;--acc3:#0099cc;--warn:#d97706;--err:#dc2626;--card-shadow:0 2px 16px rgba(0,80,180,0.1);--glow:rgba(0,102,221,0.2);--badge-bg:rgba(0,102,221,0.12);--badge-tx:#0044aa;--btn-grad:linear-gradient(135deg,#0066dd,#e91e8c);--ai-border:rgba(0,102,221,0.4);--ai-bg:linear-gradient(135deg,rgba(0,102,221,0.1),rgba(233,30,140,0.07))}
+body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;transition:background .35s,color .35s}
+[data-theme="dark"] body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(108,92,231,0.14),transparent),linear-gradient(rgba(108,92,231,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(108,92,231,0.02) 1px,transparent 1px);background-size:100% 100%,48px 48px,48px 48px;pointer-events:none;z-index:0}
 
-    .layout { display: grid; grid-template-columns: 240px 1fr; height: calc(100vh - 57px); }
-    nav { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 12px 0; }
-    .nav-group { margin-bottom: 4px; }
-    .nav-label { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 8px 16px 4px; }
-    .nav-btn { display: block; width: 100%; text-align: left; background: none; border: none; color: var(--text); padding: 7px 16px; cursor: pointer; font-size: .82rem; border-left: 3px solid transparent; transition: all .15s; }
-    .nav-btn:hover { background: rgba(108,99,255,.08); color: var(--accent); }
-    .nav-btn.active { background: rgba(108,99,255,.14); border-left-color: var(--accent); color: var(--accent); }
-    .method { font-size: .65rem; font-weight: 700; padding: 2px 5px; border-radius: 3px; margin-right: 6px; }
-    .GET { background: rgba(0,212,170,.18); color: var(--accent2); }
-    .POST { background: rgba(108,99,255,.22); color: #a5a0ff; }
-    .PATCH { background: rgba(251,191,36,.18); color: #fbbf24; }
-    .DELETE { background: rgba(255,91,91,.18); color: var(--error); }
+/* ═══ PAGE TRANSITIONS ═══ */
+.page{display:none;min-height:100vh;position:relative;z-index:1;opacity:0;transform:translateY(14px);transition:opacity .4s var(--ease-out),transform .45s var(--spring)}
+.page.active{display:block;opacity:1;transform:none}
+.page.exit{opacity:0;transform:translateY(-10px)}
 
-    main { display: flex; flex-direction: column; overflow: hidden; }
-    .panel { padding: 24px; flex: 1; overflow-y: auto; }
-    .panel-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-    .badge { font-size: .7rem; padding: 3px 8px; border-radius: 12px; font-weight: 600; }
-    .form-group { margin-bottom: 14px; }
-    label { font-size: .78rem; color: var(--muted); display: block; margin-bottom: 5px; }
-    input, textarea, select { width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 9px 12px; font-size: .85rem; font-family: inherit; transition: border-color .15s; }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); }
-    textarea { resize: vertical; min-height: 80px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: .78rem; }
-    .btn { padding: 9px 20px; border-radius: 6px; font-size: .85rem; font-weight: 600; cursor: pointer; border: none; transition: all .15s; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-primary:hover { background: #7c75ff; }
-    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-sm { padding: 5px 12px; font-size: .75rem; }
-    .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
-    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+/* ═══ HOMEPAGE NAV ═══ */
+.home-nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 2rem;height:60px;display:flex;align-items:center;justify-content:space-between;background:rgba(7,7,15,0.8);backdrop-filter:blur(20px);border-bottom:1px solid var(--bd);transition:all .35s}
+[data-theme="sky"] .home-nav{background:rgba(218,238,255,0.85)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:800;text-decoration:none}
+.nav-logo-icon{width:32px;height:32px;border-radius:9px;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.nav-logo-text{background:var(--btn-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-btn{padding:7px 18px;border-radius:20px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:inherit;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center}
+.nav-btn-ghost{background:transparent;border:1px solid var(--bd2);color:var(--tx2)}
+.nav-btn-ghost:hover{border-color:var(--acc);color:var(--acc)}
+.nav-btn-fill{background:var(--btn-grad);color:#fff}
+.nav-btn-fill:hover{opacity:.88;transform:translateY(-1px)}
+.theme-pill{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:20px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx2);font-size:12px;font-weight:700;cursor:pointer;transition:all .3s;font-family:inherit}
+.theme-pill:hover{border-color:var(--bd3)}
 
-    .response-box { margin-top: 20px; }
-    .response-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .response-status { font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 4px; }
-    .s2xx { background: rgba(34,197,94,.2); color: var(--success); }
-    .s4xx { background: rgba(251,191,36,.2); color: #fbbf24; }
-    .s5xx { background: rgba(255,91,91,.2); color: var(--error); }
-    pre { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 14px; font-family: 'Cascadia Code','Fira Code',monospace; font-size: .75rem; overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; }
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .token-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 8px 16px; font-size: .73rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-    .token-chip { background: rgba(108,99,255,.15); border: 1px solid rgba(108,99,255,.3); border-radius: 4px; padding: 3px 8px; font-family: monospace; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .divider { height: 1px; background: var(--border); margin: 16px 0; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .checkbox-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .checkbox-row label { display: flex; align-items: center; gap: 5px; color: var(--text); cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 5px 10px; font-size: .78rem; transition: all .15s; }
-    .checkbox-row input[type=checkbox] { width: auto; accent-color: var(--accent); }
-    .checkbox-row label:has(input:checked) { border-color: var(--accent); background: rgba(108,99,255,.12); }
-    .info-box { background: rgba(0,212,170,.07); border: 1px solid rgba(0,212,170,.25); border-radius: 6px; padding: 10px 14px; font-size: .78rem; color: var(--accent2); margin-bottom: 14px; }
-  </style>
+/* ═══ HERO ═══ */
+.hero{padding:140px 2rem 80px;text-align:center;max-width:900px;margin:0 auto}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:20px;background:var(--badge-bg);border:1px solid var(--ai-border);color:var(--badge-tx);font-size:12px;font-weight:700;margin-bottom:1.5rem;animation:fadeUp .6s var(--ease-out) both}
+.hero-title{font-size:clamp(2.4rem,6vw,5rem);font-weight:900;line-height:1.08;letter-spacing:-2px;margin-bottom:1.25rem;background:linear-gradient(135deg,#6c5ce7,#fd79a8,#00cec9,#6c5ce7);background-size:300%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradientShift 5s ease infinite,fadeUp .7s var(--ease-out) .1s both}
+.hero-sub{font-size:1.15rem;color:var(--tx2);max-width:580px;margin:0 auto 2rem;line-height:1.7;animation:fadeUp .7s var(--ease-out) .2s both}
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:2.5rem;animation:fadeUp .7s var(--ease-out) .3s both}
+.hero-btn-primary{padding:13px 28px;border-radius:14px;background:var(--btn-grad);color:#fff;font-size:15px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .25s;box-shadow:0 8px 24px var(--glow)}
+.hero-btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 32px var(--glow)}
+.hero-btn-ghost{padding:13px 28px;border-radius:14px;background:transparent;border:1px solid var(--bd2);color:var(--tx);font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .25s}
+.hero-btn-ghost:hover{border-color:var(--acc);color:var(--acc)}
+.hero-platforms{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;animation:fadeUp .7s var(--ease-out) .4s both}
+.hero-plat-chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;background:var(--s2);border:1px solid var(--bd);font-size:12px;font-weight:600;color:var(--tx2)}
+.hero-plat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ═══ MARQUEE ═══ */
+.marquee-section{overflow:hidden;padding:28px 0;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);background:var(--s1)}
+.marquee-track{display:flex;width:max-content;animation:marquee 22s linear infinite}
+.marquee-track:hover{animation-play-state:paused}
+.marquee-item{display:flex;align-items:center;gap:8px;padding:0 28px;white-space:nowrap;font-size:13px;font-weight:700;color:var(--tx2);transition:color .2s}
+.marquee-item:hover{color:var(--tx)}
+.marquee-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.marquee-sep{color:var(--bd3);font-size:18px;padding:0 4px}
+
+/* ═══ FEATURES ═══ */
+.section{padding:80px 2rem;max-width:1100px;margin:0 auto}
+.section-label{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--acc);text-align:center;margin-bottom:12px}
+.section-title{font-size:clamp(1.6rem,3.5vw,2.6rem);font-weight:800;text-align:center;letter-spacing:-1px;margin-bottom:.6rem}
+.section-sub{text-align:center;color:var(--tx2);font-size:1rem;margin-bottom:3rem;line-height:1.6;max-width:520px;margin-left:auto;margin-right:auto}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feat-card{background:var(--s1);border:1px solid var(--bd);border-radius:16px;padding:1.5rem;transition:all .3s;box-shadow:var(--card-shadow);opacity:0;transform:translateY(28px)}
+.feat-card.visible{opacity:1;transform:none;transition:opacity .65s var(--ease-out),transform .7s var(--spring)}
+.feat-card:hover{border-color:var(--ai-border);transform:translateY(-3px);box-shadow:0 12px 32px var(--glow)}
+.feat-card:nth-child(1){transition-delay:0ms}.feat-card:nth-child(2){transition-delay:80ms}.feat-card:nth-child(3){transition-delay:160ms}.feat-card:nth-child(4){transition-delay:60ms}.feat-card:nth-child(5){transition-delay:140ms}.feat-card:nth-child(6){transition-delay:220ms}
+.feat-icon{font-size:1.6rem;margin-bottom:12px;display:block}
+.feat-title{font-size:15px;font-weight:800;margin-bottom:6px}
+.feat-desc{font-size:13px;color:var(--tx2);line-height:1.6}
+
+/* ═══ STATS ═══ */
+.stats-section{background:var(--s1);border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);padding:60px 2rem}
+.stats-inner{max-width:800px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:2rem;text-align:center}
+.stat-big{opacity:0;transform:translateY(20px)}
+.stat-big.visible{opacity:1;transform:none;transition:opacity .6s var(--ease-out),transform .65s var(--spring)}
+.stat-big:nth-child(2){transition-delay:80ms}.stat-big:nth-child(3){transition-delay:160ms}
+.stat-big-num{font-size:clamp(2rem,5vw,3.5rem);font-weight:900;background:var(--btn-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1}
+.stat-big-label{font-size:13px;color:var(--tx2);margin-top:6px;font-weight:600}
+
+/* ═══ CTA BANNER ═══ */
+.cta-section{padding:80px 2rem;text-align:center}
+.cta-card{max-width:680px;margin:0 auto;background:var(--ai-bg);border:1px solid var(--ai-border);border-radius:24px;padding:3rem 2rem;box-shadow:0 24px 64px var(--glow);opacity:0;transform:translateY(28px)}
+.cta-card.visible{opacity:1;transform:none;transition:opacity .65s var(--ease-out),transform .7s var(--spring)}
+.cta-title{font-size:clamp(1.4rem,3vw,2rem);font-weight:800;margin-bottom:.75rem;letter-spacing:-0.5px}
+.cta-sub{color:var(--tx2);font-size:.95rem;margin-bottom:1.75rem;line-height:1.6}
+.cta-btn{padding:14px 32px;border-radius:14px;background:var(--btn-grad);color:#fff;font-size:15px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .25s;box-shadow:0 8px 24px var(--glow)}
+.cta-btn:hover{transform:translateY(-2px);box-shadow:0 14px 32px var(--glow)}
+.home-footer{text-align:center;padding:2rem;color:var(--tx3);font-size:12px;border-top:1px solid var(--bd)}
+
+/* ═══ AUTH PAGE ═══ */
+#page-auth{display:none;min-height:100vh;align-items:center;justify-content:center;padding:2rem}
+#page-auth.active{display:flex}
+.auth-back{position:fixed;top:1.25rem;left:1.5rem;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--tx2);cursor:pointer;background:none;border:none;font-family:inherit;transition:color .2s;z-index:10}
+.auth-back:hover{color:var(--tx)}
+.auth-card{background:var(--s1);border:1px solid var(--bd2);border-radius:20px;padding:2.25rem;width:100%;max-width:420px;box-shadow:0 24px 64px rgba(0,0,0,0.4);animation:fadeUp .5s var(--ease-out) both}
+.auth-logo{display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:1.75rem}
+.auth-logo-icon{width:38px;height:38px;border-radius:11px;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:18px}
+.auth-logo-text{font-size:20px;font-weight:900;background:var(--btn-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.auth-tabs{display:flex;gap:4px;background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:4px;margin-bottom:1.75rem}
+.auth-tab{flex:1;padding:8px;border-radius:9px;border:none;background:transparent;color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+.auth-tab.active{background:var(--s1);color:var(--tx);border:1px solid var(--bd2);box-shadow:var(--card-shadow)}
+.auth-form{display:none}
+.auth-form.active{display:block;animation:fadeUp .3s var(--ease-out) both}
+.auth-title{font-size:18px;font-weight:800;margin-bottom:.35rem}
+.auth-subtitle{font-size:13px;color:var(--tx2);margin-bottom:1.5rem;line-height:1.5}
+.field{margin-bottom:1rem;position:relative}
+.field label{font-size:11px;font-weight:700;color:var(--tx3);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.field input{width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:10px;padding:10px 14px;color:var(--tx);font-size:14px;outline:none;font-family:inherit;transition:all .2s}
+.field input:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--glow)}
+.field input.err-input{border-color:var(--err)}
+.pw-toggle{position:absolute;right:12px;bottom:11px;background:none;border:none;color:var(--tx3);cursor:pointer;font-size:13px;padding:0;transition:color .2s}
+.pw-toggle:hover{color:var(--tx)}
+.pw-strength{margin-top:6px;display:flex;gap:4px}
+.pw-seg{flex:1;height:3px;border-radius:2px;background:var(--bd2);transition:background .3s}
+.pw-seg.s1{background:var(--err)}.pw-seg.s2{background:var(--warn)}.pw-seg.s3{background:#74b9ff}.pw-seg.s4{background:var(--acc3)}
+.pw-checks{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:3px}
+.pw-check{font-size:11px;color:var(--tx3);display:flex;align-items:center;gap:5px;transition:color .2s}
+.pw-check.ok{color:var(--acc3)}
+.pw-check::before{content:'○';transition:content .2s}
+.pw-check.ok::before{content:'✓'}
+.auth-submit{width:100%;padding:12px;border-radius:12px;background:var(--btn-grad);color:#fff;font-size:15px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .25s;margin-top:.5rem;position:relative;overflow:hidden}
+.auth-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 8px 20px var(--glow)}
+.auth-submit:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.auth-err{font-size:12px;color:var(--err);text-align:center;margin-top:.75rem;min-height:18px;animation:shake .35s ease}
+.auth-ok{font-size:12px;color:var(--acc3);text-align:center;margin-top:.75rem}
+.auth-switch{text-align:center;margin-top:1.25rem;font-size:13px;color:var(--tx2)}
+.auth-switch a{color:var(--acc);cursor:pointer;font-weight:700;text-decoration:none}
+.auth-switch a:hover{text-decoration:underline}
+.forgot-link{font-size:12px;color:var(--tx3);cursor:pointer;text-align:right;margin-top:.25rem;transition:color .2s;display:block}
+.forgot-link:hover{color:var(--acc)}
+.spin-sm{width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+
+/* ═══ DASHBOARD ═══ */
+.dash-header{position:sticky;top:0;z-index:200;background:var(--s1);backdrop-filter:blur(24px);border-bottom:1px solid var(--bd2);padding:0 1.5rem;height:58px;display:flex;align-items:center;justify-content:space-between;transition:background .35s,border-color .35s;box-shadow:var(--card-shadow)}
+[data-theme="dark"] .dash-header{background:rgba(7,7,15,0.88)}
+.dash-logo{font-size:17px;font-weight:800;display:flex;align-items:center;gap:10px}
+.dash-logo-icon{width:30px;height:30px;border-radius:8px;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:14px}
+.dash-logo-text{background:var(--btn-grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.dash-right{display:flex;align-items:center;gap:8px}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--tx2);padding:5px 12px;border:1px solid var(--bd);border-radius:20px;background:var(--s2)}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--acc3);box-shadow:0 0 6px var(--acc3);animation:pulse 2s ease-in-out infinite}
+.user-avatar{width:30px;height:30px;border-radius:50%;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600;color:var(--tx2)}
+.dash-icon-btn{background:none;border:1px solid var(--bd);color:var(--tx2);border-radius:9px;padding:6px 10px;font-size:13px;cursor:pointer;transition:all .2s;font-family:inherit}
+.dash-icon-btn:hover{border-color:var(--bd2);color:var(--tx);background:var(--s2)}
+.logout-btn{background:transparent;border:1px solid var(--bd2);color:var(--tx2);border-radius:9px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+.logout-btn:hover{border-color:var(--err);color:var(--err)}
+.sel-badge{font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;background:var(--badge-bg);border:1px solid var(--ai-border);color:var(--badge-tx)}
+.theme-toggle{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx2);font-size:12px;font-weight:700;cursor:pointer;transition:all .3s;font-family:inherit}
+.theme-toggle:hover{border-color:var(--bd3);color:var(--tx)}
+
+/* ═══ DASHBOARD LAYOUT ═══ */
+.app{display:grid;grid-template-columns:390px 1fr 370px;min-height:calc(100vh - 58px);position:relative;z-index:1}
+.panel{border-right:1px solid var(--bd);padding:1.25rem 1.25rem 4rem;overflow-y:auto;max-height:calc(100vh - 58px);transition:border-color .35s}
+.panel:last-child{border-right:none}
+.panel-head{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--tx3);margin-bottom:1.25rem;display:flex;align-items:center;gap:8px}
+.panel-head::before,.panel-head::after{content:'';flex:1;height:1px;background:var(--bd)}
+.compose-box{background:var(--s1);border:1px solid var(--bd);border-radius:14px;padding:1rem;margin-bottom:1rem;transition:all .3s;box-shadow:var(--card-shadow)}
+.compose-box:focus-within{border-color:var(--ai-border);box-shadow:0 0 0 3px var(--glow)}
+.compose-ta{width:100%;background:transparent;border:none;outline:none;color:var(--tx);font-size:14px;line-height:1.7;resize:none;min-height:110px;font-family:inherit;caret-color:var(--acc)}
+.compose-ta::placeholder{color:var(--tx3)}
+.compose-toolbar{display:flex;align-items:center;justify-content:space-between;padding-top:10px;border-top:1px solid var(--bd);margin-top:8px;gap:8px}
+.tbar-left{display:flex;gap:5px;flex-wrap:wrap}
+.tbar-btn{background:none;border:1px solid var(--bd);color:var(--tx2);border-radius:8px;padding:5px 9px;font-size:12px;cursor:pointer;transition:all .2s;font-family:inherit}
+.tbar-btn:hover{border-color:var(--bd2);color:var(--tx);background:var(--s2)}
+.char-count{font-size:11px;color:var(--tx3);white-space:nowrap}
+.char-count.warn{color:var(--warn)}.char-count.over{color:var(--err)}
+.format-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:1rem}
+.fmt-btn{background:var(--s1);border:1px solid var(--bd);border-radius:10px;padding:8px 4px;font-size:10px;font-weight:700;cursor:pointer;transition:all .2s;text-align:center;color:var(--tx2);font-family:inherit}
+.fmt-btn .fmt-icon{font-size:1.2rem;display:block;margin-bottom:3px}
+.fmt-btn:hover{border-color:var(--bd2);color:var(--tx);background:var(--s2)}
+.fmt-btn.active{border-color:var(--acc);background:var(--badge-bg);color:var(--badge-tx);box-shadow:0 0 0 2px var(--glow)}
+.ratio-row{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
+.ratio-btn{background:var(--s1);border:1px solid var(--bd);border-radius:9px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--tx2);font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:4px}
+.ratio-frame{border:2px solid currentColor;background:transparent;opacity:.5}
+.ratio-btn:hover{border-color:var(--bd2);color:var(--acc)}.ratio-btn:hover .ratio-frame{opacity:.8}
+.ratio-btn.active{border-color:var(--acc);color:var(--acc);background:var(--badge-bg);box-shadow:0 0 0 2px var(--glow)}.ratio-btn.active .ratio-frame{opacity:1}
+.rf-16-9{width:32px;height:18px}.rf-9-16{width:16px;height:28px}.rf-1-1{width:22px;height:22px}.rf-4-5{width:18px;height:22px}.rf-2-3{width:16px;height:24px}
+.preview-wrap{background:var(--s2);border:1px solid var(--bd);border-radius:12px;padding:1rem;margin-bottom:1rem;display:flex;flex-direction:column;align-items:center;gap:10px}
+.preview-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);width:100%;display:flex;align-items:center;justify-content:space-between}
+.preview-device{position:relative;display:flex;align-items:center;justify-content:center}
+.device-frame{background:var(--s3);border:2px solid var(--bd3);overflow:hidden;position:relative;display:flex;align-items:center;justify-content:center;transition:all .4s cubic-bezier(0.34,1.56,0.64,1)}
+.device-notch{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:40px;height:6px;background:var(--bd3);border-radius:3px}
+.device-content{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center}
+.device-content-text{font-size:9px;color:var(--tx2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;width:100%}
+.device-media-preview{width:100%;background:var(--s4);display:flex;align-items:center;justify-content:center;font-size:1.2rem;border-radius:4px;flex:1}
+.frame-16-9{width:200px;height:112px;border-radius:10px}.frame-9-16{width:90px;height:160px;border-radius:16px}.frame-1-1{width:140px;height:140px;border-radius:10px}.frame-4-5{width:112px;height:140px;border-radius:10px}.frame-2-3{width:100px;height:150px;border-radius:10px}
+.format-badge{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);border-radius:6px;padding:2px 6px;font-size:8px;font-weight:800;color:#fff;letter-spacing:.5px}
+.compat-row{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;width:100%}
+.compat-chip{font-size:9px;padding:2px 7px;border-radius:10px;background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border);font-weight:700}
+.media-zone{border:1px dashed var(--bd2);border-radius:12px;padding:1.1rem;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:1rem;position:relative;overflow:hidden}
+.media-zone:hover,.media-zone.drag{border-color:var(--acc);background:var(--badge-bg)}
+.media-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
+.media-zone-txt{font-size:12px;color:var(--tx3)}.media-zone-icon{font-size:1.6rem;margin-bottom:5px;display:block}
+.media-previews{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;justify-content:center}
+.media-thumb{width:54px;height:54px;border-radius:7px;object-fit:cover;border:1px solid var(--bd2)}
+.tabs{display:flex;gap:3px;background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:3px;margin-bottom:1rem}
+.tab-btn{flex:1;padding:7px 4px;border-radius:8px;border:none;background:transparent;color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.tab-btn.active{background:var(--s1);color:var(--tx);border:1px solid var(--bd2);box-shadow:var(--card-shadow)}
+.tab-content{display:none}.tab-content.active{display:block}
+.sched-row{display:flex;gap:8px}
+.sched-input{flex:1;background:var(--s1);border:1px solid var(--bd);border-radius:9px;padding:8px 12px;color:var(--tx);font-size:13px;outline:none;font-family:inherit;transition:all .2s}
+.sched-input:focus{border-color:var(--ai-border);box-shadow:0 0 0 2px var(--glow)}
+[data-theme="dark"] .sched-input::-webkit-calendar-picker-indicator{filter:invert(.5) sepia(1) saturate(2) hue-rotate(220deg)}
+.ai-btn{width:100%;margin-top:1rem;padding:11px 16px;border-radius:12px;border:1px solid var(--ai-border);background:var(--ai-bg);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
+.ai-btn:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0 6px 20px var(--glow)}
+.ai-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
+.template-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:.75rem}
+.tmpl-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--bd);background:var(--s1);color:var(--tx2);cursor:pointer;transition:all .2s;font-family:inherit}
+.tmpl-btn:hover{border-color:var(--acc);color:var(--acc);background:var(--badge-bg)}
+.sel-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--s2);border:1px solid var(--bd);border-radius:10px;margin-bottom:1rem;font-size:12px}
+.sel-bar-lbl{color:var(--tx2)}.sel-all-btn{background:none;border:none;color:var(--acc);font-size:12px;font-weight:700;cursor:pointer;padding:0;font-family:inherit}
+.plats-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.plat-card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:9px 11px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:9px;position:relative;overflow:hidden;box-shadow:var(--card-shadow)}
+.plat-card::after{content:'';position:absolute;inset:0;background:var(--pc,#6c5ce7);opacity:0;transition:opacity .2s;pointer-events:none}
+.plat-card.sel{border-color:var(--pc)}.plat-card.sel::after{opacity:.06}
+.plat-card:hover{background:var(--s2)}.plat-card.dimmed{opacity:.35;pointer-events:none}
+.plat-card.sel .plat-toggle{background:var(--pc);border-color:var(--pc)}.plat-card.sel .plat-toggle::after{content:'✓';font-size:9px;font-weight:900;color:#fff}
+.plat-icon{width:31px;height:31px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;color:#fff;letter-spacing:-.5px}
+.plat-info{flex:1;min-width:0}.plat-name{font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.plat-meta{font-size:10px;color:var(--tx3);margin-top:1px}
+.plat-toggle{width:17px;height:17px;border-radius:50%;border:1.5px solid var(--bd2);display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.plat-compat{font-size:9px;padding:1px 5px;border-radius:8px;background:var(--s3);color:var(--tx3);font-weight:600;margin-top:2px;display:inline-block}
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:1.25rem}
+.stat-card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:12px 10px;text-align:center;box-shadow:var(--card-shadow)}
+.stat-num{font-size:21px;font-weight:800;color:var(--tx);line-height:1}.stat-label{font-size:10px;color:var(--tx3);margin-top:4px;font-weight:600;letter-spacing:.5px}
+.pub-btn{width:100%;padding:13px;border-radius:13px;border:none;background:var(--btn-grad);color:#fff;font-size:15px;font-weight:800;cursor:pointer;transition:all .3s;margin-bottom:1.25rem;font-family:inherit;position:relative;overflow:hidden;letter-spacing:.3px}
+.pub-btn:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 32px var(--glow)}.pub-btn:disabled{opacity:.4;cursor:not-allowed}
+.pub-btn.going::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:shimmer 1.4s infinite}
+.adapted-card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:11px;margin-bottom:8px;animation:fadeUp .3s ease;box-shadow:var(--card-shadow)}
+.adapted-head{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.a-plat-icon{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#fff;flex-shrink:0}
+.a-plat-name{font-size:12px;font-weight:800;flex:1;color:var(--tx)}.a-chars{font-size:10px;color:var(--tx3)}
+.a-copy-btn{background:none;border:1px solid var(--bd);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--tx3);cursor:pointer;transition:all .2s;font-family:inherit}
+.a-copy-btn:hover{border-color:var(--bd2);color:var(--tx)}
+.adapted-text{font-size:12px;color:var(--tx2);line-height:1.55;border-top:1px solid var(--bd);padding-top:8px;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.mini-prog{height:2px;background:var(--bd2);border-radius:1px;margin-top:8px;overflow:hidden}
+.mini-prog-fill{height:100%;border-radius:1px;transition:width .4s ease}
+.stat-item{display:flex;align-items:center;gap:10px;padding:10px 11px;background:var(--s1);border:1px solid var(--bd);border-radius:11px;margin-bottom:7px;box-shadow:var(--card-shadow)}
+.stat-item-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;flex-shrink:0}
+.stat-item-info{flex:1}.stat-item-name{font-size:12px;font-weight:700;color:var(--tx)}.stat-item-detail{font-size:10px;color:var(--tx3);margin-top:2px}
+.stat-item-prog{height:2px;background:var(--bd2);border-radius:1px;margin-top:5px;overflow:hidden}.stat-item-fill{height:100%;border-radius:1px;transition:width .4s ease;background:var(--acc)}
+.badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
+.b-wait{background:var(--s3);color:var(--tx3);border:1px solid var(--bd2)}.b-pub{background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border)}.b-ok{background:rgba(0,206,201,.12);color:var(--acc3);border:1px solid rgba(0,206,201,.3)}.b-err{background:rgba(225,112,85,.12);color:var(--err);border:1px solid rgba(225,112,85,.3)}
+.empty{text-align:center;padding:2.5rem 1rem;color:var(--tx3)}.empty-icon{font-size:2rem;margin-bottom:10px;display:block;opacity:.4}.empty-text{font-size:13px;line-height:1.6}
+.info-box{background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--tx2);line-height:1.6;border-left:3px solid var(--acc)}
+.section-div{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);margin:.9rem 0 .6rem;display:flex;align-items:center;gap:8px}
+.section-div::after{content:'';flex:1;height:1px;background:var(--bd)}
+.draft-bar{background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:7px 12px;font-size:11px;color:var(--tx3);margin-bottom:.75rem;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.draft-bar-btn{background:none;border:none;color:var(--acc);font-size:11px;font-weight:700;cursor:pointer;padding:0;font-family:inherit}
+
+/* ═══ SHARED / TOAST / MODAL ═══ */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:var(--s2);border:1px solid var(--bd2);border-radius:12px;padding:11px 20px;font-size:13px;z-index:1000;white-space:nowrap;backdrop-filter:blur(20px);display:none;box-shadow:var(--card-shadow);animation:fadeUp .3s ease}
+.toast.ok{border-color:rgba(0,206,201,.4);color:var(--acc3)}.toast.err{border-color:rgba(225,112,85,.4);color:var(--err)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);z-index:500;display:flex;align-items:center;justify-content:center;animation:fadeUp .2s ease}
+.modal{background:var(--s1);border:1px solid var(--bd2);border-radius:16px;padding:1.5rem;width:420px;max-width:calc(100vw - 2rem);box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.modal-title{font-size:15px;font-weight:800;margin-bottom:1rem;color:var(--tx)}
+.modal-field{margin-bottom:1rem}
+.modal-label{font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:5px;display:block;letter-spacing:.5px;text-transform:uppercase}
+.modal-input{width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:9px;padding:9px 12px;color:var(--tx);font-size:13px;outline:none;font-family:inherit}
+.modal-input:focus{border-color:var(--ai-border);box-shadow:0 0 0 2px var(--glow)}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.modal-btn{padding:8px 18px;border-radius:9px;border:none;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.modal-btn.cancel{background:var(--s3);color:var(--tx2)}.modal-btn.save{background:var(--btn-grad);color:#fff}.modal-btn:hover{opacity:.85}
+
+/* ═══ SCROLLBAR ═══ */
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:2px}
+
+/* ═══ KEYFRAMES ═══ */
+@keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes shimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+@keyframes themeSwitch{0%{transform:scale(.97)}50%{transform:scale(1.01)}100%{transform:scale(1)}}
+.theme-anim{animation:themeSwitch .35s ease}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:900px){.app{grid-template-columns:1fr}.panel{border-right:none;border-bottom:1px solid var(--bd);max-height:none}.features-grid{grid-template-columns:1fr 1fr}.dash-header{padding:0 1rem}}
+@media(max-width:600px){.stats-inner{grid-template-columns:repeat(2,1fr)}.plats-grid{grid-template-columns:1fr}.format-grid{grid-template-columns:repeat(3,1fr)}.features-grid{grid-template-columns:1fr}.hero{padding:120px 1.25rem 60px}}
+</style>
 </head>
 <body>
-<header>
-  <div class="status-dot" id="dot"></div>
-  <h1>OmniPublish API</h1>
-  <span id="status-text">Checking server…</span>
-</header>
 
-<div class="layout">
-  <nav>
-    <div class="nav-group">
-      <div class="nav-label">System</div>
-      <button class="nav-btn active" onclick="show('health')"><span class="method GET">GET</span>Health</button>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Auth</div>
-      <button class="nav-btn" onclick="show('register')"><span class="method POST">POST</span>Register</button>
-      <button class="nav-btn" onclick="show('login')"><span class="method POST">POST</span>Login</button>
-      <button class="nav-btn" onclick="show('me')"><span class="method GET">GET</span>Me</button>
-      <button class="nav-btn" onclick="show('refresh')"><span class="method POST">POST</span>Refresh Token</button>
-      <button class="nav-btn" onclick="show('logout')"><span class="method POST">POST</span>Logout</button>
-      <button class="nav-btn" onclick="show('forgot')"><span class="method POST">POST</span>Forgot Password</button>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Posts</div>
-      <button class="nav-btn" onclick="show('create-post')"><span class="method POST">POST</span>Create Post</button>
-      <button class="nav-btn" onclick="show('list-posts')"><span class="method GET">GET</span>List Posts</button>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">AI</div>
-      <button class="nav-btn" onclick="show('ai-adapt')"><span class="method POST">POST</span>AI Adapt Content</button>
-    </div>
-    <div class="nav-group">
-      <div class="nav-label">Platforms</div>
-      <button class="nav-btn" onclick="show('list-platforms')"><span class="method GET">GET</span>List Connections</button>
+<!-- ═══════════ HOME PAGE ═══════════ -->
+<div id="page-home" class="page active">
+  <nav class="home-nav">
+    <a class="nav-logo" href="#">
+      <div class="nav-logo-icon">⬡</div>
+      <span class="nav-logo-text">OmniPublish</span>
+    </a>
+    <div class="nav-right">
+      <button class="theme-pill" onclick="toggleTheme()" id="home-theme-btn">☀️ Sky Blue</button>
+      <button class="nav-btn nav-btn-ghost" onclick="goAuth('login')">Login</button>
+      <button class="nav-btn nav-btn-fill" onclick="goAuth('register')">Get Started →</button>
     </div>
   </nav>
 
-  <main>
-    <div class="panel" id="panel"></div>
-    <div class="token-bar" id="token-bar" style="display:none">
-      <span style="color:var(--muted)">Token:</span>
-      <span class="token-chip" id="token-display"></span>
-      <button class="btn btn-ghost btn-sm" onclick="clearSession()">Clear Session</button>
+  <section class="hero">
+    <div class="hero-eyebrow">✦ AI-Powered Multi-Platform Publisher</div>
+    <h1 class="hero-title">Publish Everywhere.<br>Instantly.</h1>
+    <p class="hero-sub">Claude AI rewrites your content for each platform's unique tone, culture, and character limits. One post — 14 platforms — 5.8 billion people.</p>
+    <div class="hero-ctas">
+      <button class="hero-btn-primary" onclick="goAuth('register')">Start for Free →</button>
+      <button class="hero-btn-ghost" onclick="goAuth('login')">Login</button>
     </div>
-  </main>
+    <div class="hero-platforms">
+      <div class="hero-plat-chip"><div class="hero-plat-dot" style="background:#1877F2"></div>Facebook</div>
+      <div class="hero-plat-chip"><div class="hero-plat-dot" style="background:#C13584"></div>Instagram</div>
+      <div class="hero-plat-chip"><div class="hero-plat-dot" style="background:#4a4a6a"></div>X (Twitter)</div>
+      <div class="hero-plat-chip"><div class="hero-plat-dot" style="background:#FF0050"></div>TikTok</div>
+      <div class="hero-plat-chip"><div class="hero-plat-dot" style="background:#0A66C2"></div>LinkedIn</div>
+      <div class="hero-plat-chip"><div class="hero-plat-dot" style="background:#FF0000"></div>YouTube</div>
+      <div class="hero-plat-chip"><div class="hero-plat-dot" style="background:#FF4500"></div>Reddit</div>
+      <div class="hero-plat-chip" style="color:var(--tx3)">+7 more</div>
+    </div>
+  </section>
+
+  <div class="marquee-section">
+    <div class="marquee-track" id="marquee-track"></div>
+  </div>
+
+  <section class="section">
+    <div class="section-label">Why OmniPublish</div>
+    <h2 class="section-title">Everything you need to dominate social media</h2>
+    <p class="section-sub">From AI content adaptation to real-time publishing status — all in one dashboard.</p>
+    <div class="features-grid" id="features-grid">
+      <div class="feat-card"><span class="feat-icon">✦</span><div class="feat-title">AI Adaptation</div><div class="feat-desc">Claude rewrites your content for each platform's unique tone, culture, and character limits. Never sound out-of-place again.</div></div>
+      <div class="feat-card"><span class="feat-icon">◎</span><div class="feat-title">14 Platforms</div><div class="feat-desc">Facebook, Instagram, X, TikTok, LinkedIn, YouTube, Reddit, Threads, Telegram, Bluesky, Pinterest, Rumble, Twitch, Snapchat.</div></div>
+      <div class="feat-card"><span class="feat-icon">◷</span><div class="feat-title">Smart Scheduling</div><div class="feat-desc">Post instantly or schedule for the perfect time. Automated queue management ensures your content goes live when your audience is active.</div></div>
+      <div class="feat-card"><span class="feat-icon">◈</span><div class="feat-title">Live Status</div><div class="feat-desc">Real-time publishing status per platform. Know exactly what's live, what's pending, and what needs attention — instantly.</div></div>
+      <div class="feat-card"><span class="feat-icon">⬡</span><div class="feat-title">Media Support</div><div class="feat-desc">Images, videos, GIFs, MP4, MOV. Automatic aspect ratio compatibility checking per platform so your media always fits.</div></div>
+      <div class="feat-card"><span class="feat-icon">⊕</span><div class="feat-title">Secure & Private</div><div class="feat-desc">JWT authentication, AES-256 token encryption, CSRF protection, rate limiting, and full audit logging. Enterprise-grade security.</div></div>
+    </div>
+  </section>
+
+  <div class="stats-section">
+    <div class="stats-inner">
+      <div class="stat-big"><div class="stat-big-num" id="stat-reach">0B</div><div class="stat-big-label">Total Potential Reach</div></div>
+      <div class="stat-big"><div class="stat-big-num" id="stat-plats">0</div><div class="stat-big-label">Supported Platforms</div></div>
+      <div class="stat-big"><div class="stat-big-num" id="stat-click">1</div><div class="stat-big-label">Click to Publish Everywhere</div></div>
+    </div>
+  </div>
+
+  <section class="cta-section">
+    <div class="cta-card" id="cta-card">
+      <div class="cta-title">Ready to reach 5.8 billion people?</div>
+      <div class="cta-sub">Join creators and brands using OmniPublish to publish smarter. Start free — no credit card required.</div>
+      <button class="cta-btn" onclick="goAuth('register')">Start Publishing Today →</button>
+    </div>
+  </section>
+
+  <footer class="home-footer">
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px">
+      <div style="width:20px;height:20px;border-radius:5px;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:10px">⬡</div>
+      <span style="font-weight:700;font-size:13px;color:var(--tx2)">OmniPublish</span>
+    </div>
+    <div>© 2026 OmniPublish. AI-powered social media publishing.</div>
+  </footer>
+</div>
+
+<!-- ═══════════ AUTH PAGE ═══════════ -->
+<div id="page-auth" class="page">
+  <button class="auth-back" onclick="showPage('home')">← Back to Home</button>
+
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">⬡</div>
+      <span class="auth-logo-text">OmniPublish</span>
+    </div>
+
+    <!-- Tabs (hidden on forgot) -->
+    <div class="auth-tabs" id="auth-tabs">
+      <button class="auth-tab active" id="tab-register" onclick="switchAuthForm('register')">Register</button>
+      <button class="auth-tab" id="tab-login" onclick="switchAuthForm('login')">Login</button>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div class="auth-form active" id="form-register">
+      <div class="auth-title">Create your account</div>
+      <div class="auth-subtitle">Start publishing to 14 platforms with one click.</div>
+      <div class="field"><label>Full Name</label><input type="text" id="reg-name" placeholder="Your name" autocomplete="name"></div>
+      <div class="field"><label>Email</label><input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="field">
+        <label>Password</label>
+        <div style="position:relative">
+          <input type="password" id="reg-pw" placeholder="12+ characters" autocomplete="new-password" oninput="onPwInput()">
+          <button class="pw-toggle" onclick="togglePw('reg-pw',this)" type="button">👁</button>
+        </div>
+        <div class="pw-strength"><div class="pw-seg" id="ps1"></div><div class="pw-seg" id="ps2"></div><div class="pw-seg" id="ps3"></div><div class="pw-seg" id="ps4"></div></div>
+        <div class="pw-checks" id="pw-checks">
+          <div class="pw-check" id="pc-len">12+ characters</div>
+          <div class="pw-check" id="pc-up">Uppercase letter</div>
+          <div class="pw-check" id="pc-lo">Lowercase letter</div>
+          <div class="pw-check" id="pc-num">Number</div>
+          <div class="pw-check" id="pc-sym">Symbol</div>
+        </div>
+      </div>
+      <button class="auth-submit" id="reg-btn" onclick="doRegister()">Create Account →</button>
+      <div class="auth-err" id="reg-err"></div>
+      <div class="auth-switch">Already have an account? <a onclick="switchAuthForm('login')">Login →</a></div>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div class="auth-form" id="form-login">
+      <div class="auth-title">Welcome back</div>
+      <div class="auth-subtitle">Login to your OmniPublish account.</div>
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="field">
+        <label>Password</label>
+        <div style="position:relative">
+          <input type="password" id="login-pw" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+          <button class="pw-toggle" onclick="togglePw('login-pw',this)" type="button">👁</button>
+        </div>
+        <a class="forgot-link" onclick="switchAuthForm('forgot')">Forgot password?</a>
+      </div>
+      <button class="auth-submit" id="login-btn" onclick="doLogin()">Login →</button>
+      <div class="auth-err" id="login-err"></div>
+      <div class="auth-switch">Don't have an account? <a onclick="switchAuthForm('register')">Register →</a></div>
+    </div>
+
+    <!-- FORGOT PASSWORD FORM -->
+    <div class="auth-form" id="form-forgot">
+      <div style="margin-bottom:1.25rem"><a style="font-size:13px;font-weight:700;color:var(--tx2);cursor:pointer" onclick="switchAuthForm('login')">← Back to Login</a></div>
+      <div class="auth-title">Reset your password</div>
+      <div class="auth-subtitle">Enter your email and we'll send you a reset link.</div>
+      <div class="field"><label>Email</label><input type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')doForgot()"></div>
+      <button class="auth-submit" id="forgot-btn" onclick="doForgot()">Send Reset Link →</button>
+      <div class="auth-err" id="forgot-err"></div>
+      <div class="auth-ok" id="forgot-ok" style="display:none">✓ Check your email for the reset link.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ DASHBOARD ═══════════ -->
+<div id="page-dashboard" class="page">
+  <!-- Dashboard Header -->
+  <header class="dash-header">
+    <div class="dash-logo">
+      <div class="dash-logo-icon">⬡</div>
+      <span class="dash-logo-text">OmniPublish</span>
+      <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border);margin-left:2px">v2</span>
+    </div>
+    <div class="dash-right">
+      <div class="status-pill"><div class="pulse-dot"></div><span>AI Engine Online</span></div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <span class="user-name" id="user-name">User</span>
+      </div>
+      <div class="sel-badge" id="hdr-badge">0 Platforms</div>
+      <button class="theme-toggle" onclick="toggleTheme()" id="dash-theme-btn">☀️ Sky Blue</button>
+      <button class="dash-icon-btn" onclick="openSettings()">⚙️</button>
+      <button class="logout-btn" onclick="doLogout()">Logout →</button>
+    </div>
+  </header>
+
+  <!-- 3-column layout -->
+  <div class="app">
+    <!-- ── COMPOSE ── -->
+    <div class="panel">
+      <div class="panel-head">Compose</div>
+      <div class="draft-bar" id="draft-bar" style="display:none">
+        <span id="draft-bar-txt"></span>
+        <button class="draft-bar-btn" onclick="clearDraft()">Discard</button>
+      </div>
+      <div class="compose-box">
+        <textarea class="compose-ta" id="content" rows="6" placeholder="Write your content here. The AI will adapt it to each platform's tone, culture, and character limits." oninput="onContentChange();autosaveDraft()"></textarea>
+        <div class="compose-toolbar">
+          <div class="tbar-left">
+            <button class="tbar-btn" onclick="addMedia()">🎞 Media</button>
+            <button class="tbar-btn" onclick="addHashtags()"># Tags</button>
+            <button class="tbar-btn" onclick="addEmoji()">+ Emoji</button>
+            <button class="tbar-btn" onclick="clearContent()">✕ Clear</button>
+          </div>
+          <span class="char-count" id="char-count">0 / 280 (X (Twitter))</span>
+        </div>
+      </div>
+      <div class="section-div">Templates</div>
+      <div class="template-row">
+        <button class="tmpl-btn" onclick="useTemplate('announce')">🎉 Announce</button>
+        <button class="tmpl-btn" onclick="useTemplate('launch')">🚀 Launch</button>
+        <button class="tmpl-btn" onclick="useTemplate('tip')">💡 Tip</button>
+        <button class="tmpl-btn" onclick="useTemplate('story')">📖 Story</button>
+        <button class="tmpl-btn" onclick="useTemplate('promo')">🎁 Promo</button>
+        <button class="tmpl-btn" onclick="useTemplate('shorts')">🎬 Shorts Script</button>
+      </div>
+      <div class="section-div">Content format</div>
+      <div class="format-grid" id="format-grid">
+        <button class="fmt-btn active" data-fmt="post" onclick="setFormat(this)"><span class="fmt-icon">📝</span>Post</button>
+        <button class="fmt-btn" data-fmt="video" onclick="setFormat(this)"><span class="fmt-icon">🎬</span>Video</button>
+        <button class="fmt-btn" data-fmt="short" onclick="setFormat(this)"><span class="fmt-icon">⚡</span>Short/Reel</button>
+        <button class="fmt-btn" data-fmt="story" onclick="setFormat(this)"><span class="fmt-icon">⭕</span>Story</button>
+        <button class="fmt-btn" data-fmt="article" onclick="setFormat(this)"><span class="fmt-icon">📰</span>Article</button>
+      </div>
+      <div class="section-div">Aspect ratio</div>
+      <div class="ratio-row" id="ratio-row">
+        <button class="ratio-btn active" data-ratio="16:9" onclick="setRatio(this)"><div class="ratio-frame rf-16-9"></div><span>16:9</span></button>
+        <button class="ratio-btn" data-ratio="9:16" onclick="setRatio(this)"><div class="ratio-frame rf-9-16"></div><span>9:16</span></button>
+        <button class="ratio-btn" data-ratio="1:1" onclick="setRatio(this)"><div class="ratio-frame rf-1-1"></div><span>1:1</span></button>
+        <button class="ratio-btn" data-ratio="4:5" onclick="setRatio(this)"><div class="ratio-frame rf-4-5"></div><span>4:5</span></button>
+        <button class="ratio-btn" data-ratio="2:3" onclick="setRatio(this)"><div class="ratio-frame rf-2-3"></div><span>2:3</span></button>
+      </div>
+      <div class="preview-wrap" id="preview-wrap">
+        <div class="preview-label"><span>Preview</span><span id="preview-meta-top" style="font-size:10px;color:var(--tx3)">Post · 16:9</span></div>
+        <div class="preview-device">
+          <div class="device-frame frame-16-9" id="device-frame">
+            <div class="device-content" id="device-content"><div class="device-media-preview">🎬</div><div class="device-content-text" id="device-text">Your content will appear here</div></div>
+            <div class="format-badge" id="format-badge">16:9</div>
+          </div>
+        </div>
+        <div class="compat-row" id="compat-row"></div>
+      </div>
+      <div class="section-div">Media</div>
+      <div class="media-zone" id="media-zone" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+        <input type="file" id="media-input" multiple accept="image/*,video/*" onchange="handleFiles(event.target.files)">
+        <span class="media-zone-icon">🎞️</span>
+        <div class="media-zone-txt">Drop media here or click to browse<br><span style="font-size:10px;opacity:.6">Images · Videos · GIFs · MP4 · MOV</span></div>
+        <div class="media-previews" id="media-previews"></div>
+      </div>
+      <div class="section-div">Timing</div>
+      <div class="tabs" id="time-tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-now',this,'time-tabs')">Post Now</button>
+        <button class="tab-btn" onclick="switchTab('tab-sched',this,'time-tabs')">Schedule</button>
+        <button class="tab-btn" onclick="switchTab('tab-draft',this,'time-tabs')">Save Draft</button>
+      </div>
+      <div class="tab-content active" id="tab-now"><div class="info-box">Content will be published immediately on all selected platforms.</div></div>
+      <div class="tab-content" id="tab-sched"><div class="sched-row"><input type="date" class="sched-input" id="s-date"><input type="time" class="sched-input" id="s-time"></div></div>
+      <div class="tab-content" id="tab-draft"><div class="info-box">Content saved as draft. Review and publish later from the dashboard.</div></div>
+      <button class="ai-btn" id="ai-btn" onclick="runAIAdapt()"><span id="ai-ico">✦</span><span id="ai-lbl">AI Adapt for All Platforms</span></button>
+    </div>
+
+    <!-- ── PLATFORMS ── -->
+    <div class="panel">
+      <div class="panel-head">Platforms</div>
+      <div class="sel-bar"><span class="sel-bar-lbl" id="sel-label">0 of 14 selected</span><button class="sel-all-btn" id="sel-all-btn" onclick="toggleAll()">Select Compatible</button></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:10px;text-align:center">Platforms compatible with <strong id="compat-fmt-name" style="color:var(--acc)">Post</strong> + <strong id="compat-ratio-name" style="color:var(--acc)">16:9</strong> are highlighted</div>
+      <div class="plats-grid" id="plats-grid"></div>
+    </div>
+
+    <!-- ── PUBLISH ── -->
+    <div class="panel">
+      <div class="panel-head">Publish</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-num" id="snum-plat">0</div><div class="stat-label">Platforms</div></div>
+        <div class="stat-card"><div class="stat-num" id="snum-reach">—</div><div class="stat-label">Est. Reach</div></div>
+        <div class="stat-card"><div class="stat-num" id="snum-score">—</div><div class="stat-label">AI Score</div></div>
+      </div>
+      <button class="pub-btn" id="pub-btn" onclick="publishAll()">🚀 &nbsp;Publish to All Platforms</button>
+      <div class="tabs" id="right-tabs">
+        <button class="tab-btn active" onclick="switchTab('tab-adapted',this,'right-tabs')">Adapted Content</button>
+        <button class="tab-btn" onclick="switchTab('tab-status',this,'right-tabs')">Publish Status</button>
+      </div>
+      <div class="tab-content active" id="tab-adapted">
+        <div class="empty" id="adapted-empty"><span class="empty-icon">✦</span><div class="empty-text">Click <strong style="color:var(--tx2)">AI Adapt</strong> to generate platform-optimised content for each network.</div></div>
+        <div id="adapted-list"></div>
+      </div>
+      <div class="tab-content" id="tab-status">
+        <div class="empty" id="status-empty"><span class="empty-icon">◉</span><div class="empty-text">Select platforms and click <strong style="color:var(--tx2)">Publish</strong> to start broadcasting.</div></div>
+        <div id="status-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" style="display:none">
+  <div class="modal-overlay" onclick="closeSettings(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">⚙️ Settings</div>
+      <div class="modal-field">
+        <label class="modal-label" for="backend-url-input">Backend URL</label>
+        <input class="modal-input" id="backend-url-input" type="text" placeholder="http://localhost:4000">
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn cancel" onclick="closeSettings()">Cancel</button>
+        <button class="modal-btn save" onclick="saveSettings()">Save</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
-const BASE = 'http://localhost:4000/api/v1';
-let session = { accessToken: null, refreshToken: null, csrfToken: null, user: null };
-
-function getAuthHeaders() {
-  const h = { 'Content-Type': 'application/json' };
-  if (session.accessToken) h['Authorization'] = `Bearer ${session.accessToken}`;
-  if (session.csrfToken)   h['X-CSRF-Token']  = session.csrfToken;
-  return h;
-}
-
-async function callApi(method, path, body) {
-  const opts = { method, headers: getAuthHeaders() };
-  if (body) opts.body = JSON.stringify(body);
-  const res  = await fetch(BASE + path, opts);
-  const data = await res.json().catch(() => ({ raw: await res.text() }));
-  return { status: res.status, data };
-}
-
-function showResponse(status, data, ms) {
-  const cls  = status < 300 ? 's2xx' : status < 500 ? 's4xx' : 's5xx';
-  const box  = document.getElementById('response-area');
-  box.innerHTML = `
-    <div class="response-header">
-      <span class="response-status ${cls}">${status}</span>
-      <span style="color:var(--muted);font-size:.75rem">${ms}ms</span>
-    </div>
-    <pre>${JSON.stringify(data, null, 2)}</pre>`;
-}
-
-function storeSession(data) {
-  if (data.accessToken)  session.accessToken  = data.accessToken;
-  if (data.refreshToken) session.refreshToken = data.refreshToken;
-  if (data.csrfToken)    session.csrfToken    = data.csrfToken;
-  if (data.user)         session.user         = data.user;
-  updateTokenBar();
-}
-
-function updateTokenBar() {
-  const bar = document.getElementById('token-bar');
-  const td  = document.getElementById('token-display');
-  if (session.accessToken) {
-    bar.style.display = 'flex';
-    td.textContent = session.accessToken.slice(0, 60) + '…';
-    td.title = session.accessToken;
-  } else {
-    bar.style.display = 'none';
+/* ══════════════════════════════════════
+   AUTH STATE
+══════════════════════════════════════ */
+const auth = {
+  get token()   { return localStorage.getItem('omni_token'); },
+  get refresh() { return localStorage.getItem('omni_refresh'); },
+  get user()    { return JSON.parse(localStorage.getItem('omni_user') || 'null'); },
+  set(data) {
+    if (data.accessToken)  localStorage.setItem('omni_token',   data.accessToken);
+    if (data.refreshToken) localStorage.setItem('omni_refresh', data.refreshToken);
+    if (data.user)         localStorage.setItem('omni_user',    JSON.stringify(data.user));
+  },
+  clear() {
+    ['omni_token','omni_refresh','omni_user','omni_draft','omni_draft_ts'].forEach(k => localStorage.removeItem(k));
   }
-}
-
-function clearSession() {
-  session = { accessToken: null, refreshToken: null, csrfToken: null, user: null };
-  updateTokenBar();
-}
-
-async function checkHealth() {
-  try {
-    const r = await fetch(BASE + '/health');
-    const d = await r.json();
-    const dot  = document.getElementById('dot');
-    const txt  = document.getElementById('status-text');
-    if (r.ok) {
-      dot.className = 'status-dot online';
-      txt.textContent = `Server online · DB ${d.database || 'ok'} · uptime ${Math.round((d.uptime||0)/60)}m`;
-    } else {
-      dot.className = 'status-dot offline';
-      txt.textContent = 'Server returned error';
-    }
-  } catch {
-    document.getElementById('dot').className = 'status-dot offline';
-    document.getElementById('status-text').textContent = 'Server offline';
-  }
-}
-
-const PANELS = {
-  health: () => `
-    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> Health Check</div>
-    <div class="info-box">Checks server status, database connectivity, uptime, and memory usage.</div>
-    <button class="btn btn-primary" onclick="runHealth()">Send Request</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  register: () => `
-    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Register</div>
-    <div class="form-group"><label>Email</label><input id="r-email" value="test${Date.now()}@example.com" /></div>
-    <div class="form-group"><label>Password <span style="color:var(--muted)">(min 12 chars, upper+lower+number+symbol)</span></label><input id="r-pw" value="TestPass123!" /></div>
-    <div class="form-group"><label>Full Name</label><input id="r-name" value="Test User" /></div>
-    <button class="btn btn-primary" onclick="runRegister()">Register</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  login: () => `
-    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Login</div>
-    <div class="form-group"><label>Email</label><input id="l-email" value="" placeholder="you@example.com" /></div>
-    <div class="form-group"><label>Password</label><input id="l-pw" type="password" placeholder="••••••••••••" /></div>
-    <button class="btn btn-primary" onclick="runLogin()">Login</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  me: () => `
-    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> Me (current user)</div>
-    <div class="info-box">Requires a valid access token. Register or login first.</div>
-    <button class="btn btn-primary" onclick="runMe()">Get My Profile</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  refresh: () => `
-    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Refresh Token</div>
-    <div class="info-box">Uses the refresh token stored in session to obtain a new access token.</div>
-    <button class="btn btn-primary" onclick="runRefresh()">Refresh</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  logout: () => `
-    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Logout</div>
-    <div class="info-box">Revokes the current access token (adds JTI to blacklist).</div>
-    <button class="btn btn-primary" onclick="runLogout()">Logout</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  forgot: () => `
-    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Forgot Password</div>
-    <div class="info-box">Always returns 200 (no email enumeration). Check server logs for the reset token in dev mode.</div>
-    <div class="form-group"><label>Email</label><input id="fp-email" placeholder="you@example.com" /></div>
-    <button class="btn btn-primary" onclick="runForgot()">Send Reset Link</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  'create-post': () => `
-    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> Create Post</div>
-    <div class="form-group"><label>Content</label><textarea id="cp-content">Check out OmniPublish — the easiest way to publish everywhere at once! 🚀</textarea></div>
-    <div class="form-group"><label>Title (optional)</label><input id="cp-title" value="My First Post" /></div>
-    <div class="grid2">
-      <div class="form-group"><label>Format</label>
-        <select id="cp-format"><option>post</option><option>video</option><option>short</option><option>story</option><option>article</option></select>
-      </div>
-      <div class="form-group"><label>Aspect Ratio</label>
-        <select id="cp-ratio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option><option>2:3</option></select>
-      </div>
-    </div>
-    <div class="form-group"><label>Platforms</label>
-      <div class="checkbox-row">
-        ${['facebook','instagram','x','linkedin','youtube','tiktok','threads','reddit','telegram','bluesky','snapchat','pinterest'].map(p =>
-          `<label><input type="checkbox" name="plat" value="${p}" ${['x','instagram','linkedin'].includes(p)?'checked':''}>${p}</label>`
-        ).join('')}
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="runCreatePost()">Create Post</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  'list-posts': () => `
-    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> List Posts</div>
-    <div class="info-box">Returns paginated posts for the authenticated user.</div>
-    <div class="grid2">
-      <div class="form-group"><label>Status filter</label>
-        <select id="lp-status"><option value="">all</option><option>draft</option><option>scheduled</option><option>published</option><option>failed</option></select>
-      </div>
-      <div class="form-group"><label>Limit</label><input id="lp-limit" value="10" type="number" /></div>
-    </div>
-    <button class="btn btn-primary" onclick="runListPosts()">Fetch Posts</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  'ai-adapt': () => `
-    <div class="panel-title"><span class="badge POST" style="background:rgba(108,99,255,.2);color:#a5a0ff">POST</span> AI Adapt Content</div>
-    <div class="info-box">Uses Claude to rewrite your content for each selected platform. Requires auth.</div>
-    <div class="form-group"><label>Original Content</label><textarea id="ai-content">OmniPublish just launched — the easiest way to reach every social platform with one click. Try it today!</textarea></div>
-    <div class="form-group"><label>Platforms</label>
-      <div class="checkbox-row">
-        ${['facebook','instagram','x','linkedin','tiktok','threads','reddit','bluesky'].map(p =>
-          `<label><input type="checkbox" name="ai-plat" value="${p}" ${['x','linkedin'].includes(p)?'checked':''}>${p}</label>`
-        ).join('')}
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="runAiAdapt()">Adapt with AI</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
-
-  'list-platforms': () => `
-    <div class="panel-title"><span class="badge GET" style="background:rgba(0,212,170,.2);color:var(--accent2)">GET</span> Platform Connections</div>
-    <div class="info-box">Lists all social platform OAuth connections for the current user.</div>
-    <button class="btn btn-primary" onclick="runListPlatforms()">Fetch Connections</button>
-    <div class="response-box"><div id="response-area"></div></div>`,
 };
 
-async function timed(fn) {
-  const t = Date.now();
-  const r = await fn();
-  return { ...r, ms: Date.now() - t };
+let BACKEND_URL = localStorage.getItem('omni_backend_url') || '';
+let currentTheme = localStorage.getItem('omni_theme') || 'dark';
+
+function base() { return BACKEND_URL || window.location.origin; }
+function getCsrf() {
+  const c = document.cookie.split(';').find(s => s.trim().startsWith('csrf_token='));
+  return c ? decodeURIComponent(c.split('=')[1]) : '';
 }
 
-async function runHealth() {
-  const btn = event.target; btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>';
-  const t = Date.now();
+async function api(method, path, body, skipCsrf = false) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
+  if (!skipCsrf && method !== 'GET') {
+    const csrf = getCsrf();
+    if (csrf) headers['X-CSRF-Token'] = csrf;
+  }
+  const opts = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(base() + path, opts);
+  if (res.status === 401 && auth.refresh) {
+    try {
+      const rr = await fetch(base() + '/api/v1/auth/refresh', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: auth.refresh })
+      });
+      if (rr.ok) {
+        const rd = await rr.json();
+        auth.set(rd);
+        headers['Authorization'] = `Bearer ${rd.accessToken}`;
+        const csrf2 = getCsrf();
+        if (csrf2) headers['X-CSRF-Token'] = csrf2;
+        return fetch(base() + path, { ...opts, headers });
+      }
+    } catch {}
+    auth.clear();
+    showPage('auth', { tab: 'login' });
+    throw new Error('Session expired');
+  }
+  return res;
+}
+
+/* ══════════════════════════════════════
+   PAGE ROUTER
+══════════════════════════════════════ */
+let _dashInit = false;
+
+function showPage(name, opts = {}) {
+  document.querySelectorAll('.page').forEach(p => {
+    p.classList.remove('active');
+  });
+  const page = document.getElementById('page-' + name);
+  if (!page) return;
+  requestAnimationFrame(() => {
+    page.classList.add('active');
+    if (name === 'auth') {
+      switchAuthForm(opts.tab || 'login');
+    }
+    if (name === 'dashboard') {
+      updateDashboardUser();
+      if (!_dashInit) { initDashboard(); _dashInit = true; }
+    }
+    if (name === 'home') {
+      initScrollAnimations();
+    }
+    window.scrollTo(0, 0);
+  });
+}
+
+function goAuth(tab) { showPage('auth', { tab }); }
+
+function updateDashboardUser() {
+  const u = auth.user;
+  if (!u) return;
+  const name = u.full_name || u.email?.split('@')[0] || 'User';
+  document.getElementById('user-name').textContent = name;
+  document.getElementById('user-avatar').textContent = name[0].toUpperCase();
+}
+
+/* ══════════════════════════════════════
+   THEME
+══════════════════════════════════════ */
+function applyTheme(t) {
+  currentTheme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('omni_theme', t);
+  const label = t === 'dark' ? '☀️ Sky Blue' : '🌑 Dark';
+  ['home-theme-btn','dash-theme-btn'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = label;
+  });
+  document.body.classList.add('theme-anim');
+  setTimeout(() => document.body.classList.remove('theme-anim'), 400);
+}
+function toggleTheme() { applyTheme(currentTheme === 'dark' ? 'sky' : 'dark'); }
+
+/* ══════════════════════════════════════
+   AUTH FORMS
+══════════════════════════════════════ */
+function switchAuthForm(name) {
+  ['register','login','forgot'].forEach(f => {
+    document.getElementById('form-' + f).classList.toggle('active', f === name);
+  });
+  const tabs = document.getElementById('auth-tabs');
+  tabs.style.display = name === 'forgot' ? 'none' : 'flex';
+  if (name !== 'forgot') {
+    document.getElementById('tab-register').classList.toggle('active', name === 'register');
+    document.getElementById('tab-login').classList.toggle('active', name === 'login');
+  }
+  document.getElementById('reg-err').textContent = '';
+  document.getElementById('login-err').textContent = '';
+  document.getElementById('forgot-err').textContent = '';
+  document.getElementById('forgot-ok').style.display = 'none';
+}
+
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+function onPwInput() {
+  const pw = document.getElementById('reg-pw').value;
+  const checks = {
+    len: pw.length >= 12,
+    up:  /[A-Z]/.test(pw),
+    lo:  /[a-z]/.test(pw),
+    num: /[0-9]/.test(pw),
+    sym: /[^A-Za-z0-9]/.test(pw),
+  };
+  ['len','up','lo','num','sym'].forEach(k => {
+    document.getElementById('pc-' + k).classList.toggle('ok', checks[k]);
+  });
+  const score = Object.values(checks).filter(Boolean).length;
+  for (let i = 1; i <= 4; i++) {
+    const seg = document.getElementById('ps' + i);
+    seg.className = 'pw-seg' + (i <= score ? ' s' + Math.min(score, 4) : '');
+  }
+}
+
+function setAuthLoading(btn, loading, label) {
+  const el = document.getElementById(btn);
+  el.disabled = loading;
+  el.innerHTML = loading ? '<span class="spin-sm"></span>Please wait…' : label;
+}
+
+async function doRegister() {
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pw    = document.getElementById('reg-pw').value;
+  const errEl = document.getElementById('reg-err');
+  errEl.textContent = '';
+  if (!email || !pw) { errEl.textContent = 'Email and password are required.'; return; }
+  setAuthLoading('reg-btn', true, 'Create Account →');
   try {
-    const res = await fetch(BASE + '/health');
+    const res  = await fetch(base() + '/api/v1/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw, fullName: name || undefined })
+    });
     const data = await res.json();
-    showResponse(res.status, data, Date.now()-t);
-    storeSession(data);
-  } catch(e) { showResponse(0, { error: e.message }, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Send Request';
+    if (!res.ok) { errEl.textContent = data.errors?.[0]?.message || data.error || 'Registration failed.'; return; }
+    auth.set({ ...data, user: data.user });
+    toast('Welcome to OmniPublish! 🚀', 'ok');
+    showPage('dashboard');
+  } catch (e) {
+    errEl.textContent = 'Connection error. Is the server running?';
+  } finally {
+    setAuthLoading('reg-btn', false, 'Create Account →');
+  }
 }
 
-async function runRegister() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw    = document.getElementById('login-pw').value;
+  const errEl = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!email || !pw) { errEl.textContent = 'Email and password are required.'; return; }
+  setAuthLoading('login-btn', true, 'Login →');
   try {
-    const r = await callApi('POST', '/auth/register', {
-      email: document.getElementById('r-email').value,
-      password: document.getElementById('r-pw').value,
-      fullName: document.getElementById('r-name').value,
+    const res  = await fetch(base() + '/api/v1/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pw })
     });
-    showResponse(r.status, r.data, Date.now()-t);
-    storeSession(r.data);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Register';
+    const data = await res.json();
+    if (!res.ok) { errEl.textContent = data.error || 'Invalid credentials.'; return; }
+    auth.set({ ...data, user: data.user });
+    toast('Welcome back! 👋', 'ok');
+    showPage('dashboard');
+  } catch (e) {
+    errEl.textContent = 'Connection error. Is the server running?';
+  } finally {
+    setAuthLoading('login-btn', false, 'Login →');
+  }
 }
 
-async function runLogin() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
+async function doForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const errEl = document.getElementById('forgot-err');
+  const okEl  = document.getElementById('forgot-ok');
+  errEl.textContent = ''; okEl.style.display = 'none';
+  if (!email) { errEl.textContent = 'Enter your email address.'; return; }
+  setAuthLoading('forgot-btn', true, 'Send Reset Link →');
   try {
-    const r = await callApi('POST', '/auth/login', {
-      email: document.getElementById('l-email').value,
-      password: document.getElementById('l-pw').value,
+    const res = await fetch(base() + '/api/v1/auth/forgot-password', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
     });
-    showResponse(r.status, r.data, Date.now()-t);
-    storeSession(r.data);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Login';
+    okEl.style.display = 'block';
+  } catch (e) {
+    errEl.textContent = 'Connection error.';
+  } finally {
+    setAuthLoading('forgot-btn', false, 'Send Reset Link →');
+  }
 }
 
-async function runMe() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
+async function doLogout() {
   try {
-    const r = await callApi('GET', '/auth/me');
-    showResponse(r.status, r.data, Date.now()-t);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Get My Profile';
+    await api('POST', '/api/v1/auth/logout');
+  } catch {}
+  auth.clear();
+  _dashInit = false;
+  selected.clear();
+  adapted = {};
+  toast('Logged out.', 'ok');
+  showPage('home');
 }
 
-async function runRefresh() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
-  if (!session.refreshToken) { showResponse(0, {error:'No refresh token in session — login first'}, 0); btn.disabled=false; btn.textContent='Refresh'; return; }
-  try {
-    const r = await callApi('POST', '/auth/refresh', { refreshToken: session.refreshToken });
-    showResponse(r.status, r.data, Date.now()-t);
-    storeSession(r.data);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Refresh';
+/* ══════════════════════════════════════
+   HOMEPAGE ANIMATIONS
+══════════════════════════════════════ */
+const PLAT_DATA = [
+  {id:'facebook',name:'Facebook',color:'#1877F2'},{id:'tiktok',name:'TikTok',color:'#FF0050'},
+  {id:'linkedin',name:'LinkedIn',color:'#0A66C2'},{id:'youtube',name:'YouTube',color:'#FF0000'},
+  {id:'instagram',name:'Instagram',color:'#C13584'},{id:'twitch',name:'Twitch',color:'#9146FF'},
+  {id:'x',name:'X (Twitter)',color:'#4a4a6a'},{id:'telegram',name:'Telegram',color:'#26A5E4'},
+  {id:'reddit',name:'Reddit',color:'#FF4500'},{id:'threads',name:'Threads',color:'#4a4a5a'},
+  {id:'pinterest',name:'Pinterest',color:'#E60023'},{id:'rumble',name:'Rumble',color:'#85C742'},
+  {id:'bluesky',name:'Bluesky',color:'#0085FF'},{id:'snapchat',name:'Snapchat',color:'#C8A800'},
+];
+
+function buildMarquee() {
+  const track = document.getElementById('marquee-track');
+  if (!track) return;
+  const items = [...PLAT_DATA, ...PLAT_DATA].map(p =>
+    `<div class="marquee-item"><div class="marquee-dot" style="background:${p.color}"></div>${p.name}</div><div class="marquee-sep">·</div>`
+  ).join('');
+  track.innerHTML = items;
 }
 
-async function runLogout() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
-  try {
-    const r = await callApi('POST', '/auth/logout');
-    showResponse(r.status, r.data, Date.now()-t);
-    if (r.status === 200) clearSession();
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Logout';
+function countUp(el, target, suffix = '', decimals = 0) {
+  const dur = 1600, start = Date.now();
+  const step = () => {
+    const p = Math.min((Date.now() - start) / dur, 1);
+    const e = 1 - Math.pow(1 - p, 3);
+    const v = e * target;
+    el.textContent = (decimals ? v.toFixed(decimals) : Math.round(v)) + suffix;
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
-async function runForgot() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
-  try {
-    const r = await callApi('POST', '/auth/forgot-password', { email: document.getElementById('fp-email').value });
-    showResponse(r.status, r.data, Date.now()-t);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Send Reset Link';
-}
-
-async function runCreatePost() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
-  const platforms = [...document.querySelectorAll('input[name="plat"]:checked')].map(el=>el.value);
-  try {
-    const r = await callApi('POST', '/posts', {
-      content: document.getElementById('cp-content').value,
-      title:   document.getElementById('cp-title').value || undefined,
-      format:  document.getElementById('cp-format').value,
-      aspectRatio: document.getElementById('cp-ratio').value,
-      platforms,
+function initScrollAnimations() {
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      el.classList.add('visible');
+      if (el.id === 'stat-reach')  countUp(el, 5.8, 'B', 1);
+      if (el.id === 'stat-plats')  countUp(el, 14, '');
+      if (el.classList.contains('cta-card')) {} // just reveal
     });
-    showResponse(r.status, r.data, Date.now()-t);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Create Post';
+  }, { threshold: 0.15 });
+
+  document.querySelectorAll('.feat-card,.stat-big,.cta-card').forEach(el => io.observe(el));
 }
 
-async function runListPosts() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
-  const status = document.getElementById('lp-status').value;
-  const limit  = document.getElementById('lp-limit').value;
-  const qs = new URLSearchParams();
-  if (status) qs.set('status', status);
-  if (limit)  qs.set('limit', limit);
-  try {
-    const r = await callApi('GET', '/posts?' + qs.toString());
-    showResponse(r.status, r.data, Date.now()-t);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Fetch Posts';
+/* ══════════════════════════════════════
+   DASHBOARD DATA
+══════════════════════════════════════ */
+const PLATFORMS = [
+  {id:'facebook', name:'Facebook',  abbr:'f',   color:'#1877F2', limit:63206, reach:'2.9B', formats:['post','video','story'],           ratios:['16:9','1:1','4:5','9:16']},
+  {id:'tiktok',   name:'TikTok',    abbr:'TT',  color:'#FF0050', limit:2200,  reach:'1.5B', formats:['video','short','story'],          ratios:['9:16']},
+  {id:'linkedin', name:'LinkedIn',  abbr:'in',  color:'#0A66C2', limit:3000,  reach:'950M', formats:['post','video','article'],         ratios:['16:9','1:1','4:5']},
+  {id:'youtube',  name:'YouTube',   abbr:'▶',   color:'#FF0000', limit:5000,  reach:'2.7B', formats:['video','short'],                  ratios:['16:9','9:16','1:1']},
+  {id:'instagram',name:'Instagram', abbr:'IG',  color:'#C13584', limit:2200,  reach:'2B',   formats:['post','video','short','story'],   ratios:['1:1','4:5','9:16']},
+  {id:'twitch',   name:'Twitch',    abbr:'tw',  color:'#9146FF', limit:500,   reach:'140M', formats:['video','story'],                  ratios:['16:9']},
+  {id:'x',        name:'X (Twitter)',abbr:'X',  color:'#4a4a6a', limit:280,   reach:'550M', formats:['post','video','short'],           ratios:['16:9','1:1']},
+  {id:'telegram', name:'Telegram',  abbr:'tg',  color:'#26A5E4', limit:4096,  reach:'900M', formats:['post','video','story','article'], ratios:['16:9','9:16','1:1','4:5','2:3']},
+  {id:'reddit',   name:'Reddit',    abbr:'r/',  color:'#FF4500', limit:40000, reach:'430M', formats:['post','video','article'],         ratios:['16:9','1:1','4:5']},
+  {id:'threads',  name:'Threads',   abbr:'⊚',   color:'#4a4a5a', limit:500,   reach:'150M', formats:['post','video','short'],           ratios:['1:1','4:5','9:16']},
+  {id:'pinterest',name:'Pinterest', abbr:'P',   color:'#E60023', limit:500,   reach:'465M', formats:['post','video'],                   ratios:['2:3','4:5','1:1']},
+  {id:'rumble',   name:'Rumble',    abbr:'R',   color:'#85C742', limit:2000,  reach:'80M',  formats:['video','short'],                  ratios:['16:9','9:16']},
+  {id:'bluesky',  name:'Bluesky',   abbr:'sky', color:'#0085FF', limit:300,   reach:'30M',  formats:['post','video','short'],           ratios:['16:9','1:1','4:5']},
+  {id:'snapchat', name:'Snapchat',  abbr:'👻',  color:'#C8A800', limit:250,   reach:'750M', formats:['short','story','video'],          ratios:['9:16']},
+];
+const FORMAT_COMPAT = {
+  'post':   {name:'Post',      icon:'📝',ratios:['1:1','4:5','16:9']},
+  'video':  {name:'Video',     icon:'🎬',ratios:['16:9','1:1']},
+  'short':  {name:'Short/Reel',icon:'⚡',ratios:['9:16']},
+  'story':  {name:'Story',     icon:'⭕',ratios:['9:16']},
+  'article':{name:'Article',   icon:'📰',ratios:['16:9','4:5']},
+};
+const RATIO_COMPAT = {
+  '16:9':{platforms:['youtube','facebook','linkedin','twitch','x','telegram','reddit','rumble'], label:'YouTube · Facebook · LinkedIn'},
+  '9:16':{platforms:['tiktok','instagram','snapchat','youtube','threads','telegram'],            label:'TikTok · Reels · Shorts'},
+  '1:1': {platforms:['instagram','facebook','x','telegram','reddit','threads','bluesky'],        label:'Instagram · X · Facebook'},
+  '4:5': {platforms:['instagram','facebook','linkedin','threads','pinterest','telegram','bluesky'],label:'Instagram · Pinterest'},
+  '2:3': {platforms:['pinterest','telegram'],                                                    label:'Pinterest'},
+};
+const TEMPLATES = {
+  announce:`🎉 Exciting news! We're thrilled to share something special with our community. After months of hard work, we're finally ready to reveal what we've been building. Stay tuned — this is just the beginning!\n\n#announcement #news #excited`,
+  launch:`🚀 It's launch day! Introducing [Product Name] — built to change how you [use case].\n\n✅ Feature one\n✅ Feature two\n✅ Feature three\n\nAvailable now — link in bio 👇\n\n#launch #product #startup`,
+  tip:`💡 Pro tip most people miss:\n\n[Your tip here]\n\nShare this with someone who needs it!\n\n#tips #productivity #learn`,
+  story:`📖 A year ago I had nothing. Here's what changed everything...\n\n[Your turning point]\n\nThe lesson: [Your core insight]\n\nRetweet if this resonates 🔁\n\n#story #growth`,
+  promo:`🎁 LIMITED TIME!\n\nGet [Product] at [X]% OFF with code OMNI\n\n✅ Benefit 1\n✅ Benefit 2\n✅ 30-day money back\n\n#sale #offer #limited`,
+  shorts:`[HOOK 0:00]\n"You've been doing this wrong..."\n\n[STEPS 0:03-0:45]\nStep 1: [Action]\nStep 2: [Action]\nStep 3: [Result]\n\n[CTA 0:45]\nFollow for more!\n\n#shorts #fyp`,
+};
+
+let selected = new Set();
+let adapted  = {};
+let publishing = false;
+let currentFormat = 'post';
+let currentRatio  = '16:9';
+
+/* ══════════════════════════════════════
+   DASHBOARD INIT
+══════════════════════════════════════ */
+function initDashboard() {
+  renderPlatforms();
+  updateAll();
+  updatePreview();
+  updateCompatibility();
+  const now = new Date();
+  const sd = document.getElementById('s-date');
+  const st = document.getElementById('s-time');
+  if (sd) sd.value = now.toISOString().split('T')[0];
+  if (st) st.value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const draft = localStorage.getItem('omni_draft');
+  if (draft) {
+    document.getElementById('content').value = draft;
+    document.getElementById('draft-bar').style.display = 'flex';
+    document.getElementById('draft-bar-txt').textContent = 'Draft restored — ' + new Date(parseInt(localStorage.getItem('omni_draft_ts')||'0')).toLocaleTimeString();
+    onContentChange();
+  }
 }
 
-async function runAiAdapt() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Calling Claude…';
-  const t = Date.now();
-  const platforms = [...document.querySelectorAll('input[name="ai-plat"]:checked')].map(el=>el.value);
+/* ══════════════════════════════════════
+   DASHBOARD FUNCTIONS
+══════════════════════════════════════ */
+function setFormat(btn) {
+  document.querySelectorAll('.fmt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFormat = btn.dataset.fmt;
+  const fc = FORMAT_COMPAT[currentFormat];
+  if (fc && !fc.ratios.includes(currentRatio)) {
+    const rb = document.querySelector(`[data-ratio="${fc.ratios[0]}"]`);
+    if (rb) setRatio(rb);
+  } else { updatePreview(); updateCompatibility(); }
+}
+function setRatio(btn) {
+  document.querySelectorAll('.ratio-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentRatio = btn.dataset.ratio;
+  updatePreview(); updateCompatibility();
+}
+function updatePreview() {
+  const frame   = document.getElementById('device-frame');
+  const badge   = document.getElementById('format-badge');
+  const topMeta = document.getElementById('preview-meta-top');
+  const content = document.getElementById('content')?.value || '';
+  if (!frame) return;
+  const classMap = {'16:9':'frame-16-9','9:16':'frame-9-16','1:1':'frame-1-1','4:5':'frame-4-5','2:3':'frame-2-3'};
+  frame.className = 'device-frame ' + (classMap[currentRatio]||'frame-16-9');
+  badge.textContent = currentRatio;
+  const fmtInfo  = FORMAT_COMPAT[currentFormat] || {};
+  const ratioC   = RATIO_COMPAT[currentRatio]   || {};
+  topMeta.textContent = `${fmtInfo.name||currentFormat} · ${currentRatio}`;
+  let notch = frame.querySelector('.device-notch');
+  if (currentRatio === '9:16') { if (!notch) { notch = document.createElement('div'); notch.className='device-notch'; frame.appendChild(notch); } }
+  else if (notch) notch.remove();
+  const mi = currentFormat==='video'?'🎬':currentFormat==='short'?'⚡':currentFormat==='story'?'⭕':'🖼️';
+  let inner = frame.querySelector('.device-content');
+  if (!inner) { inner = document.createElement('div'); inner.className='device-content'; inner.id='device-content'; frame.appendChild(inner); }
+  inner.innerHTML = `<div class="device-media-preview">${mi}</div><div class="device-content-text">${escHtml(content.slice(0,120))||'Your content preview'}</div>`;
+  const cr = document.getElementById('compat-row');
+  const cp = (ratioC.platforms||[]).slice(0,5);
+  cr.innerHTML = cp.map(pid => { const p=PLATFORMS.find(x=>x.id===pid); return p?`<div class="compat-chip">${p.abbr} ${p.name}</div>`:''; }).join('') +
+    (cp.length<(ratioC.platforms||[]).length?`<div class="compat-chip">+${(ratioC.platforms||[]).length-cp.length} more</div>`:'');
+}
+function updateCompatibility() {
+  const compat = RATIO_COMPAT[currentRatio] || {};
+  document.getElementById('compat-fmt-name').textContent  = FORMAT_COMPAT[currentFormat]?.name || currentFormat;
+  document.getElementById('compat-ratio-name').textContent = currentRatio;
+  PLATFORMS.forEach(p => {
+    const card = document.getElementById('pc-'+p.id);
+    if (!card) return;
+    const fmtOk = p.formats.includes(currentFormat);
+    const ratOk = p.ratios.includes(currentRatio);
+    card.classList.toggle('dimmed', !fmtOk || !ratOk);
+    let tag = card.querySelector('.plat-compat');
+    if (!tag) { tag = document.createElement('div'); tag.className='plat-compat'; card.querySelector('.plat-info').appendChild(tag); }
+    tag.textContent = fmtOk&&ratOk ? '✓ Compatible' : fmtOk ? '⚠ Wrong ratio' : '✗ Unsupported';
+    tag.style.color = fmtOk&&ratOk ? 'var(--acc3)' : fmtOk ? 'var(--warn)' : 'var(--err)';
+    tag.style.background = fmtOk&&ratOk ? 'rgba(0,206,201,0.1)' : 'transparent';
+  });
+}
+function renderPlatforms() {
+  document.getElementById('plats-grid').innerHTML = PLATFORMS.map(p => {
+    const lim = p.limit>=1000?(p.limit/1000).toFixed(0)+'k':p.limit;
+    return `<div class="plat-card" id="pc-${p.id}" style="--pc:${p.color}" onclick="toggle('${p.id}')">
+      <div class="plat-icon" style="background:${p.color}">${p.abbr}</div>
+      <div class="plat-info"><div class="plat-name">${p.name}</div><div class="plat-meta">${lim} chars · ${p.reach}</div></div>
+      <div class="plat-toggle" id="pt-${p.id}"></div>
+    </div>`;
+  }).join('');
+}
+function toggle(id) {
+  selected.has(id)?selected.delete(id):selected.add(id);
+  document.getElementById('pc-'+id).classList.toggle('sel',selected.has(id));
+  updateAll();
+}
+function toggleAll() {
+  const compat = PLATFORMS.filter(p=>p.formats.includes(currentFormat)&&p.ratios.includes(currentRatio));
+  const allSel = compat.every(p=>selected.has(p.id));
+  if (allSel) { selected.clear(); document.querySelectorAll('.plat-card').forEach(c=>c.classList.remove('sel')); }
+  else { compat.forEach(p=>{selected.add(p.id);document.getElementById('pc-'+p.id).classList.add('sel');}); }
+  updateAll();
+}
+function getSelected() { return PLATFORMS.filter(p=>selected.has(p.id)); }
+function updateAll() {
+  const sel = getSelected(), n = sel.length;
+  document.getElementById('sel-label').textContent = `${n} of ${PLATFORMS.length} selected`;
+  const compatCount = PLATFORMS.filter(p=>p.formats.includes(currentFormat)&&p.ratios.includes(currentRatio)).length;
+  document.getElementById('sel-all-btn').textContent = n===compatCount?'Deselect All':'Select Compatible';
+  const badge = document.getElementById('hdr-badge');
+  if (badge) badge.textContent = `${n} Platform${n!==1?'s':''}`;
+  document.getElementById('snum-plat').textContent = n;
+  let total=0; sel.forEach(p=>{const v=parseFloat(p.reach);total+=p.reach.includes('B')?v*1000:v;});
+  document.getElementById('snum-reach').textContent = n===0?'—':total>=1000?(total/1000).toFixed(1)+'B':Math.round(total)+'M';
+  onContentChange();
+}
+function onContentChange() {
+  const txt = document.getElementById('content')?.value||'';
+  const sel = getSelected();
+  document.getElementById('snum-score').textContent = txt.length>20&&sel.length>0?Math.min(100,Math.round(72+sel.length*1.5-(Math.max(0,txt.length-200)*0.08))):'—';
+  if (!sel.length) {
+    document.getElementById('char-count').textContent = `${txt.length} chars`;
+    document.getElementById('char-count').className = 'char-count';
+  } else {
+    const minLim = Math.min(...sel.map(p=>p.limit));
+    const minPlat = sel.find(p=>p.limit===minLim);
+    const pct = txt.length/minLim;
+    const el = document.getElementById('char-count');
+    el.textContent = `${txt.length} / ${minLim} (${minPlat.name})`;
+    el.className = 'char-count'+(pct>1?' over':pct>.85?' warn':'');
+  }
+  updatePreview();
+}
+function switchTab(contentId, btn, tabsId) {
+  document.getElementById(tabsId).querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const panel = btn.closest('.panel')||document.body;
+  panel.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  document.getElementById(contentId).classList.add('active');
+}
+function handleFiles(files) {
+  document.getElementById('media-zone').classList.remove('drag');
+  const prev = document.getElementById('media-previews');
+  Array.from(files).forEach(f=>{
+    if (f.type.startsWith('image/')) { const img=document.createElement('img');img.src=URL.createObjectURL(f);img.className='media-thumb';prev.appendChild(img); }
+    else { const tag=document.createElement('div');tag.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--s3);padding:4px 8px;border-radius:6px;font-size:11px;color:var(--tx2);margin:4px';tag.textContent='🎬 '+f.name.slice(0,18);prev.appendChild(tag); }
+  });
+  document.querySelector('.media-zone-txt').innerHTML = `${document.getElementById('media-previews').children.length} file(s) attached`;
+}
+function addMedia() { document.getElementById('media-input').click(); }
+function handleDrop(e) { e.preventDefault(); document.getElementById('media-zone').classList.remove('drag'); handleFiles(e.dataTransfer.files); }
+function addHashtags() { const ta=document.getElementById('content');ta.value+=(ta.value.length?'\n\n':'')+'#trending #viral #content #socialmedia';onContentChange(); }
+function addEmoji() { const em=['🚀','💡','🔥','✨','💪','🎯','📈','🌟','💫','🎉','⚡','🎬','🏆'];document.getElementById('content').value+=' '+em[Math.floor(Math.random()*em.length)];onContentChange(); }
+function clearContent() { document.getElementById('content').value='';onContentChange(); }
+function useTemplate(key) { document.getElementById('content').value=TEMPLATES[key]||'';if(key==='shorts'){document.querySelector('[data-fmt="short"]')?.click();}onContentChange();toast('Template loaded!','ok'); }
+
+let _draftTimer;
+function autosaveDraft() {
+  clearTimeout(_draftTimer);
+  _draftTimer = setTimeout(()=>{
+    const txt=document.getElementById('content').value;
+    if(txt.trim()){localStorage.setItem('omni_draft',txt);localStorage.setItem('omni_draft_ts',Date.now());
+    const bar=document.getElementById('draft-bar');bar.style.display='flex';document.getElementById('draft-bar-txt').textContent='Draft auto-saved — '+new Date().toLocaleTimeString();}
+  },1500);
+}
+function clearDraft() { localStorage.removeItem('omni_draft');localStorage.removeItem('omni_draft_ts');document.getElementById('content').value='';document.getElementById('draft-bar').style.display='none';onContentChange();toast('Draft discarded','ok'); }
+
+async function runAIAdapt() {
+  const txt = document.getElementById('content').value.trim();
+  const sel = getSelected();
+  if (!txt) { toast('Write some content first!','err'); return; }
+  if (!sel.length) { toast('Select at least one platform!','err'); return; }
+  const btn = document.getElementById('ai-btn');
+  btn.disabled = true;
+  document.getElementById('ai-ico').outerHTML = '<span class="spin" id="ai-ico"></span>';
+  document.getElementById('ai-lbl').textContent = 'Adapting with AI…';
   try {
-    const r = await callApi('POST', '/ai/adapt', {
-      content: document.getElementById('ai-content').value,
-      platforms,
+    const res = await api('POST', '/api/v1/ai/adapt', { content: txt, platforms: sel.map(p=>p.id), format: currentFormat, ratio: currentRatio });
+    if (!res.ok) throw new Error(`${res.status}`);
+    const data = await res.json();
+    adapted = data.adapted || {};
+    renderAdapted(sel);
+    toast(`✦ Content adapted for ${sel.length} platforms!`,'ok');
+    document.querySelector('#right-tabs .tab-btn:first-child').click();
+  } catch (err) {
+    sel.forEach(p=>{adapted[p.id]=txt.length>p.limit?txt.slice(0,p.limit-4)+'…':txt;});
+    renderAdapted(sel);
+    toast('AI unavailable — showing trimmed fallback','err');
+  }
+  btn.disabled = false;
+  document.getElementById('ai-ico').outerHTML = '<span id="ai-ico">✦</span>';
+  document.getElementById('ai-lbl').textContent = 'Re-Adapt Content';
+}
+
+function renderAdapted(sel) {
+  document.getElementById('adapted-empty').style.display = 'none';
+  document.getElementById('adapted-list').innerHTML = sel.map(p=>{
+    const txt=adapted[p.id]||'';const pct=Math.min(txt.length/p.limit,1);
+    const barC=pct>.9?'var(--err)':pct>.7?'var(--warn)':'var(--acc3)';
+    return `<div class="adapted-card"><div class="adapted-head"><div class="a-plat-icon" style="background:${p.color}">${p.abbr}</div><span class="a-plat-name">${p.name}</span><span class="a-chars">${txt.length}/${p.limit}</span><button class="a-copy-btn" onclick="copyText('${p.id}')">Copy</button></div><div class="adapted-text">${escHtml(txt)}</div><div class="mini-prog"><div class="mini-prog-fill" style="width:${Math.round(pct*100)}%;background:${barC}"></div></div></div>`;
+  }).join('');
+}
+function copyText(pid) { if(adapted[pid]){navigator.clipboard.writeText(adapted[pid]);toast('Copied!','ok');} }
+
+async function publishAll() {
+  const txt=document.getElementById('content').value.trim();const sel=getSelected();
+  if(!txt){toast('Write some content first!','err');return;}
+  if(!sel.length){toast('Select at least one platform!','err');return;}
+  if(publishing)return;
+  publishing=true;
+  const btn=document.getElementById('pub-btn');
+  btn.disabled=true;btn.classList.add('going');btn.textContent='⟳  Publishing…';
+  document.querySelector('#right-tabs .tab-btn:last-child').click();
+  document.getElementById('status-empty').style.display='none';
+  const list=document.getElementById('status-list');
+  list.innerHTML=sel.map(p=>`<div class="stat-item" id="si-${p.id}"><div class="stat-item-icon" style="background:${p.color}">${p.abbr}</div><div class="stat-item-info"><div class="stat-item-name">${p.name}</div><div class="stat-item-detail" id="sid-${p.id}">Queued</div><div class="stat-item-prog"><div class="stat-item-fill" id="sif-${p.id}"></div></div></div><div class="badge b-wait" id="sb-${p.id}">Waiting</div></div>`).join('');
+  try {
+    const headers={'Content-Type':'application/json','Authorization':`Bearer ${auth.token||''}`};
+    const csrf=getCsrf(); if(csrf)headers['X-CSRF-Token']=csrf;
+    const pids=sel.map(p=>p.id);
+    sel.forEach(p=>{document.getElementById('sid-'+p.id).textContent='Creating post…';});
+    const postRes=await fetch(base()+'/api/v1/posts',{method:'POST',headers,body:JSON.stringify({content:txt,platforms:pids,format:currentFormat,aspectRatio:currentRatio})});
+    if(!postRes.ok)throw new Error((await postRes.json()).error||'Failed to create post');
+    const {post}=await postRes.json();
+    sel.forEach(p=>{document.getElementById('sb-'+p.id).className='badge b-pub';document.getElementById('sb-'+p.id).textContent='Uploading';document.getElementById('sid-'+p.id).textContent='Connecting…';const f=document.getElementById('sif-'+p.id);if(f)f.style.width='50%';});
+    const pubRes=await fetch(base()+'/api/v1/publish',{method:'POST',headers,body:JSON.stringify({postId:post.id,platforms:pids})});
+    const result=await pubRes.json();
+    if(!pubRes.ok)throw new Error(result.error||'Publish failed');
+    const sm={};if(result.summary)result.summary.forEach(s=>{sm[s.platform]=s;});
+    let ok=0;
+    sel.forEach(p=>{
+      const f=document.getElementById('sif-'+p.id);if(f)f.style.width='100%';
+      const r=sm[p.id]||{status:'failed',error:'Unknown'};
+      if(r.status==='published'||r.status==='fulfilled'){ok++;if(f)f.style.background='var(--acc3)';document.getElementById('sb-'+p.id).className='badge b-ok';document.getElementById('sb-'+p.id).textContent='✓ Live';document.getElementById('sid-'+p.id).innerHTML=`Published · ${new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}`;}
+      else{if(f)f.style.background='var(--err)';document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Failed';document.getElementById('sid-'+p.id).textContent=r.error||'Failed';}
     });
-    showResponse(r.status, r.data, Date.now()-t);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Adapt with AI';
+    toast(ok===sel.length?`🚀 Published to all ${sel.length} platforms!`:`Published ${ok}/${sel.length}`,(ok>0?'ok':'err'));
+  } catch(err) {
+    sel.forEach(p=>{const f=document.getElementById('sif-'+p.id);if(f){f.style.width='100%';f.style.background='var(--err)';}document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Error';document.getElementById('sid-'+p.id).textContent=err.message;});
+    toast('Publishing failed: '+err.message,'err');
+  }
+  btn.disabled=false;btn.classList.remove('going');btn.textContent='↺  Publish Again';
+  publishing=false;
 }
 
-async function runListPlatforms() {
-  const btn = event.target; btn.disabled=true; btn.innerHTML='<span class="spinner"></span>';
-  const t = Date.now();
-  try {
-    const r = await callApi('GET', '/platforms');
-    showResponse(r.status, r.data, Date.now()-t);
-  } catch(e) { showResponse(0, {error:e.message}, Date.now()-t); }
-  btn.disabled=false; btn.textContent='Fetch Connections';
-}
+function openSettings() { document.getElementById('backend-url-input').value=BACKEND_URL; document.getElementById('settings-modal').style.display='block'; }
+function closeSettings(e) { if(!e||e.target===e.currentTarget)document.getElementById('settings-modal').style.display='none'; }
+function saveSettings() { BACKEND_URL=document.getElementById('backend-url-input').value.trim().replace(/\/$/,''); localStorage.setItem('omni_backend_url',BACKEND_URL); document.getElementById('settings-modal').style.display='none'; toast('Settings saved!','ok'); }
 
-function show(key) {
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  event.currentTarget.classList.add('active');
-  document.getElementById('panel').innerHTML = PANELS[key]?.() || '<p>Panel not found</p>';
+function toast(msg, type) {
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast '+type;el.style.display='block';
+  clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3500);
 }
+function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
-// Init
-show('health'); document.querySelector('.nav-btn').classList.add('active');
-checkHealth();
-setInterval(checkHealth, 10000);
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', () => {
+  applyTheme(currentTheme);
+  buildMarquee();
+
+  if (auth.token && auth.user) {
+    showPage('dashboard');
+  } else {
+    showPage('home');
+  }
+});
 </script>
 </body>
 </html>
