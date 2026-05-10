@@ -8,6 +8,7 @@
 
 const { decrypt }  = require('../utils/encryption');
 const { logger }   = require('../utils/logger');
+const { publishWithRetry, classifyPlatformError, normalizePlatformResponse } = require('./platformRetryService');
 
 /**
  * publishToPlatform — dispatches content to the appropriate platform API.

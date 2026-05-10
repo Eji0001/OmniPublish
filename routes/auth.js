@@ -71,14 +71,21 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
     const newAttempts = (user.failed_login_attempts || 0) + 1;
+    // Exponential backoff: 15m, 22.5m, 33.75m, up to 24h
+    const exponentialBackoff = (attempts) => {
+      const baseMs = LOCKOUT_POLICY.lockDurationMs;
+      const delayMs = Math.min(baseMs * Math.pow(1.5, Math.max(0, attempts - 5)), 86400000);
+      return delayMs;
+    };
     const lockUpdate = {
       failed_login_attempts: newAttempts,
-      ...(newAttempts >= LOCKOUT_POLICY.maxFailedAttempts ? { locked_until: new Date(Date.now() + LOCKOUT_POLICY.lockDurationMs) } : {}),
+      ...(newAttempts >= LOCKOUT_POLICY.maxFailedAttempts ? { locked_until: new Date(Date.now() + exponentialBackoff(newAttempts)) } : {}),
     };
     // Optimistic concurrency: only update if the counter we read is still current
     await supabase.from('users').update(lockUpdate)
       .eq('id', user.id)
       .eq('failed_login_attempts', user.failed_login_attempts || 0);
+    logger.warn('Failed login attempt', { userId: user.id, attempts: newAttempts, ip: req.ip });
     return res.status(401).json({ error: 'Invalid credentials' });
   }
 

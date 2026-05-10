@@ -40,12 +40,12 @@ const requestSanitizer = (req, res, next) => {
 
 const schemas = {
   register: z.object({
-    email:    z.string().email().max(255),
+    email:    z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
     password: z.string().min(12).max(128),
     fullName: z.string().min(2).max(100).optional(),
   }),
   login: z.object({
-    email:    z.string().email().max(255),
+    email:    z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
     password: z.string().min(1).max(128),
   }),
   createPost: z.object({
@@ -68,7 +68,7 @@ const schemas = {
     platforms: z.array(z.string().max(50)).min(1).max(14),
   }),
   forgotPassword: z.object({
-    email: z.string().email().max(255),
+    email: z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
   }),
   resetPassword: z.object({
     token:    z.string().min(64).max(64),
@@ -83,7 +83,7 @@ const schemas = {
     status:       z.enum(['draft', 'scheduled']).optional(),
   }).strict(),
   magicLink: z.object({
-    email: z.string().email().max(255),
+    email: z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
   }),
   magicLinkVerify: z.object({
     token: z.string().min(64).max(64),

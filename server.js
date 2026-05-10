@@ -26,6 +26,8 @@ const { auditLogger }              = require('./middleware/audit');
 const { verifyCSRF }               = require('./middleware/csrf');
 const { securityHeaders }          = require('./config/security');
 const { requireApiKey, requireJwtOrApiKey } = require('./middleware/apiKey');
+const { idempotencyMiddleware }    = require('./middleware/idempotency');
+const { cleanupExpiredOAuthStates } = require('./middleware/oauthStateVerification');
 
 const authRoutes      = require('./routes/auth');
 const oauthRoutes     = require('./routes/oauth');
@@ -116,18 +118,38 @@ app.use(cors({
 }));
 
 /* ─────────────────────────────────────────
-   LAYER 3 — Body Parsing & HTTP Pollution
+   LAYER 3 — Content-Type Validation
+───────────────────────────────────────── */
+const validateContentType = (req, res, next) => {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    const contentType = req.headers['content-type'] || '';
+    if (!contentType.includes('application/json')) {
+      logger.warn('Invalid content-type', { ip: req.ip, contentType, path: req.path });
+      return res.status(415).json({
+        error: 'Unsupported Media Type',
+        code: 'CONTENT_TYPE_INVALID',
+        expected: 'application/json',
+        received: contentType,
+      });
+    }
+  }
+  next();
+};
+app.use(validateContentType);
+
+/* ─────────────────────────────────────────
+   LAYER 4 — Body Parsing & HTTP Pollution
 ───────────────────────────────────────── */
 app.use(express.json({
-  limit: '512kb',       // prevent large payload attacks
+  limit: '2mb',         // prevent large payload attacks
   strict: true,         // only arrays/objects
 }));
-app.use(express.urlencoded({ extended: false, limit: '512kb' }));
+app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 app.use(hpp());         // HTTP Parameter Pollution guard
 app.use(cookieParser()); // Required for CSRF cookie reading
 
 /* ─────────────────────────────────────────
-   LAYER 4 — Compression
+   LAYER 5 — Compression
 ───────────────────────────────────────── */
 app.use(compression({
   filter: (req, res) => {
@@ -138,7 +160,7 @@ app.use(compression({
 }));
 
 /* ─────────────────────────────────────────
-   LAYER 5 — Request Logging (Morgan)
+   LAYER 6 — Request Logging (Morgan)
 ───────────────────────────────────────── */
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan(
@@ -164,7 +186,12 @@ app.use(requestSanitizer);
 app.use('/api/', verifyCSRF);
 
 /* ─────────────────────────────────────────
-   LAYER 9 — Audit Logging
+   LAYER 9 — Idempotency Key Verification
+───────────────────────────────────────── */
+app.use('/api/', idempotencyMiddleware);
+
+/* ─────────────────────────────────────────
+   LAYER 10 — Audit Logging
 ───────────────────────────────────────── */
 app.use(auditLogger);
 
@@ -220,6 +247,11 @@ if (require.main === module) {
   cron.schedule('0 * * * *', async () => {
     try { await cleanupRevokedTokens(); }
     catch (e) { logger.error('Token cleanup error', { err: e.message }); }
+  });
+
+  cron.schedule('0 * * * *', async () => {
+    try { await cleanupExpiredOAuthStates(); }
+    catch (e) { logger.error('OAuth state cleanup error', { err: e.message }); }
   });
 
   const PORT = parseInt(process.env.PORT || '4000', 10);

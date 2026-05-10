@@ -18,17 +18,24 @@ router.use(verifyToken);
 
 /* ── GET /posts ── */
 router.get('/', async (req, res) => {
-  const { status, format, page = 1, limit = 20 } = req.query;
-  const offset = (Math.max(1, parseInt(page)) - 1) * Math.min(100, parseInt(limit));
+  const { status, format } = req.query;
+  let page = Math.max(1, Math.min(999, parseInt(req.query.page) || 1));
+  let limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
+  
+  if (isNaN(page) || isNaN(limit)) {
+    return res.status(400).json({ error: 'Invalid pagination parameters', code: 'PAGINATION_INVALID' });
+  }
+  
+  const offset = (page - 1) * limit;
   let query = supabase.from('posts')
     .select('id,title,content,format,aspect_ratio,status,scheduled_at,published_at,created_at,post_platforms(platform,status,platform_post_url,published_at)', { count: 'exact' })
     .eq('user_id', req.user.id).order('created_at', { ascending: false })
-    .range(offset, offset + parseInt(limit) - 1);
+    .range(offset, offset + limit - 1);
   if (status) query = query.eq('status', status);
   if (format) query = query.eq('format', format);
   const { data, error, count } = await query;
   if (error) return res.status(500).json({ error: 'Failed to fetch posts' });
-  res.json({ posts: data, total: count, page: parseInt(page), limit: parseInt(limit) });
+  res.json({ posts: data, total: count, page, limit });
 });
 
 /* ── GET /posts/stats/overview — must be before /:id ── */
