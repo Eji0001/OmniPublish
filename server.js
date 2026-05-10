@@ -62,8 +62,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc:     ["'self'"],
-      scriptSrc:      ["'self'", "'strict-dynamic'"],
-      styleSrc:       ["'self'", "'unsafe-inline'"],   // tighten when adopting nonce
+      scriptSrc:      ["'self'", "'unsafe-inline'"],    // tighten to nonce-based when JS is extracted to app.js
+      styleSrc:       ["'self'", "'unsafe-inline'"],
       imgSrc:         ["'self'", 'data:', 'blob:', '*.supabase.co', '*.cloudfront.net'],
       connectSrc:     ["'self'", 'https://api.anthropic.com', 'https://*.supabase.co'],
       mediaSrc:       ["'self'", 'blob:', '*.cloudfront.net'],

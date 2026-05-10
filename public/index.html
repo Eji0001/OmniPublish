@@ -1571,11 +1571,12 @@ function closePlatModal() {
 
 function connectPlatform() {
   if (!_currentPlatId) return;
-  const p = OB_PLATFORMS.find(x => x.id === _currentPlatId);
+  const platId = _currentPlatId;
+  const p = OB_PLATFORMS.find(x => x.id === platId);
   closePlatModal();
   // In dev: mark as connected with a toast
-  _obConnected[_currentPlatId] = true;
-  const btn = document.getElementById('ob-add-' + _currentPlatId);
+  _obConnected[platId] = true;
+  const btn = document.getElementById('ob-add-' + platId);
   if (btn) { btn.textContent = '✓ Connected'; btn.className = 'ob-add-btn connected'; btn.onclick = null; }
   toast(p.name + ' connected! (dev mode)', 'ok');
 }
