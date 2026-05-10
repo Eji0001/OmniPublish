@@ -7,8 +7,13 @@
 'use strict';
 
 const { decrypt }  = require('../utils/encryption');
-const { logger }   = require('../utils/logger');
-const { publishWithRetry, classifyPlatformError, normalizePlatformResponse } = require('./platformRetryService');
+
+const requireMediaUrl = (post, platform) => {
+  if (!post.media_url) {
+    throw Object.assign(new Error(`${platform} publish requires media attached to the post`), { platform });
+  }
+  return post.media_url;
+};
 
 /**
  * publishToPlatform — dispatches content to the appropriate platform API.
@@ -97,6 +102,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── TikTok Content Posting API ── */
     tiktok: async () => {
+      const mediaUrl = requireMediaUrl(post, 'tiktok');
       // TikTok requires a two-step: init upload → publish
       // Using Direct Post API (requires approved app)
       const res  = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
@@ -104,7 +110,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8' },
         body: JSON.stringify({
           post_info:    { title: content.slice(0, 150), privacy_level: 'PUBLIC_TO_EVERYONE', disable_duet: false, disable_comment: false, disable_stitch: false },
-          source_info:  { source: 'PULL_FROM_URL', video_url: post.media_url || '' },
+          source_info:  { source: 'PULL_FROM_URL', video_url: mediaUrl },
         }),
       });
       const data = await res.json();
@@ -130,12 +136,13 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── Instagram Graph API ── */
     instagram: async () => {
+      const mediaUrl = requireMediaUrl(post, 'instagram');
       // Step 1: Create media container
       const containerRes = await fetch(
         `https://graph.facebook.com/v19.0/${conn.platform_user_id}/media`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ caption: content, access_token: accessToken, media_type: 'IMAGE', image_url: post.media_url }),
+          body: JSON.stringify({ caption: content, access_token: accessToken, media_type: 'IMAGE', image_url: mediaUrl }),
         }
       );
       const container = await containerRes.json();
@@ -206,6 +213,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── Pinterest API v5 ── */
     pinterest: async () => {
+      const mediaUrl = post.media_url || null;
       const res  = await fetch('https://api.pinterest.com/v5/pins', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
@@ -213,9 +221,9 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
           board_id:    conn.platform_user_id,
           title:       post.title || content.slice(0, 100),
           description: content,
-          link:        post.link_url || null,
-          media_source: post.media_url
-            ? { source_type: 'image_url', url: post.media_url }
+          link:        null,
+          media_source: mediaUrl
+            ? { source_type: 'image_url', url: mediaUrl }
             : { source_type: 'image_base64', content_type: 'image/jpeg', data: '' },
         }),
       });

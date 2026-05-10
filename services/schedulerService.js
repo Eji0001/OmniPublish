@@ -9,10 +9,18 @@ const { supabase }          = require('../config/database');
 const { publishToPlatform } = require('./platformService');
 const { logger }            = require('../utils/logger');
 
+const buildPlatformPostPayload = (post, platform) => {
+  const platformPost = post.post_platforms?.find(p => p.platform === platform);
+  return {
+    ...post,
+    media_url: platformPost?.custom_media_url || post.media_files?.[0]?.cdn_url || null,
+  };
+};
+
 const processScheduledPosts = async () => {
   const { data: duePosts } = await supabase
     .from('posts')
-    .select('id, user_id, content, title, media_url, link_url, post_platforms(platform)')
+    .select('id, user_id, content, title, post_platforms(platform, custom_media_url), media_files(cdn_url)')
     .eq('status', 'scheduled')
     .lte('scheduled_at', new Date().toISOString())
     .limit(20);
@@ -38,7 +46,7 @@ const processScheduledPosts = async () => {
         platforms.map(pl => {
           const conn = connMap[pl];
           if (!conn) return Promise.reject(Object.assign(new Error(`${pl} not connected`), { platform: pl }));
-          return publishToPlatform({ platform: pl, content: post.content, post, conn });
+          return publishToPlatform({ platform: pl, content: post.content, post: buildPlatformPostPayload(post, pl), conn });
         })
       );
 

@@ -20,6 +20,17 @@ const { logger }      = require('../utils/logger');
 const router = express.Router();
 
 const isProd = process.env.NODE_ENV === 'production';
+const TOKEN_PURPOSE = {
+  PASSWORD_RESET: 'password_reset',
+  MAGIC_LINK: 'magic_link',
+  OAUTH_EXCHANGE: 'oauth_exchange',
+};
+
+const buildAuthResponse = ({ user, tokens, csrfToken }) => ({
+  user: { id: user.id, email: user.email, role: user.role, plan: user.plan },
+  accessToken: tokens.accessToken,
+  csrfToken,
+});
 
 // Set httpOnly refresh cookie alongside every response that issues tokens
 const setRefreshCookie = (res, refreshToken) => {
@@ -52,7 +63,7 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
   logger.info('User registered', { userId: user.id });
-  res.status(201).json({ user: { id: user.id, email: user.email, role: user.role, plan: user.plan }, ...tokens, csrfToken });
+  res.status(201).json(buildAuthResponse({ user, tokens, csrfToken }));
 });
 
 /* ── POST /auth/login ── */
@@ -65,6 +76,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
 
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!user.is_active) return res.status(403).json({ error: 'Account deactivated' });
+  if (!user.password_hash) return res.status(401).json({ error: 'Password login is not available for this account' });
   if (user.locked_until && new Date(user.locked_until) > new Date())
     return res.status(429).json({ error: 'Account temporarily locked', retryAfter: user.locked_until });
 
@@ -96,7 +108,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
   logger.info('User logged in', { userId: user.id });
-  res.json({ user: { id: user.id, email: user.email, role: user.role, plan: user.plan }, ...tokens, csrfToken });
+  res.json(buildAuthResponse({ user, tokens, csrfToken }));
 });
 
 /* ── POST /auth/refresh ── */
@@ -109,7 +121,7 @@ router.post('/refresh', async (req, res) => {
     const csrfToken = generateCSRFToken();
     res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
     setRefreshCookie(res, tokens.refreshToken);
-    res.json({ ...tokens, csrfToken });
+    res.json({ accessToken: tokens.accessToken, csrfToken });
   } catch (err) {
     res.clearCookie('omni_refresh');
     res.status(err.status || 401).json({ error: err.message });
@@ -168,16 +180,18 @@ router.get('/export-data', verifyToken, async (req, res) => {
 /* ── DELETE /auth/me (GDPR Art. 17) ── */
 router.delete('/me', verifyToken, async (req, res) => {
   const { password } = req.body;
-  if (!password) return res.status(422).json({ error: 'password required to confirm account deletion' });
 
   const { data: user } = await supabase.from('users')
     .select('id, password_hash').eq('id', req.user.id).eq('is_active', true).single();
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+  if (user.password_hash) {
+    if (!password) return res.status(422).json({ error: 'password required to confirm account deletion' });
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+  }
 
-  await Promise.all([
+  const [userUpdate, connectionsUpdate] = await Promise.all([
     supabase.from('users').update({
       is_active: false,
       email: `deleted_${user.id}@deleted.local`,
@@ -185,8 +199,17 @@ router.delete('/me', verifyToken, async (req, res) => {
       full_name: null,
     }).eq('id', user.id),
     supabase.from('platform_connections').update({ is_active: false }).eq('user_id', user.id),
-    revokeToken(req.user.jti, user.id),
   ]);
+  if (userUpdate.error || connectionsUpdate.error) {
+    logger.error('Account deletion failed', {
+      userId: user.id,
+      userError: userUpdate.error?.message,
+      connectionError: connectionsUpdate.error?.message,
+    });
+    return res.status(500).json({ error: 'Account deletion failed' });
+  }
+
+  await revokeToken(req.user.jti, user.id);
 
   res.clearCookie('csrf_token');
   res.clearCookie('omni_refresh', { httpOnly: true, secure: isProd, sameSite: 'Strict' });
@@ -207,7 +230,13 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
   const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');
   const expiresAt  = new Date(Date.now() + 60 * 60 * 1000);
 
-  await supabase.from('password_resets').insert({ id: uuidv4(), user_id: user.id, token_hash: tokenHash, expires_at: expiresAt });
+  await supabase.from('password_resets').insert({
+    id: uuidv4(),
+    user_id: user.id,
+    token_hash: tokenHash,
+    purpose: TOKEN_PURPOSE.PASSWORD_RESET,
+    expires_at: expiresAt,
+  });
 
   if (!isProd) logger.info('Password reset token (dev only)', { userId: user.id, token: plainToken });
 
@@ -221,7 +250,7 @@ router.post('/reset-password', authRateLimiter, validateBody('resetPassword'), a
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
   const { data: record } = await supabase.from('password_resets')
-    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).single();
+    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).eq('purpose', TOKEN_PURPOSE.PASSWORD_RESET).single();
 
   if (!record)                                   return res.status(400).json({ error: 'Invalid or expired reset token' });
   if (record.used_at)                            return res.status(400).json({ error: 'Reset token already used' });
@@ -256,7 +285,13 @@ router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (re
   const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');
   const expiresAt  = new Date(Date.now() + (parseInt(process.env.MAGIC_LINK_EXPIRY_MINS || '15', 10)) * 60 * 1000);
 
-  await supabase.from('password_resets').insert({ id: uuidv4(), user_id: user.id, token_hash: tokenHash, expires_at: expiresAt });
+  await supabase.from('password_resets').insert({
+    id: uuidv4(),
+    user_id: user.id,
+    token_hash: tokenHash,
+    purpose: TOKEN_PURPOSE.MAGIC_LINK,
+    expires_at: expiresAt,
+  });
 
   const loginUrl = `${process.env.APP_URL || 'http://localhost:4000'}/?magic=${plainToken}`;
   if (!isProd) logger.info('Magic link (dev only)', { userId: user.id, loginUrl });
@@ -271,7 +306,7 @@ router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, r
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
   const { data: record } = await supabase.from('password_resets')
-    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).single();
+    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).eq('purpose', TOKEN_PURPOSE.MAGIC_LINK).single();
 
   if (!record)                                   return res.status(400).json({ error: 'Invalid or expired link' });
   if (record.used_at)                            return res.status(400).json({ error: 'Link already used' });
@@ -290,17 +325,16 @@ router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, r
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
   logger.info('Magic link login', { userId: user.id });
-  res.json({ user: { id: user.id, email: user.email, role: user.role, plan: user.plan }, ...tokens, csrfToken });
+  res.json(buildAuthResponse({ user, tokens, csrfToken }));
 });
 
 /* ── POST /auth/oauth/exchange — exchange one-time code for JWT (from Google OAuth redirect) ── */
-router.post('/oauth/exchange', async (req, res) => {
+router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) => {
   const { code } = req.body;
-  if (!code || typeof code !== 'string') return res.status(400).json({ error: 'code required' });
 
   const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
   const { data: record } = await supabase.from('password_resets')
-    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).single();
+    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).eq('purpose', TOKEN_PURPOSE.OAUTH_EXCHANGE).single();
 
   if (!record)                                   return res.status(400).json({ error: 'Invalid or expired code' });
   if (record.used_at)                            return res.status(400).json({ error: 'Code already used' });
@@ -317,7 +351,7 @@ router.post('/oauth/exchange', async (req, res) => {
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
   logger.info('OAuth exchange login', { userId: user.id });
-  res.json({ user: { id: user.id, email: user.email, role: user.role, plan: user.plan }, ...tokens, csrfToken });
+  res.json(buildAuthResponse({ user, tokens, csrfToken }));
 });
 
 module.exports = router;

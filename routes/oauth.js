@@ -6,6 +6,7 @@ const crypto  = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { supabase }   = require('../config/database');
 const { generateCSRFToken } = require('../middleware/csrf');
+const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
 const { logger }            = require('../utils/logger');
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -53,10 +54,26 @@ if (hasGoogle) {
   });
 
   router.get('/google',
-    passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+    async (req, res, next) => {
+      try {
+        const { state } = await generateOAuthState('google');
+        passport.authenticate('google', { scope: ['profile', 'email'], session: false, state })(req, res, next);
+      } catch (err) {
+        logger.error('OAuth initialisation error', { err: err.message });
+        res.redirect('/?oauth_error=init_failed');
+      }
+    }
   );
 
   router.get('/google/callback',
+    async (req, res, next) => {
+      try {
+        await verifyOAuthState(req.query.state, 'google');
+        next();
+      } catch {
+        res.redirect('/?oauth_error=invalid_state');
+      }
+    },
     passport.authenticate('google', { session: false, failureRedirect: '/?oauth_error=1' }),
     async (req, res) => {
       try {
@@ -66,6 +83,7 @@ if (hasGoogle) {
         await supabase.from('password_resets').insert({
           id: uuidv4(), user_id: req.user.id,
           token_hash: codeHash,
+          purpose: 'oauth_exchange',
           expires_at: new Date(Date.now() + 5 * 60 * 1000),
         });
 

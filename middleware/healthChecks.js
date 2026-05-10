@@ -1,1 +1,35 @@
-/**\n * middleware/healthChecks.js — Health checks for external API dependencies\n * Covers: Observability · Reliability\n */\n\n'use strict';\n\nconst { logger } = require('../utils/logger');\nconst { supabase, dbHealthCheck } = require('../config/database');\n\nconst HEALTH_CHECK_TIMEOUT = 5000;\n\n/**\n * Check database connectivity\n */\nconst checkDatabase = async () => {\n  try {\n    const isHealthy = await Promise.race([\n      dbHealthCheck(),\n      new Promise((_, reject) =>\n        setTimeout(() => reject(new Error('Database health check timeout')), HEALTH_CHECK_TIMEOUT)\n      ),\n    ]);\n    return { healthy: isHealthy, latency: 0 };\n  } catch (err) {\n    logger.warn('Database health check failed', { err: err.message });\n    return { healthy: false, error: err.message };\n  }\n};\n\n/**\n * Check Redis connectivity\n */\nconst checkRedis = async () => {\n  try {\n    const redisUrl = process.env.REDIS_URL;\n    if (!redisUrl) return { healthy: true, note: 'Redis not configured' };\n\n    const redis = require('redis');\n    const client = redis.createClient({ url: redisUrl });\n    const start = Date.now();\n    await client.connect();\n    const latency = Date.now() - start;\n    await client.quit();\n    return { healthy: true, latency };\n  } catch (err) {\n    logger.warn('Redis health check failed', { err: err.message });\n    return { healthy: false, error: err.message };\n  }\n};\n\n/**\n * Check Anthropic API availability\n */\nconst checkAnthropicAPI = async () => {\n  try {\n    if (!process.env.ANTHROPIC_API_KEY) {\n      return { healthy: true, note: 'Anthropic API key not configured' };\n    }\n\n    const start = Date.now();\n    const response = await Promise.race([\n      fetch('https://api.anthropic.com/v1/models', {\n        method: 'GET',\n        headers: { 'x-api-key': process.env.ANTHROPIC_API_KEY },\n        timeout: HEALTH_CHECK_TIMEOUT,\n      }),\n      new Promise((_, reject) =>\n        setTimeout(() => reject(new Error('Anthropic API timeout')), HEALTH_CHECK_TIMEOUT)\n      ),\n    ]);\n\n    const latency = Date.now() - start;\n    return { healthy: response.ok, status: response.status, latency };\n  } catch (err) {\n    logger.warn('Anthropic API health check failed', { err: err.message });\n    return { healthy: false, error: err.message };\n  }\n};\n\n/**\n * Check platform APIs availability (sample)\n */\nconst checkPlatformAPIs = async () => {\n  const platforms = {\n    facebook: 'https://graph.facebook.com/v19.0/me',\n    x: 'https://api.twitter.com/2/tweets/search/recent',\n    linkedin: 'https://api.linkedin.com/v2/me',\n  };\n\n  const results = {};\n\n  for (const [platform, url] of Object.entries(platforms)) {\n    try {\n      const start = Date.now();\n      const response = await Promise.race([\n        fetch(url, { method: 'HEAD', timeout: HEALTH_CHECK_TIMEOUT }),\n        new Promise((_, reject) =>\n          setTimeout(() => reject(new Error('Timeout')), HEALTH_CHECK_TIMEOUT)\n        ),\n      ]);\n      const latency = Date.now() - start;\n      // Platform APIs return 401 without auth, which is expected\n      results[platform] = {\n        healthy: response.status < 500,\n        status: response.status,\n        latency,\n      };\n    } catch (err) {\n      results[platform] = { healthy: false, error: err.message };\n    }\n  }\n\n  return results;\n};\n\n/**\n * Comprehensive health check\n */\nconst fullHealthCheck = async () => {\n  const checks = {\n    timestamp: new Date().toISOString(),\n    database: await checkDatabase(),\n    redis: await checkRedis(),\n    anthropic: await checkAnthropicAPI(),\n    platforms: await checkPlatformAPIs(),\n  };\n\n  const allHealthy = checks.database.healthy && \n                     checks.redis.healthy !== false &&\n                     checks.anthropic.healthy !== false;\n\n  return {\n    status: allHealthy ? 'healthy' : 'degraded',\n    checks,\n  };\n};\n\n/**\n * Express middleware for /health/ready endpoint\n */\nconst healthReadinessCheck = async (req, res) => {\n  const health = await fullHealthCheck();\n  const statusCode = health.status === 'healthy' ? 200 : 503;\n  res.status(statusCode).json(health);\n};\n\n/**\n * Express middleware for /health/live endpoint (fast)\n */\nconst healthLivenessCheck = async (req, res) => {\n  try {\n    const dbOk = await Promise.race([\n      dbHealthCheck(),\n      new Promise((_, reject) =>\n        setTimeout(() => reject(new Error('Timeout')), 2000)\n      ),\n    ]);\n\n    if (dbOk) {\n      return res.status(200).json({ status: 'alive', timestamp: new Date().toISOString() });\n    }\n  } catch (err) {\n    logger.warn('Liveness check failed', { err: err.message });\n  }\n\n  res.status(503).json({ status: 'unhealthy', error: 'Database unavailable' });\n};\n\nmodule.exports = {\n  checkDatabase,\n  checkRedis,\n  checkAnthropicAPI,\n  checkPlatformAPIs,\n  fullHealthCheck,\n  healthReadinessCheck,\n  healthLivenessCheck,\n};\n
+'use strict';
+
+const { dbHealthCheck } = require('../config/database');
+const { logger } = require('../utils/logger');
+
+const HEALTH_CHECK_TIMEOUT = 5000;
+
+const withTimeout = async (promise, label) => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`${label} timed out`)), HEALTH_CHECK_TIMEOUT);
+    }),
+  ]);
+};
+
+const healthLivenessCheck = (_req, res) => {
+  res.status(200).json({ status: 'ok', time: new Date() });
+};
+
+const healthReadinessCheck = async (_req, res) => {
+  try {
+    const dbOk = await withTimeout(dbHealthCheck(), 'database health check');
+    if (!dbOk) {
+      return res.status(503).json({ status: 'not_ready', db: 'error', time: new Date() });
+    }
+
+    res.status(200).json({ status: 'ready', db: 'ok', time: new Date() });
+  } catch (err) {
+    logger.warn('Readiness check failed', { err: err.message });
+    res.status(503).json({ status: 'not_ready', db: 'error', time: new Date() });
+  }
+};
+
+module.exports = { healthLivenessCheck, healthReadinessCheck };

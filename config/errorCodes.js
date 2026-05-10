@@ -110,7 +110,7 @@ const ERROR_CODE_MAP = {
   503: ERROR_CODES.SRV_SERVICE_UNAVAILABLE,
 };
 
-const getErrorCode = (statusCode, context) => {
+const getErrorCode = (statusCode, _context) => {
   return ERROR_CODE_MAP[statusCode] || ERROR_CODES.SRV_INTERNAL_ERROR;
 };
 

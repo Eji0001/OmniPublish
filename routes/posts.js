@@ -19,8 +19,8 @@ router.use(verifyToken);
 /* ── GET /posts ── */
 router.get('/', async (req, res) => {
   const { status, format } = req.query;
-  let page = Math.max(1, Math.min(999, parseInt(req.query.page) || 1));
-  let limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
+  const page = Math.max(1, Math.min(999, parseInt(req.query.page) || 1));
+  const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
   
   if (isNaN(page) || isNaN(limit)) {
     return res.status(400).json({ error: 'Invalid pagination parameters', code: 'PAGINATION_INVALID' });

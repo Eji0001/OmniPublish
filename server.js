@@ -15,6 +15,7 @@ const compression = require('compression');
 const morgan      = require('morgan');
 const hpp         = require('hpp');
 const cron        = require('node-cron');
+const passport    = require('passport');
 
 const cookieParser                 = require('cookie-parser');
 const { logger, httpLogStream }    = require('./utils/logger');
@@ -25,7 +26,7 @@ const { requestSanitizer }         = require('./middleware/sanitizer');
 const { auditLogger }              = require('./middleware/audit');
 const { verifyCSRF }               = require('./middleware/csrf');
 const { securityHeaders }          = require('./config/security');
-const { requireApiKey, requireJwtOrApiKey } = require('./middleware/apiKey');
+const { requireApiKey } = require('./middleware/apiKey');
 const { idempotencyMiddleware }    = require('./middleware/idempotency');
 const { cleanupExpiredOAuthStates } = require('./middleware/oauthStateVerification');
 
@@ -127,6 +128,14 @@ app.use(cors({
 const validateContentType = (req, res, next) => {
   if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
     const contentType = req.headers['content-type'] || '';
+    const contentLength = Number.parseInt(req.headers['content-length'] || '0', 10);
+    const hasBody = contentLength > 0 || !!req.headers['transfer-encoding'];
+    const isMediaUpload = req.path === '/v1/media/upload' || req.path === '/api/v1/media/upload';
+
+    if (!hasBody) return next();
+    if (contentType.includes('application/json')) return next();
+    if (isMediaUpload && contentType.includes('multipart/form-data')) return next();
+
     if (!contentType.includes('application/json')) {
       logger.warn('Invalid content-type', { ip: req.ip, contentType, path: req.path });
       return res.status(415).json({
@@ -151,6 +160,7 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false, limit: '2mb' }));
 app.use(hpp());         // HTTP Parameter Pollution guard
 app.use(cookieParser()); // Required for CSRF cookie reading
+app.use(passport.initialize());
 
 /* ─────────────────────────────────────────
    LAYER 5 — Compression

@@ -10,7 +10,7 @@ const { supabase } = require('../config/database');
 const { logger } = require('../utils/logger');
 
 const IDEMPOTENT_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const IDEMPOTENT_PATHS = ['/publish', '/auth/logout', '/auth/password-change'];
+const IDEMPOTENT_PATHS = ['/publish', '/auth/password-change'];
 
 /**
  * idempotencyMiddleware — Check for cached idempotency result

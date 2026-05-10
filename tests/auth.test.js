@@ -57,7 +57,7 @@ describe('POST /api/v1/auth/register', () => {
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('accessToken');
-    expect(res.body).toHaveProperty('refreshToken');
+    expect(res.body).not.toHaveProperty('refreshToken');
     expect(res.body.user.email).toBe(TEST_USER.email);
   });
 
@@ -104,8 +104,20 @@ describe('POST /api/v1/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
-    expect(res.body).toHaveProperty('refreshToken');
+    expect(res.body).not.toHaveProperty('refreshToken');
     expect(res.headers['set-cookie']).toBeDefined();
+  });
+
+  it('401 — rejects password login for OAuth-only accounts', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { ...DB_USER, password_hash: null }, error: null }));
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: TEST_USER.email, password: 'ValidPass123!' });
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toMatch(/password login/i);
   });
 
   it('401 — rejects wrong password and increments failed attempts', async () => {
@@ -184,7 +196,7 @@ describe('POST /api/v1/auth/refresh', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
-    expect(res.body).toHaveProperty('refreshToken');
+    expect(res.body).not.toHaveProperty('refreshToken');
   });
 
   it('401 — rejects invalid refresh token', async () => {
@@ -201,6 +213,62 @@ describe('POST /api/v1/auth/refresh', () => {
       .send({});
 
     expect(res.status).toBe(422);
+  });
+});
+
+// ── POST /api/v1/auth/reset-password ────────────────────────
+
+describe('POST /api/v1/auth/reset-password', () => {
+  it('scopes reset tokens to password_reset purpose', async () => {
+    const chain = mockChain({ data: null, error: { message: 'not found' } });
+    supabase.from.mockReturnValueOnce(chain);
+
+    const res = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ token: 'a'.repeat(64), password: 'ValidPass123!' });
+
+    expect(res.status).toBe(400);
+    expect(chain.eq).toHaveBeenCalledWith('purpose', 'password_reset');
+  });
+});
+
+// ── POST /api/v1/auth/magic-link/verify ─────────────────────
+
+describe('POST /api/v1/auth/magic-link/verify', () => {
+  it('scopes magic links to magic_link purpose', async () => {
+    const chain = mockChain({ data: null, error: { message: 'not found' } });
+    supabase.from.mockReturnValueOnce(chain);
+
+    const res = await request(app)
+      .post('/api/v1/auth/magic-link/verify')
+      .send({ token: 'b'.repeat(64) });
+
+    expect(res.status).toBe(400);
+    expect(chain.eq).toHaveBeenCalledWith('purpose', 'magic_link');
+  });
+});
+
+// ── POST /api/v1/auth/oauth/exchange ────────────────────────
+
+describe('POST /api/v1/auth/oauth/exchange', () => {
+  it('422 — rejects malformed exchange codes', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/oauth/exchange')
+      .send({ code: 'short' });
+
+    expect(res.status).toBe(422);
+  });
+
+  it('scopes exchange codes to oauth_exchange purpose', async () => {
+    const chain = mockChain({ data: null, error: { message: 'not found' } });
+    supabase.from.mockReturnValueOnce(chain);
+
+    const res = await request(app)
+      .post('/api/v1/auth/oauth/exchange')
+      .send({ code: 'c'.repeat(48) });
+
+    expect(res.status).toBe(400);
+    expect(chain.eq).toHaveBeenCalledWith('purpose', 'oauth_exchange');
   });
 });
 
@@ -235,9 +303,11 @@ describe('GET /api/v1/auth/me', () => {
     const { token } = generateAccessToken(TEST_USER);
     const profile = { id: TEST_USER.id, email: TEST_USER.email, full_name: 'Test User', role: 'user', plan: 'pro', created_at: new Date().toISOString(), last_login_at: null };
 
-    supabase.from
-      .mockReturnValueOnce(mockChain({ data: null, error: null }))    // revoked_tokens check
-      .mockReturnValueOnce(mockChain({ data: profile, error: null })); // get user
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      if (table === 'users') return mockChain({ data: profile, error: null });
+      return mockChain({ data: null, error: null });
+    });
 
     const res = await request(app)
       .get('/api/v1/auth/me')

@@ -25,13 +25,15 @@ CREATE TYPE plat_status  AS ENUM ('pending', 'publishing', 'published', 'failed'
 CREATE TABLE users (
   id                    UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
   email                 VARCHAR(255) UNIQUE NOT NULL,
-  password_hash         VARCHAR(255) NOT NULL,
+  password_hash         VARCHAR(255),
   full_name             VARCHAR(255),
   avatar_url            TEXT,
   role                  user_role   DEFAULT 'user'        NOT NULL,
   plan                  user_plan   DEFAULT 'free'        NOT NULL,
   is_verified           BOOLEAN     DEFAULT FALSE         NOT NULL,
   is_active             BOOLEAN     DEFAULT TRUE          NOT NULL,
+  user_type             VARCHAR(32),
+  onboarding_completed_at TIMESTAMPTZ,
   last_login_at         TIMESTAMPTZ,
   failed_login_attempts INT         DEFAULT 0             NOT NULL,
   locked_until          TIMESTAMPTZ,
@@ -63,12 +65,14 @@ CREATE TABLE password_resets (
   id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token_hash  VARCHAR(64) UNIQUE NOT NULL,  -- SHA-256 of the reset token
+  purpose     VARCHAR(32) NOT NULL CHECK (purpose IN ('password_reset', 'magic_link', 'oauth_exchange')),
   expires_at  TIMESTAMPTZ NOT NULL,
   used_at     TIMESTAMPTZ,
   created_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 CREATE INDEX idx_pw_reset_token  ON password_resets (token_hash);
 CREATE INDEX idx_pw_reset_user   ON password_resets (user_id);
+CREATE INDEX idx_pw_reset_purpose ON password_resets (purpose);
 
 -- ──────────────────────────────────────────
 -- REVOKED TOKENS (JWT blacklist)

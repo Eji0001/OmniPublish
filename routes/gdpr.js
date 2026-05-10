@@ -1,1 +1,141 @@
-/**\n * routes/gdpr.js — GDPR data export and deletion endpoints\n * Covers: GDPR Art. 15 (Access), Art. 17 (Deletion), CCPA, privacy regulations\n */\n\n'use strict';\n\nconst express = require('express');\nconst { supabase } = require('../config/database');\nconst { verifyToken } = require('../middleware/auth');\nconst { logger } = require('../utils/logger');\nconst router = express.Router();\n\nrouter.use(verifyToken);\n\n/**\n * POST /gdpr/export-data — Export all user data as JSON\n * Returns: User profile, posts, connections, settings, activity logs\n */\nrouter.post('/export-data', async (req, res) => {\n  const userId = req.user.id;\n\n  try {\n    const exportData = {};\n\n    // User profile\n    const { data: user } = await supabase\n      .from('users')\n      .select('*')\n      .eq('id', userId)\n      .single();\n    exportData.user = user ? { ...user, password_hash: undefined } : null;\n\n    // Posts and platforms\n    const { data: posts } = await supabase\n      .from('posts')\n      .select('*')\n      .eq('user_id', userId);\n    exportData.posts = posts || [];\n\n    // Platform connections (without encrypted tokens)\n    const { data: connections } = await supabase\n      .from('platform_connections')\n      .select('id, platform, platform_user_id, platform_username, token_expires_at, is_active, connected_at')\n      .eq('user_id', userId);\n    exportData.platform_connections = connections || [];\n\n    // Media files\n    const { data: media } = await supabase\n      .from('media_files')\n      .select('*')\n      .eq('user_id', userId);\n    exportData.media_files = media || [];\n\n    // Activity logs (limited to last 90 days)\n    const { data: activities } = await supabase\n      .from('audit_logs')\n      .select('*')\n      .eq('user_id', userId)\n      .gte('created_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())\n      .limit(1000);\n    exportData.activity_logs = activities || [];\n\n    logger.info('User data exported', { userId, dataSize: JSON.stringify(exportData).length });\n\n    // Return as JSON file\n    res.setHeader('Content-Type', 'application/json');\n    res.setHeader('Content-Disposition', `attachment; filename=\"omnipublish-export-${userId}.json\"`);\n    res.json({\n      exported_at: new Date().toISOString(),\n      user_id: userId,\n      data: exportData,\n    });\n  } catch (err) {\n    logger.error('Data export failed', { userId, err: err.message });\n    res.status(500).json({ error: 'Failed to export data', code: 'EXPORT_FAILED' });\n  }\n});\n\n/**\n * POST /gdpr/request-deletion — Request account deletion (30-day grace period)\n * User can cancel within 30 days; after that, account and all data are permanently deleted\n */\nrouter.post('/request-deletion', async (req, res) => {\n  const userId = req.user.id;\n  const deletionScheduledFor = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);\n\n  try {\n    // Mark user as pending deletion\n    const { error } = await supabase\n      .from('users')\n      .update({\n        deletion_requested_at: new Date(),\n        deletion_scheduled_for: deletionScheduledFor,\n      })\n      .eq('id', userId);\n\n    if (error) throw error;\n\n    logger.info('Account deletion requested', { userId, scheduledFor: deletionScheduledFor });\n\n    res.json({\n      message: 'Account deletion scheduled',\n      deletion_scheduled_for: deletionScheduledFor,\n      grace_period_days: 30,\n      note: 'You can cancel this request within 30 days by contacting support',\n    });\n  } catch (err) {\n    logger.error('Deletion request failed', { userId, err: err.message });\n    res.status(500).json({ error: 'Failed to schedule deletion', code: 'DELETION_REQUEST_FAILED' });\n  }\n});\n\n/**\n * POST /gdpr/cancel-deletion — Cancel pending account deletion\n */\nrouter.post('/cancel-deletion', async (req, res) => {\n  const userId = req.user.id;\n\n  try {\n    // Clear deletion flags\n    const { error } = await supabase\n      .from('users')\n      .update({\n        deletion_requested_at: null,\n        deletion_scheduled_for: null,\n      })\n      .eq('id', userId);\n\n    if (error) throw error;\n\n    logger.info('Account deletion cancelled', { userId });\n\n    res.json({ message: 'Account deletion cancelled' });\n  } catch (err) {\n    logger.error('Deletion cancellation failed', { userId, err: err.message });\n    res.status(500).json({ error: 'Failed to cancel deletion', code: 'CANCELLATION_FAILED' });\n  }\n});\n\n/**\n * GET /gdpr/status — Get current GDPR status and data\n */\nrouter.get('/status', async (req, res) => {\n  const userId = req.user.id;\n\n  try {\n    const { data: user } = await supabase\n      .from('users')\n      .select('deletion_requested_at, deletion_scheduled_for, created_at, marketing_consent')\n      .eq('id', userId)\n      .single();\n\n    res.json({\n      account_created: user?.created_at,\n      deletion_pending: !!user?.deletion_requested_at,\n      deletion_scheduled_for: user?.deletion_scheduled_for,\n      marketing_consent: user?.marketing_consent,\n      data_export_available: true,\n    });\n  } catch (err) {\n    logger.error('GDPR status check failed', { userId, err: err.message });\n    res.status(500).json({ error: 'Failed to get GDPR status', code: 'STATUS_CHECK_FAILED' });\n  }\n});\n\nmodule.exports = router;\n
+'use strict';
+
+const express = require('express');
+
+const { supabase } = require('../config/database');
+const { verifyToken } = require('../middleware/auth');
+const { logger } = require('../utils/logger');
+
+const router = express.Router();
+
+router.use(verifyToken);
+
+router.post('/export-data', async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const exportData = {};
+
+    const { data: user } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    exportData.user = user ? { ...user, password_hash: undefined } : null;
+
+    const { data: posts } = await supabase
+      .from('posts')
+      .select('*')
+      .eq('user_id', userId);
+    exportData.posts = posts || [];
+
+    const { data: connections } = await supabase
+      .from('platform_connections')
+      .select('id, platform, platform_user_id, platform_username, token_expires_at, is_active, connected_at')
+      .eq('user_id', userId);
+    exportData.platform_connections = connections || [];
+
+    const { data: media } = await supabase
+      .from('media_files')
+      .select('*')
+      .eq('user_id', userId);
+    exportData.media_files = media || [];
+
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: activities } = await supabase
+      .from('audit_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('created_at', ninetyDaysAgo)
+      .limit(1000);
+    exportData.activity_logs = activities || [];
+
+    logger.info('User data exported', { userId, dataSize: JSON.stringify(exportData).length });
+
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="omnipublish-export-${userId}.json"`);
+    res.json({
+      exported_at: new Date().toISOString(),
+      user_id: userId,
+      data: exportData,
+    });
+  } catch (err) {
+    logger.error('Data export failed', { userId, err: err.message });
+    res.status(500).json({ error: 'Failed to export data', code: 'EXPORT_FAILED' });
+  }
+});
+
+router.post('/request-deletion', async (req, res) => {
+  const userId = req.user.id;
+  const deletionScheduledFor = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        deletion_requested_at: new Date(),
+        deletion_scheduled_for: deletionScheduledFor,
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    logger.info('Account deletion requested', { userId, scheduledFor: deletionScheduledFor });
+    res.json({
+      message: 'Account deletion scheduled',
+      deletion_scheduled_for: deletionScheduledFor,
+      grace_period_days: 30,
+      note: 'You can cancel this request within 30 days by contacting support',
+    });
+  } catch (err) {
+    logger.error('Deletion request failed', { userId, err: err.message });
+    res.status(500).json({ error: 'Failed to schedule deletion', code: 'DELETION_REQUEST_FAILED' });
+  }
+});
+
+router.post('/cancel-deletion', async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({
+        deletion_requested_at: null,
+        deletion_scheduled_for: null,
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    logger.info('Account deletion cancelled', { userId });
+    res.json({ message: 'Account deletion cancelled' });
+  } catch (err) {
+    logger.error('Deletion cancellation failed', { userId, err: err.message });
+    res.status(500).json({ error: 'Failed to cancel deletion', code: 'CANCELLATION_FAILED' });
+  }
+});
+
+router.get('/status', async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { data: user } = await supabase
+      .from('users')
+      .select('deletion_requested_at, deletion_scheduled_for, created_at, marketing_consent')
+      .eq('id', userId)
+      .single();
+
+    res.json({
+      account_created: user?.created_at,
+      deletion_pending: !!user?.deletion_requested_at,
+      deletion_scheduled_for: user?.deletion_scheduled_for,
+      marketing_consent: user?.marketing_consent,
+      data_export_available: true,
+    });
+  } catch (err) {
+    logger.error('GDPR status check failed', { userId, err: err.message });
+    res.status(500).json({ error: 'Failed to get GDPR status', code: 'STATUS_CHECK_FAILED' });
+  }
+});
+
+module.exports = router;

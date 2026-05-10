@@ -15,6 +15,14 @@ const { logger }               = require('../utils/logger');
 const router = express.Router();
 router.use(verifyToken);
 
+const buildPlatformPostPayload = (post, platform) => {
+  const platformPost = post.post_platforms?.find(p => p.platform === platform);
+  return {
+    ...post,
+    media_url: platformPost?.custom_media_url || post.media_files?.[0]?.cdn_url || null,
+  };
+};
+
 /**
  * POST /publish — publish a post to all selected platforms concurrently.
  * Uses Promise.allSettled so one failure doesn't block others.
@@ -24,7 +32,7 @@ router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, re
 
   // Ownership check
   const { data: post } = await supabase.from('posts')
-    .select('*, post_platforms(*)')
+    .select('*, post_platforms(*), media_files(cdn_url)')
     .eq('id', postId).eq('user_id', req.user.id).single();
   if (!post) return res.status(404).json({ error: 'Post not found' });
 
@@ -46,7 +54,7 @@ router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, re
 
       const platformPost = post.post_platforms?.find(p => p.platform === platform);
       const content      = platformPost?.adapted_content || post.content;
-      const result       = await publishToPlatform({ platform, content, post, conn });
+      const result       = await publishToPlatform({ platform, content, post: buildPlatformPostPayload(post, platform), conn });
 
       await supabase.from('post_platforms').update({
         status: 'published', platform_post_id: result.postId,
