@@ -36,8 +36,12 @@ const platformsRoutes = require('./routes/platforms');
 const publishRoutes   = require('./routes/publish');
 const mediaRoutes     = require('./routes/media');
 const healthRoutes    = require('./routes/health');
+const gdprRoutes      = require('./routes/gdpr');
 
 const { processScheduledPosts, cleanupRevokedTokens } = require('./services/schedulerService');
+const { healthReadinessCheck, healthLivenessCheck } = require('./middleware/healthChecks');
+const { limiter } = require('./middleware/concurrencyLimit');
+const { setupGracefulShutdown } = require('./utils/gracefulShutdown');
 
 /* ─────────────────────────────────────────
    App bootstrap
@@ -176,6 +180,11 @@ if (process.env.NODE_ENV !== 'test') {
 app.use('/api/', globalRateLimiter);
 
 /* ─────────────────────────────────────────
+   LAYER 8 — Concurrency Limiting
+───────────────────────────────────────── */
+app.use('/api/', limiter.middleware(5));
+
+/* ─────────────────────────────────────────
    LAYER 7 — Input Sanitisation (XSS / Injection)
 ───────────────────────────────────────── */
 app.use(requestSanitizer);
@@ -198,9 +207,12 @@ app.use(auditLogger);
 /* ─────────────────────────────────────────
    ROUTES
 ───────────────────────────────────────── */
+app.get('/api/v1/health/live', healthLivenessCheck);
+app.get('/api/v1/health/ready', healthReadinessCheck);
 app.use('/api/v1/health',     healthRoutes);
 app.use('/api/v1/auth',       authRoutes);
 app.use('/api/v1/auth',       oauthRoutes);
+app.use('/api/v1/gdpr',       gdprRoutes);
 app.use('/api/v1/posts',      postsRoutes);
 app.use('/api/v1/platforms',  platformsRoutes);
 app.use('/api/v1/publish',    publishRoutes);
@@ -269,19 +281,9 @@ if (require.main === module) {
     }
   });
 
-  const shutdown = (signal) => {
-    logger.info(`${signal} received — graceful shutdown`);
-    server.close(() => { logger.info('HTTP server closed'); process.exit(0); });
-    setTimeout(() => { logger.error('Forced shutdown after timeout'); process.exit(1); }, 15000);
-  };
-
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT',  () => shutdown('SIGINT'));
-  process.on('unhandledRejection', (reason) => {
-    logger.error('Unhandled Promise Rejection', { reason: String(reason) });
-  });
-  process.on('uncaughtException', (err) => {
-    logger.error('Uncaught Exception — shutting down', { err: err.message, stack: err.stack });
-    process.exit(1);
+  // Setup graceful shutdown with resource cleanup
+  setupGracefulShutdown(server, {
+    supabase: null,  // Supabase auto-closes
+    redis: null,     // Would be redis client if initialized
   });
 }
