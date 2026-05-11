@@ -7,7 +7,7 @@ const { TEST_USER, generateAccessToken } = require('./helpers/auth');
 // ── Module mocks ───────────────────────────────────────────
 
 jest.mock('../config/database', () => ({
-  supabase: { from: jest.fn() },
+  supabase: { from: jest.fn(), storage: { from: jest.fn() } },
   supabasePublic: { from: jest.fn() },
   dbHealthCheck: jest.fn().mockResolvedValue(true),
   execute: jest.fn(),
@@ -242,8 +242,11 @@ describe('PATCH /api/v1/posts/:id', () => {
 
 describe('DELETE /api/v1/posts/:id', () => {
   it('204 — deletes post owned by user', async () => {
+    const remove = jest.fn().mockResolvedValue({ error: null });
+    supabase.storage.from.mockReturnValueOnce({ remove });
     supabase.from
       .mockReturnValueOnce(mockChain({ data: null, error: null }))  // revoked_tokens
+      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: [{ storage_path: 'posts/p1.webp' }], error: null }))
       .mockReturnValue(mockChain({ data: null, error: null }));      // delete
 
     const res = await request(app)
@@ -251,6 +254,8 @@ describe('DELETE /api/v1/posts/:id', () => {
       .set(authHeader());
 
     expect(res.status).toBe(204);
+    expect(supabase.storage.from).toHaveBeenCalledWith('media');
+    expect(remove).toHaveBeenCalledWith(['posts/p1.webp']);
   });
 });
 

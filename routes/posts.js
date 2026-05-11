@@ -97,8 +97,27 @@ router.patch('/:id', validateBody('patchPost'), async (req, res) => {
 
 /* ── DELETE /posts/:id ── */
 router.delete('/:id', async (req, res) => {
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+  const { data: mediaFiles } = await supabase.from('media_files')
+    .select('storage_path')
+    .eq('post_id', req.params.id)
+    .eq('user_id', req.user.id);
+
   const { error } = await supabase.from('posts').delete().eq('id', req.params.id).eq('user_id', req.user.id);
   if (error) return res.status(404).json({ error: 'Post not found' });
+
+  const storagePaths = (mediaFiles || []).map(file => file.storage_path).filter(Boolean);
+  if (storagePaths.length) {
+    const { error: storageError } = await supabase.storage.from(bucket).remove(storagePaths);
+    if (storageError) {
+      logger.warn('Failed to remove post media from storage', {
+        postId: req.params.id,
+        userId: req.user.id,
+        err: storageError.message,
+      });
+    }
+  }
+
   res.status(204).send();
 });
 
