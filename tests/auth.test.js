@@ -38,7 +38,7 @@ const HASH = bcrypt.hashSync('ValidPass123!', 1); // cost 1 for speed
 const DB_USER = {
   id: TEST_USER.id, email: TEST_USER.email,
   password_hash: HASH, role: 'user', plan: 'pro',
-  is_active: true, failed_login_attempts: 0, locked_until: null,
+  is_active: true, is_verified: true, failed_login_attempts: 0, locked_until: null,
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -46,7 +46,7 @@ beforeEach(() => jest.clearAllMocks());
 // ── POST /api/v1/auth/register ─────────────────────────────
 
 describe('POST /api/v1/auth/register', () => {
-  it('201 — creates user and returns tokens', async () => {
+  it('202 — creates user and sends confirmation link', async () => {
     supabase.from
       .mockReturnValueOnce(mockChain({ data: null, error: null }))           // email check
       .mockReturnValueOnce(mockChain({ data: { id: TEST_USER.id, email: TEST_USER.email, role: 'user', plan: 'free' }, error: null })); // insert
@@ -55,15 +55,13 @@ describe('POST /api/v1/auth/register', () => {
       .post('/api/v1/auth/register')
       .send({ email: 'new@example.com', password: 'ValidPass123!', fullName: 'Test User' });
 
-    expect(res.status).toBe(201);
-    expect(res.body).toHaveProperty('accessToken');
-    expect(res.body).not.toHaveProperty('refreshToken');
-    expect(res.body.user.email).toBe(TEST_USER.email);
+    expect(res.status).toBe(202);
+    expect(res.body.message).toMatch(/confirmation link/i);
   });
 
   it('409 — rejects duplicate email', async () => {
     supabase.from
-      .mockReturnValueOnce(mockChain({ data: { id: 'existing-id' }, error: null })); // email taken
+      .mockReturnValueOnce(mockChain({ data: { id: 'existing-id', is_verified: true }, error: null })); // email taken
 
     const res = await request(app)
       .post('/api/v1/auth/register')
@@ -118,6 +116,18 @@ describe('POST /api/v1/auth/login', () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toMatch(/password login/i);
+  });
+
+  it('403 — rejects unverified accounts', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { ...DB_USER, is_verified: false }, error: null }));
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: TEST_USER.email, password: 'ValidPass123!' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/verify your email/i);
   });
 
   it('401 — rejects wrong password and increments failed attempts', async () => {

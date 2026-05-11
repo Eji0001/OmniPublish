@@ -16,6 +16,7 @@ const { authRateLimiter, authSlowDown } = require('../middleware/rateLimit');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { BCRYPT_ROUNDS, LOCKOUT_POLICY, validatePassword } = require('../config/security');
 const { logger }      = require('../utils/logger');
+const { issueConfirmationLink } = require('../services/authLinkService');
 
 const router = express.Router();
 
@@ -47,23 +48,46 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
   const pwErrors = validatePassword(password);
   if (pwErrors.length) return res.status(422).json({ error: 'Weak password', errors: pwErrors });
 
-  const { data: existing } = await supabase.from('users').select('id').eq('email', email).single();
-  if (existing) return res.status(409).json({ error: 'Email already registered' });
-
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-  const { data: user, error } = await supabase.from('users')
-    .insert({ id: uuidv4(), email, password_hash: passwordHash, full_name: fullName || null, role: 'user', plan: 'free', is_active: true })
-    .select('id, email, role, plan')
+  const { data: existing, error: existingError } = await supabase.from('users')
+    .select('id, email, full_name, is_verified, password_hash, role, plan')
+    .eq('email', email)
     .single();
 
-  if (error) { logger.error('Register failed', { err: error.message }); return res.status(500).json({ error: 'Registration failed' }); }
+  if (existingError && existingError.code !== 'PGRST116') {
+    logger.error('Register lookup failed', { err: existingError.message });
+    return res.status(500).json({ error: 'Registration failed' });
+  }
 
-  const tokens    = issueTokens(user);
-  const csrfToken = generateCSRFToken();
-  res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
-  setRefreshCookie(res, tokens.refreshToken);
-  logger.info('User registered', { userId: user.id });
-  res.status(201).json(buildAuthResponse({ user, tokens, csrfToken }));
+  if (existing?.is_verified) return res.status(409).json({ error: 'Email already registered' });
+
+  let user = existing;
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  if (user) {
+    const { data: updated, error } = await supabase.from('users')
+      .update({ password_hash: passwordHash, full_name: fullName || user.full_name || null, is_active: true })
+      .eq('id', user.id)
+      .select('id, email, full_name, is_verified, role, plan')
+      .single();
+    if (error) { logger.error('Register update failed', { err: error.message }); return res.status(500).json({ error: 'Registration failed' }); }
+    user = updated;
+  } else {
+    const { data: created, error } = await supabase.from('users')
+      .insert({ id: uuidv4(), email, password_hash: passwordHash, full_name: fullName || null, role: 'user', plan: 'free', is_active: true, is_verified: false })
+      .select('id, email, full_name, is_verified, role, plan')
+      .single();
+    if (error) { logger.error('Register failed', { err: error.message }); return res.status(500).json({ error: 'Registration failed' }); }
+    user = created;
+  }
+
+  await issueConfirmationLink(user, {
+    subject: 'Confirm your OmniPublish email',
+    headline: 'Confirm your email to start onboarding',
+    cta: 'Confirm and start onboarding',
+  });
+
+  logger.info('Verification email sent after registration', { userId: user.id });
+  res.status(202).json({ message: 'Check your email for a confirmation link to start onboarding.' });
 });
 
 /* ── POST /auth/login ── */
@@ -76,6 +100,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
 
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!user.is_active) return res.status(403).json({ error: 'Account deactivated' });
+  if (!user.is_verified) return res.status(403).json({ error: 'Verify your email to continue.' });
   if (!user.password_hash) return res.status(401).json({ error: 'Password login is not available for this account' });
   if (user.locked_until && new Date(user.locked_until) > new Date())
     return res.status(429).json({ error: 'Account temporarily locked', retryAfter: user.locked_until });
@@ -315,10 +340,10 @@ router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, r
   await supabase.from('password_resets').update({ used_at: new Date() }).eq('id', record.id);
 
   const { data: user } = await supabase.from('users')
-    .select('id, email, role, plan, full_name').eq('id', record.user_id).single();
+    .select('id, email, role, plan, full_name, is_verified').eq('id', record.user_id).single();
   if (!user) return res.status(400).json({ error: 'User not found' });
 
-  await supabase.from('users').update({ last_login_at: new Date() }).eq('id', user.id);
+  await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
 
   const tokens    = issueTokens(user);
   const csrfToken = generateCSRFToken();
@@ -343,8 +368,10 @@ router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) =
   await supabase.from('password_resets').update({ used_at: new Date() }).eq('id', record.id);
 
   const { data: user } = await supabase.from('users')
-    .select('id, email, role, plan, full_name').eq('id', record.user_id).single();
+    .select('id, email, role, plan, full_name, is_verified').eq('id', record.user_id).single();
   if (!user) return res.status(400).json({ error: 'User not found' });
+
+  await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
 
   const tokens    = issueTokens(user);
   const csrfToken = generateCSRFToken();

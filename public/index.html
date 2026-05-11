@@ -510,6 +510,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       </div>
       <button class="auth-submit" id="reg-btn" type="button">Create Account →</button>
       <div class="auth-err" id="reg-err"></div>
+      <div class="auth-ok" id="reg-ok" style="display:none">✓ Check your email for a confirmation link to continue onboarding.</div>
       <div class="auth-switch">Already have an account? <a href="#" id="reg-login-link">Login →</a></div>
     </div>
 
@@ -954,6 +955,8 @@ function switchAuthForm(name) {
     document.getElementById('tab-login').classList.toggle('active', name === 'login');
   }
   document.getElementById('reg-err').textContent = '';
+  const regOk = document.getElementById('reg-ok');
+  if (regOk) { regOk.style.display = 'none'; regOk.textContent = '✓ Check your email for a confirmation link to continue onboarding.'; }
   document.getElementById('login-err').textContent = '';
   document.getElementById('forgot-err').textContent = '';
   document.getElementById('forgot-ok').style.display = 'none';
@@ -995,7 +998,9 @@ async function doRegister() {
   const email = document.getElementById('reg-email').value.trim();
   const pw    = document.getElementById('reg-pw').value;
   const errEl = document.getElementById('reg-err');
+  const okEl  = document.getElementById('reg-ok');
   errEl.textContent = '';
+  if (okEl) okEl.style.display = 'none';
   if (!email || !pw) { errEl.textContent = 'Email and password are required.'; return; }
   setAuthLoading('reg-btn', true, 'Create Account →');
   try {
@@ -1004,10 +1009,9 @@ async function doRegister() {
       body: JSON.stringify({ email, password: pw, fullName: name || undefined })
     });
     const data = await res.json();
-    if (!res.ok) { errEl.textContent = data.errors?.[0]?.message || data.error || 'Registration failed.'; return; }
-    auth.set({ ...data, user: data.user });
-    toast('Welcome to OmniPublish! 🚀', 'ok');
-    showPage('onboarding');
+    if (!res.ok && res.status !== 202) { errEl.textContent = data.errors?.[0]?.message || data.error || 'Registration failed.'; return; }
+    if (okEl) { okEl.style.display = 'block'; okEl.textContent = data.message || '✓ Check your email for a confirmation link to continue onboarding.'; }
+    toast(data.message || 'Check your email to continue onboarding.', 'ok');
   } catch (e) {
     errEl.textContent = 'Connection error. Is the server running?';
   } finally {
@@ -1779,13 +1783,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const params = new URLSearchParams(window.location.search);
   const oauthCode  = params.get('oauth_code');
   const oauthError = params.get('oauth_error');
+  const verifySent = params.get('verify_sent');
   const magicToken = params.get('magic');
+
+  if (verifySent) {
+    history.replaceState(null, '', '/');
+    showPage('home');
+    setTimeout(() => toast('Check your email to confirm your account and continue onboarding.', 'ok'), 400);
+    return;
+  }
 
   if (oauthError) {
     history.replaceState(null, '', '/');
     if (oauthError === 'not_configured') {
       showPage('home');
       setTimeout(() => toast('Google OAuth is not configured yet. Use Register instead.', 'err'), 400);
+    } else if (oauthError === 'verify_failed') {
+      showPage('home');
+      setTimeout(() => toast('We could not send the verification email. Please try again.', 'err'), 400);
     } else {
       showPage('home');
       setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);

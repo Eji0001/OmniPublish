@@ -8,6 +8,7 @@ const { supabase }   = require('../config/database');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
 const { logger }            = require('../utils/logger');
+const { issueConfirmationLink } = require('../services/authLinkService');
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -28,12 +29,12 @@ if (hasGoogle) {
       if (!email) return done(new Error('No email from Google'));
 
       let { data: user } = await supabase.from('users')
-        .select('id, email, role, plan').eq('email', email).single();
+        .select('id, email, role, plan, full_name, is_verified').eq('email', email).single();
 
       if (!user) {
         const { data: created, error } = await supabase.from('users')
-          .insert({ id: uuidv4(), email, full_name: fullName, password_hash: null, role: 'user', plan: 'free', is_active: true })
-          .select('id, email, role, plan').single();
+          .insert({ id: uuidv4(), email, full_name: fullName, password_hash: null, role: 'user', plan: 'free', is_active: true, is_verified: false })
+          .select('id, email, role, plan, full_name, is_verified').single();
         if (error) return done(error);
         user = created;
         logger.info('Google OAuth new user created', { userId: user.id });
@@ -77,6 +78,22 @@ if (hasGoogle) {
     passport.authenticate('google', { session: false, failureRedirect: '/?oauth_error=1' }),
     async (req, res) => {
       try {
+        if (!req.user?.is_verified) {
+          try {
+            await issueConfirmationLink(req.user, {
+              subject: 'Confirm your OmniPublish email',
+              headline: 'Confirm your email to finish Google sign-in',
+              cta: 'Confirm and continue onboarding',
+            });
+            res.redirect('/?verify_sent=1');
+            return;
+          } catch (err) {
+            logger.error('Verification email send failed', { err: err.message, userId: req.user.id });
+            res.redirect('/?oauth_error=verify_failed');
+            return;
+          }
+        }
+
         // Issue a short-lived one-time exchange code (5 min) stored in password_resets
         const code     = crypto.randomBytes(24).toString('hex');
         const codeHash = crypto.createHash('sha256').update(code).digest('hex');
