@@ -19,6 +19,7 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .filter(Boolean);
 
 const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 function getFrontendOrigin(req) {
   const fallback = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:4000';
@@ -81,6 +82,31 @@ async function upsertGoogleOAuthUser(email, fullName) {
   return updated || { ...user, is_verified: true };
 }
 
+async function issueOAuthExchangeCode(user) {
+  const code = jwt.sign(
+    { purpose: 'oauth_exchange', userId: user.id, email: user.email },
+    JWT_CONFIG.accessSecret,
+    {
+      expiresIn: '10m',
+      issuer: JWT_CONFIG.issuer,
+      audience: JWT_CONFIG.audience,
+      algorithm: JWT_CONFIG.algorithm,
+    }
+  );
+
+  const tokenHash = hashToken(code);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  const { error } = await supabase.from('password_resets').insert({
+    user_id: user.id,
+    token_hash: tokenHash,
+    purpose: 'oauth_exchange',
+    expires_at: expiresAt,
+  });
+
+  if (error) throw error;
+  return code;
+}
+
 if (hasGoogle) {
   const passport       = require('passport');
   const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -133,16 +159,7 @@ if (hasGoogle) {
     passport.authenticate('google', { session: false, failureRedirect: '/?oauth_error=1' }),
     async (req, res) => {
       try {
-        const code = jwt.sign(
-          { purpose: 'oauth_exchange', userId: req.user.id, email: req.user.email },
-          JWT_CONFIG.accessSecret,
-          {
-            expiresIn: '10m',
-            issuer: JWT_CONFIG.issuer,
-            audience: JWT_CONFIG.audience,
-            algorithm: JWT_CONFIG.algorithm,
-          }
-        );
+        const code = await issueOAuthExchangeCode(req.user);
 
         // Set CSRF cookie now so frontend can use it immediately after exchange
         const csrfToken = generateCSRFToken();
@@ -165,3 +182,4 @@ if (hasGoogle) {
 
 module.exports = router;
 module.exports.upsertGoogleOAuthUser = upsertGoogleOAuthUser;
+module.exports.issueOAuthExchangeCode = issueOAuthExchangeCode;

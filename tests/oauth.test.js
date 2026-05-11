@@ -12,7 +12,7 @@ jest.mock('../config/database', () => ({
 }));
 
 const { supabase } = require('../config/database');
-const { upsertGoogleOAuthUser } = require('../routes/oauth');
+const { upsertGoogleOAuthUser, issueOAuthExchangeCode } = require('../routes/oauth');
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -78,5 +78,22 @@ describe('OAuth state return target', () => {
     const payload = await verifyOAuthState(state, 'google');
 
     expect(payload.returnTo).toBe('http://localhost:3000');
+  });
+});
+
+describe('issueOAuthExchangeCode', () => {
+  it('stores the exchange code hash for one-time use', async () => {
+    const user = { id: 'oauth-user', email: 'oauth@example.com' };
+
+    supabase.from.mockReturnValueOnce(mockChain({ data: null, error: null }));
+
+    const code = await issueOAuthExchangeCode(user);
+
+    expect(code).toEqual(expect.any(String));
+    expect(supabase.from).toHaveBeenCalledWith('password_resets');
+    expect(supabase.from.mock.results[0].value.insert.mock.calls[0][0]).toMatchObject({
+      user_id: user.id,
+      purpose: 'oauth_exchange',
+    });
   });
 });

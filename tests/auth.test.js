@@ -323,6 +323,7 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
     );
 
     supabase.from
+      .mockReturnValueOnce(mockChain({ data: { id: 'oauth-exchange-code-id' }, error: null }))
       .mockReturnValueOnce(mockChain({ data: { ...DB_USER, is_verified: false }, error: null }))
       .mockReturnValueOnce(mockChain({ data: null, error: null }));
 
@@ -333,6 +334,32 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
     expect(res.body.user.email).toBe(TEST_USER.email);
+  });
+
+  it('400 — rejects replayed oauth exchange codes', async () => {
+    const code = jwt.sign(
+      { purpose: 'oauth_exchange', userId: TEST_USER.id, email: TEST_USER.email },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: '10m', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
+    );
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { id: 'oauth-exchange-code-id' }, error: null }))
+      .mockReturnValueOnce(mockChain({ data: { ...DB_USER, is_verified: false }, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: { message: 'No rows updated' } }));
+
+    const first = await request(app)
+      .post('/api/v1/auth/oauth/exchange')
+      .send({ code });
+
+    const second = await request(app)
+      .post('/api/v1/auth/oauth/exchange')
+      .send({ code });
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(400);
+    expect(second.body.error).toMatch(/invalid or expired code/i);
   });
 });
 

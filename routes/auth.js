@@ -24,6 +24,7 @@ const isProd = process.env.NODE_ENV === 'production';
 const TOKEN_PURPOSE = {
   OAUTH_EXCHANGE: 'oauth_exchange',
 };
+const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 
 const buildAuthResponse = ({ user, tokens, csrfToken }) => ({
   user: { id: user.id, email: user.email, role: user.role, plan: user.plan },
@@ -406,6 +407,7 @@ router.post('/confirm-email', validateBody('confirmEmail'), async (req, res) => 
 /* ── POST /auth/oauth/exchange — exchange one-time code for JWT (from Google OAuth redirect) ── */
 router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) => {
   const { code } = req.body;
+  const tokenHash = hashToken(code);
 
   let payload;
   try {
@@ -420,6 +422,20 @@ router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) =
 
   if (payload.purpose !== 'oauth_exchange' || !payload.userId) {
     return res.status(400).json({ error: 'Invalid code' });
+  }
+
+  const { data: exchangeRecord, error: exchangeError } = await supabase.from('password_resets')
+    .update({ used_at: new Date() })
+    .eq('token_hash', tokenHash)
+    .eq('user_id', payload.userId)
+    .eq('purpose', TOKEN_PURPOSE.OAUTH_EXCHANGE)
+    .is('used_at', null)
+    .gt('expires_at', new Date().toISOString())
+    .select('id')
+    .single();
+
+  if (exchangeError || !exchangeRecord) {
+    return res.status(400).json({ error: 'Invalid or expired code' });
   }
 
   const { data: user } = await supabase.from('users')
