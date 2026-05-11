@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node \"d:\\\\OmniPublish\\\\server.js\")",
+      "Bash(curl -s http://localhost:4000/api/v1/health)",
+      "Bash(curl -s http://localhost:4000/)",
+      "Bash(start http://localhost:4000)",
+      "Bash(git -C \"d:\\\\OmniPublish\" check-ignore -v .claude/settings.json .claude/settings.local.json server.err)",
+      "Bash(git -C \"d:\\\\OmniPublish\" check-ignore .claude/settings.json)",
+      "Bash(git -C \"d:\\\\OmniPublish\" check-ignore server.err)",
+      "Bash(git -C \"d:\\\\OmniPublish\" check-ignore \".claude/settings.json\")",
+      "Bash(git -C \"d:\\\\OmniPublish\" add .claude/settings.local.json .claude/settings.json .gitignore)"
+    ]
+  }
+}

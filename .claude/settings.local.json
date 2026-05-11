@@ -8,7 +8,24 @@
       "Bash(node -e \"require\\('passport'\\); require\\('passport-google-oauth20'\\); console.log\\('OK'\\)\")",
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__get_project",
-      "Bash(node -e \"const c=require\\('crypto'\\); console.log\\('ACCESS:', c.randomBytes\\(32\\).toString\\('hex'\\)\\); console.log\\('REFRESH:', c.randomBytes\\(32\\).toString\\('hex'\\)\\); console.log\\('ENCRYPTION:', c.randomBytes\\(32\\).toString\\('hex'\\)\\);\")"
+      "Bash(node -e \"const c=require\\('crypto'\\); console.log\\('ACCESS:', c.randomBytes\\(32\\).toString\\('hex'\\)\\); console.log\\('REFRESH:', c.randomBytes\\(32\\).toString\\('hex'\\)\\); console.log\\('ENCRYPTION:', c.randomBytes\\(32\\).toString\\('hex'\\)\\);\")",
+      "Bash(git log *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\OmniPublish\")",
+      "Bash(Select-Object -First 20)",
+      "Bash(Get-ChildItem -Path d:\\\\OmniPublish -Depth 1 -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "mcp__supabase__list_migrations",
+      "mcp__supabase__execute_sql",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(cd /d \"d:\\\\OmniPublish\")",
+      "Bash(npx supabase *)",
+      "Bash(git -C \"d:\\\\OmniPublish\" status)",
+      "Bash(git -C \"d:\\\\OmniPublish\" diff)",
+      "Bash(git -C \"d:\\\\OmniPublish\" push origin main)",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "Bash(node -e \"const s=require\\('C:/Users/tejia/.claude/settings.json'\\); const m=s.mcpServers; console.log\\(JSON.stringify\\(Object.keys\\(m||{}\\)\\)\\);\")",
+      "Bash(node -e \"const s=require\\('C:/Users/tejia/.claude/settings.json'\\); const m=s.mcpServers.supabase; console.log\\(JSON.stringify\\({command:m.command,args:m.args,env:Object.keys\\(m.env||{}\\)}\\)\\);\")",
+      "Bash(node -e ' *)"
     ]
   }
 }

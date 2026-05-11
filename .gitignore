@@ -20,6 +20,7 @@ yarn.lock
 logs/
 *.log
 npm-debug.log*
+server.err
 
 # Runtime Data
 dist/
