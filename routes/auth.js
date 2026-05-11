@@ -22,8 +22,6 @@ const router = express.Router();
 
 const isProd = process.env.NODE_ENV === 'production';
 const TOKEN_PURPOSE = {
-  PASSWORD_RESET: 'password_reset',
-  MAGIC_LINK: 'magic_link',
   OAUTH_EXCHANGE: 'oauth_exchange',
 };
 
@@ -266,7 +264,7 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
 
   await supabase.from('password_resets').delete().eq('user_id', user.id).is('used_at', null);
 
-  const plainToken = crypto.randomBytes(32).toString('hex');
+  const plainToken = `pr_${crypto.randomBytes(32).toString('hex')}`;
   const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');
   const expiresAt  = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -274,7 +272,6 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
     id: uuidv4(),
     user_id: user.id,
     token_hash: tokenHash,
-    purpose: TOKEN_PURPOSE.PASSWORD_RESET,
     expires_at: expiresAt,
   });
 
@@ -287,10 +284,11 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
 /* ── POST /auth/reset-password ── */
 router.post('/reset-password', authRateLimiter, validateBody('resetPassword'), async (req, res) => {
   const { token, password } = req.body;
+  if (!token.startsWith('pr_')) return res.status(400).json({ error: 'Invalid or expired reset token' });
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
   const { data: record } = await supabase.from('password_resets')
-    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).eq('purpose', TOKEN_PURPOSE.PASSWORD_RESET).single();
+    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).single();
 
   if (!record)                                   return res.status(400).json({ error: 'Invalid or expired reset token' });
   if (record.used_at)                            return res.status(400).json({ error: 'Reset token already used' });
@@ -321,7 +319,7 @@ router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (re
 
   await supabase.from('password_resets').delete().eq('user_id', user.id).is('used_at', null);
 
-  const plainToken = crypto.randomBytes(32).toString('hex');
+  const plainToken = `ml_${crypto.randomBytes(32).toString('hex')}`;
   const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');
   const expiresAt  = new Date(Date.now() + (parseInt(process.env.MAGIC_LINK_EXPIRY_MINS || '15', 10)) * 60 * 1000);
 
@@ -329,7 +327,6 @@ router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (re
     id: uuidv4(),
     user_id: user.id,
     token_hash: tokenHash,
-    purpose: TOKEN_PURPOSE.MAGIC_LINK,
     expires_at: expiresAt,
   });
 
@@ -343,10 +340,11 @@ router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (re
 /* ── POST /auth/magic-link/verify (changed from GET to prevent CSRF via img tags) ── */
 router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, res) => {
   const { token } = req.body;
+  if (!token.startsWith('ml_')) return res.status(400).json({ error: 'Invalid or expired link' });
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
   const { data: record } = await supabase.from('password_resets')
-    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).eq('purpose', TOKEN_PURPOSE.MAGIC_LINK).single();
+    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).single();
 
   if (!record)                                   return res.status(400).json({ error: 'Invalid or expired link' });
   if (record.used_at)                            return res.status(400).json({ error: 'Link already used' });

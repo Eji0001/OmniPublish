@@ -1451,7 +1451,8 @@ function enterOnboarding(data, message = 'Account created. Welcome!') {
    SIGNUP & MAGIC LINK
 ══════════════════════════════════════ */
 function doGoogleSignup() {
-  window.location.href = base() + '/api/v1/auth/google';
+  const returnTo = encodeURIComponent(window.location.origin);
+  window.location.href = base() + `/api/v1/auth/google?returnTo=${returnTo}`;
 }
 
 async function doMagicLink() {

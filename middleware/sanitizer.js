@@ -71,7 +71,7 @@ const schemas = {
     email: z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
   }),
   resetPassword: z.object({
-    token:    z.string().min(64).max(64),
+    token:    z.string().min(67).max(2048),
     password: z.string().min(12).max(128),
   }),
   patchPost: z.object({
@@ -86,7 +86,7 @@ const schemas = {
     email: z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
   }),
   magicLinkVerify: z.object({
-    token: z.string().min(64).max(64),
+    token: z.string().min(67).max(2048),
   }),
   confirmEmail: z.object({
     token: z.string().min(20).max(2048),

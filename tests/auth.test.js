@@ -248,32 +248,34 @@ describe('POST /api/v1/auth/refresh', () => {
 // ── POST /api/v1/auth/reset-password ────────────────────────
 
 describe('POST /api/v1/auth/reset-password', () => {
-  it('scopes reset tokens to password_reset purpose', async () => {
+  it('scopes reset tokens by prefix instead of purpose column', async () => {
     const chain = mockChain({ data: null, error: { message: 'not found' } });
     supabase.from.mockReturnValueOnce(chain);
 
     const res = await request(app)
       .post('/api/v1/auth/reset-password')
-      .send({ token: 'a'.repeat(64), password: 'ValidPass123!' });
+      .send({ token: `pr_${'a'.repeat(64)}`, password: 'ValidPass123!' });
 
     expect(res.status).toBe(400);
-    expect(chain.eq).toHaveBeenCalledWith('purpose', 'password_reset');
+    expect(chain.eq).toHaveBeenCalledWith('token_hash', expect.any(String));
+    expect(chain.eq).not.toHaveBeenCalledWith('purpose', expect.anything());
   });
 });
 
 // ── POST /api/v1/auth/magic-link/verify ─────────────────────
 
 describe('POST /api/v1/auth/magic-link/verify', () => {
-  it('scopes magic links to magic_link purpose', async () => {
+  it('scopes magic links by prefix instead of purpose column', async () => {
     const chain = mockChain({ data: null, error: { message: 'not found' } });
     supabase.from.mockReturnValueOnce(chain);
 
     const res = await request(app)
       .post('/api/v1/auth/magic-link/verify')
-      .send({ token: 'b'.repeat(64) });
+      .send({ token: `ml_${'b'.repeat(64)}` });
 
     expect(res.status).toBe(400);
-    expect(chain.eq).toHaveBeenCalledWith('purpose', 'magic_link');
+    expect(chain.eq).toHaveBeenCalledWith('token_hash', expect.any(String));
+    expect(chain.eq).not.toHaveBeenCalledWith('purpose', expect.anything());
   });
 });
 

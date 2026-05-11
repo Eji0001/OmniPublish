@@ -22,7 +22,7 @@ const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_S
 
 function getFrontendOrigin(req) {
   const fallback = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:4000';
-  const candidates = [req.get('origin'), req.get('referer')].filter(Boolean);
+  const candidates = [req.query?.returnTo, req.get('origin'), req.get('referer')].filter(Boolean);
 
   for (const candidate of candidates) {
     try {
@@ -110,7 +110,8 @@ if (hasGoogle) {
   router.get('/google',
     async (req, res, next) => {
       try {
-        const { state } = await generateOAuthState('google', null, getFrontendOrigin(req));
+        const returnTo = getFrontendOrigin(req);
+        const { state } = await generateOAuthState('google', null, returnTo);
         passport.authenticate('google', { scope: ['profile', 'email'], session: false, state })(req, res, next);
       } catch (err) {
         logger.error('OAuth initialisation error', { err: err.message });
