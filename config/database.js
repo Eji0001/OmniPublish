@@ -56,7 +56,7 @@ const executeWithRetry = async (queryFn, context, maxRetries = 3) => {
     try { return await execute(queryFn, context); }
     catch (err) {
       lastError = err;
-      const isRetryable = ['PGRST116', '08006', '57P03'].includes(err.code);
+      const isRetryable = ['08006', '57P03'].includes(err.code);
       if (!isRetryable || attempt === maxRetries) break;
       const delay = Math.pow(2, attempt) * 100;
       logger.warn(`Retrying [${context}] attempt ${attempt}/${maxRetries} in ${delay}ms`);
