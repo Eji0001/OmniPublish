@@ -1002,6 +1002,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
   </div>
 </div>
 
+<script src="/js/backend-url.js"></script>
 <script nonce="__CSP_NONCE__">
 /* ══════════════════════════════════════
    AUTH STATE
@@ -1032,7 +1033,12 @@ const auth = {
 let accessToken = localStorage.getItem('omni_token') || null;
 if (accessToken) localStorage.removeItem('omni_token');
 
-let BACKEND_URL = localStorage.getItem('omni_backend_url') || '';
+const BACKEND_URL_POLICY = window.OmniPublishBackendUrl;
+let BACKEND_URL = BACKEND_URL_POLICY.loadBackendUrl({
+  storage: localStorage,
+  origin: window.location.origin,
+  hostname: window.location.hostname,
+});
 let currentTheme = localStorage.getItem('omni_theme') || 'dark';
 
 function base() { return BACKEND_URL || window.location.origin; }
@@ -1654,7 +1660,21 @@ async function publishAll() {
 
 function openSettings() { document.getElementById('backend-url-input').value=BACKEND_URL; document.getElementById('settings-modal').style.display='block'; }
 function closeSettings(e) { if(!e||e.target===e.currentTarget)document.getElementById('settings-modal').style.display='none'; }
-function saveSettings() { BACKEND_URL=document.getElementById('backend-url-input').value.trim().replace(/\/$/,''); localStorage.setItem('omni_backend_url',BACKEND_URL); document.getElementById('settings-modal').style.display='none'; toast('Settings saved!','ok'); }
+function saveSettings() {
+  const next = BACKEND_URL_POLICY.saveBackendUrl({
+    storage: localStorage,
+    origin: window.location.origin,
+    hostname: window.location.hostname,
+    candidate: document.getElementById('backend-url-input').value,
+  });
+  if (next === null) {
+    toast('Backend URL must be the current origin or localhost in development.', 'err');
+    return;
+  }
+  BACKEND_URL = next;
+  document.getElementById('settings-modal').style.display='none';
+  toast('Settings saved!','ok');
+}
 
 function toast(msg, type) {
   const el=document.getElementById('toast');

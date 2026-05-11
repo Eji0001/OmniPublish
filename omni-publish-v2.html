@@ -536,6 +536,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 </div>
 
 <!-- ═══════════════════════════ JAVASCRIPT ═══════════════════════════ -->
+<script src="/js/backend-url.js"></script>
 <script>
 /* ── PLATFORM DATA ── */
 const PLATFORMS = [
@@ -589,7 +590,12 @@ let currentRatio = '16:9';
 let currentTheme = 'dark';
 
 // Settings stored in localStorage
-let BACKEND_URL = localStorage.getItem('omni_backend_url') || '';
+const BACKEND_URL_POLICY = window.OmniPublishBackendUrl;
+let BACKEND_URL = BACKEND_URL_POLICY.loadBackendUrl({
+  storage: localStorage,
+  origin: window.location.origin,
+  hostname: window.location.hostname,
+});
 let USER_API_KEY = localStorage.getItem('omni_api_key') || '';   // optional override; never sent to prod Anthropic directly
 
 /* ── INIT ── */
@@ -842,9 +848,18 @@ function closeSettings(e) {
 }
 function saveSettings() {
   USER_API_KEY = document.getElementById('api-key-input').value.trim();
-  BACKEND_URL  = document.getElementById('backend-url-input').value.trim().replace(/\/$/, '');
   localStorage.setItem('omni_api_key',    USER_API_KEY);
-  localStorage.setItem('omni_backend_url', BACKEND_URL);
+  const nextBackendUrl = BACKEND_URL_POLICY.saveBackendUrl({
+    storage: localStorage,
+    origin: window.location.origin,
+    hostname: window.location.hostname,
+    candidate: document.getElementById('backend-url-input').value,
+  });
+  if (nextBackendUrl === null) {
+    toast('Backend URL must be the current origin or localhost in development.', 'err');
+    return;
+  }
+  BACKEND_URL = nextBackendUrl;
   document.getElementById('settings-modal').style.display = 'none';
   toast('Settings saved!', 'ok');
 }
