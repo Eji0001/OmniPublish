@@ -88,6 +88,9 @@ const schemas = {
   magicLinkVerify: z.object({
     token: z.string().min(64).max(64),
   }),
+  confirmEmail: z.object({
+    token: z.string().min(20).max(2048),
+  }),
   oauthExchange: z.object({
     code: z.string().min(48).max(48),
   }),

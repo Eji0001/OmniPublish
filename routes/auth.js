@@ -8,13 +8,14 @@
 const express         = require('express');
 const bcrypt          = require('bcryptjs');
 const crypto          = require('crypto');
+const jwt             = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { supabase }    = require('../config/database');
 const { issueTokens, rotateRefreshToken, revokeToken, verifyToken } = require('../middleware/auth');
 const { validateBody }   = require('../middleware/sanitizer');
 const { authRateLimiter, authSlowDown } = require('../middleware/rateLimit');
 const { generateCSRFToken } = require('../middleware/csrf');
-const { BCRYPT_ROUNDS, LOCKOUT_POLICY, validatePassword } = require('../config/security');
+const { BCRYPT_ROUNDS, LOCKOUT_POLICY, validatePassword, JWT_CONFIG } = require('../config/security');
 const { logger }      = require('../utils/logger');
 const { issueConfirmationLink } = require('../services/authLinkService');
 
@@ -351,6 +352,41 @@ router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, r
   setRefreshCookie(res, tokens.refreshToken);
   logger.info('Magic link login', { userId: user.id });
   res.json(buildAuthResponse({ user, tokens, csrfToken }));
+});
+
+/* ── POST /auth/confirm-email ── */
+router.post('/confirm-email', validateBody('confirmEmail'), async (req, res) => {
+  const { token } = req.body;
+
+  let payload;
+  try {
+    payload = jwt.verify(token, JWT_CONFIG.accessSecret, {
+      algorithms: [JWT_CONFIG.algorithm],
+      issuer: JWT_CONFIG.issuer,
+      audience: JWT_CONFIG.audience,
+    });
+  } catch {
+    return res.status(400).json({ error: 'Invalid or expired confirmation link' });
+  }
+
+  if (payload.purpose !== 'email_confirm' || !payload.userId) {
+    return res.status(400).json({ error: 'Invalid confirmation link' });
+  }
+
+  const { data: user } = await supabase.from('users')
+    .select('id, email, role, plan, full_name, is_verified')
+    .eq('id', payload.userId)
+    .single();
+  if (!user) return res.status(400).json({ error: 'User not found' });
+
+  await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
+
+  const tokens    = issueTokens({ ...user, is_verified: true });
+  const csrfToken = generateCSRFToken();
+  res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+  setRefreshCookie(res, tokens.refreshToken);
+  logger.info('Email confirmed', { userId: user.id });
+  res.json(buildAuthResponse({ user: { ...user, is_verified: true }, tokens, csrfToken }));
 });
 
 /* ── POST /auth/oauth/exchange — exchange one-time code for JWT (from Google OAuth redirect) ── */

@@ -1,44 +1,25 @@
 'use strict';
 
-const crypto = require('crypto');
-const { supabase } = require('../config/database');
+const jwt = require('jsonwebtoken');
+const { JWT_CONFIG } = require('../config/security');
 const { logger } = require('../utils/logger');
 const { sendEmail } = require('./emailService');
 
 const APP_URL = process.env.APP_URL || 'http://localhost:4000';
-const MAGIC_LINK_PURPOSE = 'magic_link';
 
 function makeLink(token) {
-  return `${APP_URL}/?magic=${token}`;
+  return `${APP_URL}/?confirm=${token}`;
 }
 
 async function issueConfirmationLink(user, options = {}) {
   const { subject = 'Confirm your OmniPublish email', headline = 'Confirm your email', cta = 'Confirm email' } = options;
   if (!user?.id || !user?.email) throw new Error('User email is required');
 
-  if (process.env.NODE_ENV === 'test') {
-    logger.debug('Confirmation email skipped in test', { userId: user.id, email: user.email });
-    return { skipped: true, link: makeLink('test-token') };
-  }
-
-  await supabase.from('password_resets')
-    .delete()
-    .eq('user_id', user.id)
-    .eq('purpose', MAGIC_LINK_PURPOSE)
-    .is('used_at', null);
-
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-  const { error } = await supabase.from('password_resets').insert({
-    id: crypto.randomUUID(),
-    user_id: user.id,
-    token_hash: tokenHash,
-    purpose: MAGIC_LINK_PURPOSE,
-    expires_at: expiresAt,
-  });
-  if (error) throw new Error(error.message || 'Failed to create verification link');
+  const token = jwt.sign(
+    { purpose: 'email_confirm', userId: user.id, email: user.email },
+    JWT_CONFIG.accessSecret,
+    { expiresIn: '1h', issuer: JWT_CONFIG.issuer, audience: JWT_CONFIG.audience, algorithm: JWT_CONFIG.algorithm }
+  );
 
   const link = makeLink(token);
   const firstName = user.full_name?.split(' ')?.[0] || 'there';

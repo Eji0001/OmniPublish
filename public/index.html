@@ -1781,10 +1781,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Handle Google OAuth redirect (?oauth_code=<opaque-code>)
   const params = new URLSearchParams(window.location.search);
+  const confirmToken = params.get('confirm');
   const oauthCode  = params.get('oauth_code');
   const oauthError = params.get('oauth_error');
   const verifySent = params.get('verify_sent');
   const magicToken = params.get('magic');
+
+  if (confirmToken) {
+    history.replaceState(null, '', '/');
+    (async () => {
+      try {
+        const res = await api('POST', '/api/v1/auth/confirm-email', { token: confirmToken });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Confirmation failed');
+        auth.set(data);
+        showPage('onboarding');
+      } catch (err) {
+        showPage('home');
+        setTimeout(() => toast(err.message || 'Could not confirm your email.', 'err'), 400);
+      }
+    })();
+    return;
+  }
 
   if (verifySent) {
     history.replaceState(null, '', '/');

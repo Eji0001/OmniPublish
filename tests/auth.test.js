@@ -2,6 +2,7 @@
 
 const request = require('supertest');
 const bcrypt  = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { mockChain } = require('./helpers/db');
 const { TEST_USER, generateAccessToken, generateRefreshToken } = require('./helpers/auth');
 
@@ -255,6 +256,31 @@ describe('POST /api/v1/auth/magic-link/verify', () => {
 
     expect(res.status).toBe(400);
     expect(chain.eq).toHaveBeenCalledWith('purpose', 'magic_link');
+  });
+});
+
+// ── POST /api/v1/auth/confirm-email ─────────────────────────
+
+describe('POST /api/v1/auth/confirm-email', () => {
+  it('200 — verifies email and returns session tokens', async () => {
+    const token = jwt.sign(
+      { purpose: 'email_confirm', userId: TEST_USER.id, email: TEST_USER.email },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
+    );
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { id: TEST_USER.id, email: TEST_USER.email, role: 'user', plan: 'free', full_name: 'Test User', is_verified: false }, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }));
+
+    const res = await request(app)
+      .post('/api/v1/auth/confirm-email')
+      .send({ token });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body.user).toBeDefined();
+    expect(supabase.from).toHaveBeenCalledWith('users');
   });
 });
 
