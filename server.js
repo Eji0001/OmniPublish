@@ -106,10 +106,13 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .map(o => o.trim())
   .filter(Boolean);
 
+const isLocalDevOrigin = origin => /^https?:\/\/(localhost|127(?:\.\d{1,3}){3})(:\d+)?$/.test(origin);
+
 app.use(cors({
   origin: (origin, cb) => {
     // Allow server-to-server (no origin) only in test env
     if (!origin && process.env.NODE_ENV !== 'production') return cb(null, true);
+    if (process.env.NODE_ENV !== 'production' && origin && isLocalDevOrigin(origin)) return cb(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     logger.warn('CORS rejection', { origin });
     cb(new Error(`CORS: origin ${origin} not permitted`));
