@@ -15,10 +15,11 @@ router.post('/export-data', async (req, res) => {
 
   try {
     const exportData = {};
+    const userColumns = 'id, email, full_name, avatar_url, role, plan, is_verified, is_active, user_type, onboarding_completed_at, last_login_at, marketing_consent, marketing_consent_at, timezone, created_at, updated_at';
 
     const { data: user } = await supabase
       .from('users')
-      .select('*')
+      .select(userColumns)
       .eq('id', userId)
       .single();
     exportData.user = user ? { ...user, password_hash: undefined } : null;
