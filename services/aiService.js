@@ -6,6 +6,7 @@
 'use strict';
 
 const Anthropic  = require('@anthropic-ai/sdk');
+const { anthropicBreaker } = require('../middleware/circuitBreaker');
 const { logger } = require('../utils/logger');
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -47,11 +48,11 @@ const aiAdaptContent = async ({ content, platforms, format, ratio, userId }) => 
   let adapted = {};
 
   try {
-    const message = await anthropic.messages.create({
+    const message = await anthropicBreaker.execute(() => anthropic.messages.create({
       model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6', max_tokens: 2500,
       system: systemPrompt,
       messages: [{ role: 'user', content: userPrompt }],
-    });
+    }));
     const raw     = message.content.find(b => b.type === 'text')?.text || '{}';
     const cleaned = raw.replace(/```json|```/g, '').trim();
     try {

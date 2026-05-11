@@ -7,6 +7,9 @@
 'use strict';
 
 const { decrypt }  = require('../utils/encryption');
+const { platformApisBreaker } = require('../middleware/circuitBreaker');
+
+const platformRequest = (url, init) => platformApisBreaker.execute(() => fetch(url, init));
 
 const requireMediaUrl = (post, platform) => {
   if (!post.media_url) {
@@ -27,7 +30,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── Facebook Graph API ── */
     facebook: async () => {
-      const res  = await fetch(`https://graph.facebook.com/v19.0/me/feed`, {
+      const res  = await platformRequest(`https://graph.facebook.com/v19.0/me/feed`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: content, access_token: accessToken }),
@@ -39,7 +42,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── X (Twitter) API v2 ── */
     x: async () => {
-      const res  = await fetch('https://api.twitter.com/2/tweets', {
+      const res  = await platformRequest('https://api.twitter.com/2/tweets', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: content }),
@@ -51,7 +54,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── LinkedIn UGC Posts API v2 ── */
     linkedin: async () => {
-      const res  = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      const res  = await platformRequest('https://api.linkedin.com/v2/ugcPosts', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0' },
         body: JSON.stringify({
@@ -73,7 +76,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── Bluesky AT Protocol ── */
     bluesky: async () => {
-      const res  = await fetch('https://bsky.social/xrpc/com.atproto.repo.createRecord', {
+      const res  = await platformRequest('https://bsky.social/xrpc/com.atproto.repo.createRecord', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -90,7 +93,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── Telegram Bot API ── */
     telegram: async () => {
-      const res  = await fetch(`https://api.telegram.org/bot${accessToken}/sendMessage`, {
+      const res  = await platformRequest(`https://api.telegram.org/bot${accessToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id: conn.platform_user_id, text: content }),
@@ -105,7 +108,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
       const mediaUrl = requireMediaUrl(post, 'tiktok');
       // TikTok requires a two-step: init upload → publish
       // Using Direct Post API (requires approved app)
-      const res  = await fetch('https://open.tiktokapis.com/v2/post/publish/content/init/', {
+      const res  = await platformRequest('https://open.tiktokapis.com/v2/post/publish/content/init/', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json; charset=UTF-8' },
         body: JSON.stringify({
@@ -121,7 +124,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── YouTube Data API v3 ── */
     youtube: async () => {
-      const res  = await fetch('https://www.googleapis.com/youtube/v3/videos?part=snippet,status', {
+      const res  = await platformRequest('https://www.googleapis.com/youtube/v3/videos?part=snippet,status', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -138,7 +141,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
     instagram: async () => {
       const mediaUrl = requireMediaUrl(post, 'instagram');
       // Step 1: Create media container
-      const containerRes = await fetch(
+      const containerRes = await platformRequest(
         `https://graph.facebook.com/v19.0/${conn.platform_user_id}/media`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -149,7 +152,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
       if (container.error) throw Object.assign(new Error(container.error.message), { platform: 'instagram' });
 
       // Step 2: Publish the container
-      const publishRes = await fetch(
+      const publishRes = await platformRequest(
         `https://graph.facebook.com/v19.0/${conn.platform_user_id}/media_publish`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -164,7 +167,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── Reddit API v1 ── */
     reddit: async () => {
-      const res  = await fetch('https://oauth.reddit.com/api/submit', {
+      const res  = await platformRequest('https://oauth.reddit.com/api/submit', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -187,7 +190,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
     /* ── Threads (Meta) API ── */
     threads: async () => {
       // Step 1: Create container
-      const containerRes = await fetch(
+      const containerRes = await platformRequest(
         `https://graph.threads.net/v1.0/${conn.platform_user_id}/threads`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -198,7 +201,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
       if (container.error) throw Object.assign(new Error(container.error.message), { platform: 'threads' });
 
       // Step 2: Publish
-      const publishRes = await fetch(
+      const publishRes = await platformRequest(
         `https://graph.threads.net/v1.0/${conn.platform_user_id}/threads_publish`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -214,7 +217,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
     /* ── Pinterest API v5 ── */
     pinterest: async () => {
       const mediaUrl = post.media_url || null;
-      const res  = await fetch('https://api.pinterest.com/v5/pins', {
+      const res  = await platformRequest('https://api.pinterest.com/v5/pins', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -242,7 +245,7 @@ const publishToPlatform = async ({ platform, content, post, conn }) => {
 
     /* ── Twitch (update stream info) ── */
     twitch: async () => {
-      const res  = await fetch(`https://api.twitch.tv/helix/channels?broadcaster_id=${conn.platform_user_id}`, {
+      const res  = await platformRequest(`https://api.twitch.tv/helix/channels?broadcaster_id=${conn.platform_user_id}`, {
         method: 'PATCH',
         headers: {
           'Authorization':  `Bearer ${accessToken}`,
