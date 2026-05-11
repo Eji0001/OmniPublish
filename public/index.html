@@ -1007,17 +1007,30 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
    AUTH STATE
 ══════════════════════════════════════ */
 const auth = {
-  get token()   { return localStorage.getItem('omni_token'); },
+  get token()   { return accessToken; },
   get user()    { return JSON.parse(localStorage.getItem('omni_user') || 'null'); },
   set(data) {
-    if (data.accessToken) localStorage.setItem('omni_token', data.accessToken);
+    if (Object.prototype.hasOwnProperty.call(data, 'accessToken')) accessToken = data.accessToken || null;
     if (data.user)        localStorage.setItem('omni_user',  JSON.stringify(data.user));
     // refreshToken is now stored in httpOnly cookie by the server — not in localStorage
   },
   clear() {
+    accessToken = null;
     ['omni_token','omni_user','omni_draft','omni_draft_ts'].forEach(k => localStorage.removeItem(k));
+  },
+  async refresh() {
+    const rr = await fetch(base() + '/api/v1/auth/refresh', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+    });
+    if (!rr.ok) return false;
+    const rd = await rr.json();
+    auth.set(rd);
+    return true;
   }
 };
+
+let accessToken = localStorage.getItem('omni_token') || null;
+if (accessToken) localStorage.removeItem('omni_token');
 
 let BACKEND_URL = localStorage.getItem('omni_backend_url') || '';
 let currentTheme = localStorage.getItem('omni_theme') || 'dark';
@@ -1058,6 +1071,34 @@ async function api(method, path, body, skipCsrf = false) {
     throw new Error('Session expired');
   }
   return res;
+}
+
+async function bootstrapAuthState() {
+  if (auth.token) return true;
+
+  try {
+    const refreshed = await auth.refresh();
+    if (!refreshed) {
+      auth.clear();
+      return false;
+    }
+
+    if (!auth.user) {
+      const meRes = await fetch(base() + '/api/v1/auth/me', {
+        headers: { 'Authorization': `Bearer ${auth.token}` },
+        credentials: 'include',
+      });
+      if (meRes.ok) {
+        const meData = await meRes.json();
+        if (meData.user) auth.set({ user: meData.user });
+      }
+    }
+
+    return true;
+  } catch {
+    auth.clear();
+    return false;
+  }
 }
 
 /* ══════════════════════════════════════
@@ -1969,7 +2010,7 @@ async function finishOnboarding() {
 /* ══════════════════════════════════════
    INIT
 ══════════════════════════════════════ */
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   // Bind button event handlers
   const bind = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
   const bindLink = (id, fn) => document.getElementById(id)?.addEventListener('click', e => { e.preventDefault(); fn(e); });
@@ -2086,6 +2127,8 @@ document.addEventListener('DOMContentLoaded', () => {
     verifyMagicToken(magicToken);
     return;
   }
+
+  await bootstrapAuthState();
 
   if (auth.token && auth.user) {
     if (localStorage.getItem('omni_onboarding_done')) {
