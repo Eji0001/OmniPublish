@@ -86,7 +86,15 @@ const schemas = {
     aspect_ratio: z.enum(['16:9', '9:16', '1:1', '4:5', '2:3']).optional(),
     scheduled_at: z.string().datetime().nullable().optional(),
     status:       z.enum(['draft', 'scheduled']).optional(),
-  }).strict(),
+  }).strict().superRefine((data, ctx) => {
+    if (data.status === 'scheduled' && !data.scheduled_at) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['scheduled_at'],
+        message: 'scheduled_at is required when status is scheduled',
+      });
+    }
+  }),
   magicLink: z.object({
     email: z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
   }),

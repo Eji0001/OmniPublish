@@ -214,6 +214,18 @@ describe('PATCH /api/v1/posts/:id', () => {
     expect(res.status).toBe(422);
   });
 
+  it('422 — rejects status=scheduled without scheduled_at', async () => {
+    supabase.from.mockReturnValueOnce(mockChain({ data: null, error: null })); // revoked_tokens
+
+    const res = await request(app)
+      .patch(`/api/v1/posts/${POST_ID}`)
+      .set(authHeader())
+      .send({ status: 'scheduled' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.errors?.[0]?.field).toBe('scheduled_at');
+  });
+
   it('422 — rejects unknown fields (strict schema)', async () => {
     supabase.from.mockReturnValueOnce(mockChain({ data: null, error: null })); // revoked_tokens
 
