@@ -76,6 +76,9 @@ const idempotencyMiddleware = async (req, res, next) => {
           response: JSON.stringify(body),
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
         })
+        .then(({ error: dbErr }) => {
+          if (dbErr) logger.warn('Failed to cache idempotency result', { err: dbErr.message });
+        })
         .catch(err => logger.warn('Failed to cache idempotency result', { err: err.message }));
     }
     return originalJson(body);

@@ -7,8 +7,8 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--spring:cubic-bezier(0.34,1.56,0.64,1);--ease-out:cubic-bezier(0.22,1,0.36,1)}
-[data-theme="dark"]{--bg:#07070f;--s1:#0d0d1a;--s2:#12121f;--s3:#1a1a2e;--s4:#22223a;--bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.14);--bd3:rgba(255,255,255,0.22);--tx:#e8e8ff;--tx2:#9090bb;--tx3:#5a5a80;--acc:#6c5ce7;--acc2:#fd79a8;--acc3:#00cec9;--warn:#fdcb6e;--err:#e17055;--card-shadow:0 2px 16px rgba(0,0,0,0.4);--glow:rgba(108,92,231,0.25);--badge-bg:rgba(108,92,231,0.22);--badge-tx:#a29bfe;--btn-grad:linear-gradient(135deg,#6c5ce7,#fd79a8);--ai-border:rgba(108,92,231,0.45);--ai-bg:linear-gradient(135deg,rgba(108,92,231,0.16),rgba(253,121,168,0.1))}
-[data-theme="sky"]{--bg:#daeeff;--s1:#ffffff;--s2:#f0f8ff;--s3:#e0f2ff;--s4:#c8e6ff;--bd:rgba(0,90,180,0.1);--bd2:rgba(0,90,180,0.18);--bd3:rgba(0,90,180,0.28);--tx:#0a1628;--tx2:#2a4a72;--tx3:#6a8aae;--acc:#0066dd;--acc2:#e91e8c;--acc3:#0099cc;--warn:#d97706;--err:#dc2626;--card-shadow:0 2px 16px rgba(0,80,180,0.1);--glow:rgba(0,102,221,0.2);--badge-bg:rgba(0,102,221,0.12);--badge-tx:#0044aa;--btn-grad:linear-gradient(135deg,#0066dd,#e91e8c);--ai-border:rgba(0,102,221,0.4);--ai-bg:linear-gradient(135deg,rgba(0,102,221,0.1),rgba(233,30,140,0.07))}
+[data-theme="dark"]{--bg:#07070f;--s1:#0d0d1a;--s2:#12121f;--s3:#1a1a2e;--s4:#22223a;--bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.14);--bd3:rgba(255,255,255,0.22);--tx:#e8e8ff;--tx2:#9090bb;--tx3:#5a5a80;--acc:#6c5ce7;--acc2:#fd79a8;--acc3:#00cec9;--warn:#fdcb6e;--err:#e17055;--card-shadow:0 2px 16px rgba(0,0,0,0.4);--glow:rgba(108,92,231,0.25);--badge-bg:rgba(108,92,231,0.22);--badge-tx:#a29bfe;--btn-grad:linear-gradient(135deg,#6c5ce7,#fd79a8);--ai-border:rgba(108,92,231,0.45);--ai-bg:linear-gradient(135deg,rgba(108,92,231,0.16),rgba(253,121,168,0.1));--primary-neon:#00c8ff;--secondary-neon:#7000ff}
+[data-theme="sky"]{--bg:#daeeff;--s1:#ffffff;--s2:#f0f8ff;--s3:#e0f2ff;--s4:#c8e6ff;--bd:rgba(0,90,180,0.1);--bd2:rgba(0,90,180,0.18);--bd3:rgba(0,90,180,0.28);--tx:#0a1628;--tx2:#2a4a72;--tx3:#6a8aae;--acc:#0066dd;--acc2:#e91e8c;--acc3:#0099cc;--warn:#d97706;--err:#dc2626;--card-shadow:0 2px 16px rgba(0,80,180,0.1);--glow:rgba(0,102,221,0.2);--badge-bg:rgba(0,102,221,0.12);--badge-tx:#0044aa;--btn-grad:linear-gradient(135deg,#0066dd,#e91e8c);--ai-border:rgba(0,102,221,0.4);--ai-bg:linear-gradient(135deg,rgba(0,102,221,0.1),rgba(233,30,140,0.07));--primary-neon:#0066dd;--secondary-neon:#7c3aed}
 body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh;overflow-x:hidden;transition:background .35s,color .35s}
 [data-theme="dark"] body::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 80% 50% at 50% -5%,rgba(108,92,231,0.14),transparent),linear-gradient(rgba(108,92,231,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(108,92,231,0.02) 1px,transparent 1px);background-size:100% 100%,48px 48px,48px 48px;pointer-events:none;z-index:0}
 
@@ -319,136 +319,148 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .su-msg.ok{color:var(--acc3)}.su-msg.err{color:var(--err)}
 
 /* ═══ ONBOARDING PAGE ═══ */
-#page-onboarding{display:none;min-height:100vh;background:#ededed;padding:0;color:#253145}
+#page-onboarding{display:none;min-height:100vh;background:var(--bg);padding:0;color:var(--tx)}
 #page-onboarding.active{display:block}
-.ob-wrap{max-width:1120px;margin:0 auto;padding:0 24px 48px}
-.ob-header{display:flex;align-items:center;justify-content:space-between;padding:20px 4px 18px;margin:0 0 12px;border-bottom:1px solid #d9d9d9;background:#fff;position:sticky;top:0;z-index:30}
-.ob-steps{display:flex;align-items:center;gap:0;flex:1;justify-content:center}
-.ob-step{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
-.ob-step-circle{width:38px;height:38px;border-radius:50%;border:1px solid #c9c9c9;background:#dcdcdc;color:#596175;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .35s}
-.ob-step.done .ob-step-circle{background:#7ecf89;border-color:#7ecf89;color:#1f3f24}
-.ob-step.active .ob-step-circle{background:#7ecf89;border-color:#7ecf89;color:#1f3f24;box-shadow:none}
-.ob-step-label{display:none}
-.ob-connector{width:112px;height:2px;background:#c7c7c7;margin:0 10px 12px;transition:background .35s}
-.ob-connector.done{background:#7ecf89}
-.ob-avatar{width:36px;height:36px;border-radius:50%;background:#dff4df;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#78b978}
-.ob-panel{display:none;animation:fadeUp .4s var(--ease-out) both;padding-top:10px}
-.ob-panel.active{display:block}
-.ob-accent{font-size:12px;font-weight:800;color:#00a376;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:10px;text-align:center}
-.ob-title{font-size:clamp(2.1rem,4vw,3rem);font-weight:900;letter-spacing:-1.2px;margin-bottom:10px;text-align:center;color:#253145}
-.ob-roles{display:flex;flex-direction:column;gap:8px}
-.ob-role-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;border:1px solid #d7d7d7;border-radius:12px;cursor:pointer;transition:all .2s;position:relative}
-.ob-role-card:hover{border-color:#bfc7cf;box-shadow:0 2px 6px rgba(0,0,0,.04)}
-.ob-role-card.selected{border-color:#7ecf89;background:#f5fbf5}
-.ob-role-radio{width:18px;height:18px;border-radius:50%;border:2px solid #bfc7cf;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.ob-role-card.selected .ob-role-radio{border-color:#7ecf89;background:#7ecf89}
-.ob-role-card.selected .ob-role-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
-.ob-role-icon{font-size:1.3rem;flex-shrink:0}
-.ob-role-text{flex:1}
-.ob-role-name{font-size:14px;font-weight:800;color:#253145}
-.ob-role-desc{font-size:12px;color:#69768a;margin-top:1px}
-.ob-connection-hero{max-width:1040px;margin:34px auto 0;background:#fff;border:2px dashed #d2d2d2;border-radius:16px;min-height:110px;display:flex;align-items:center;justify-content:center;padding:18px}
-.ob-connection-hero button{display:inline-flex;align-items:center;gap:10px;border:none;background:transparent;color:#5a6779;font-size:18px;font-weight:500;cursor:pointer;font-family:inherit}
-.ob-connection-hero button .plus{font-size:28px;line-height:1;color:#8d95a4}
-.ob-empty-note{margin:28px auto 0;max-width:760px;text-align:center;font-size:14px;color:#8a96a8}
-.ob-plat-sub{font-size:18px;color:#5d6a7d;margin-bottom:1.75rem;line-height:1.5;text-align:center;max-width:920px;margin-left:auto;margin-right:auto}
-.ob-plats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-bottom:2rem}
-.ob-plat-card{background:#fff;border:1px solid #d7d7d7;border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:12px;transition:all .2s;min-height:110px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
-.ob-plat-card:hover{border-color:#bfc7cf;box-shadow:0 4px 14px rgba(0,0,0,.06)}
-.ob-plat-icon{font-size:1.8rem;line-height:1;color:#253145}
-.ob-plat-name{font-size:16px;font-weight:700;color:#253145;text-align:left}
-.ob-add-btn{width:100%;padding:10px 12px;border-radius:8px;background:#7ecf89;color:#23312c;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
-.ob-add-btn:hover{background:#6cc779;transform:translateY(-1px)}
-.ob-add-btn.connected{background:#dff4df;color:#2b6a38;border:1px solid #b4ddb8;cursor:pointer}
-.ob-step-cta{display:flex;justify-content:flex-end;margin-top:4px}
-.ob-continue{padding:12px 28px;border-radius:12px;background:#7ecf89;color:#23312c;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .25s;box-shadow:none}
-.ob-continue:hover{transform:translateY(-1px);filter:brightness(.97)}
-.ob-clearfix{clear:both;padding-bottom:2rem}
-.ob-summary{max-width:820px;margin:28px auto 0;background:#fff;border:1px solid #d7d7d7;border-radius:16px;padding:20px}
-.ob-summary h3{font-size:18px;margin-bottom:10px;color:#253145}
-.ob-summary-list{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-.ob-summary-chip{padding:8px 12px;border-radius:999px;background:#f2f6f4;color:#2f4b39;font-size:13px;font-weight:700;border:1px solid #d7e6d9}
 
-/* ═══ CYBER-GLASS ONBOARDING OVERRIDES ═══ */
-.ob-shell{max-width:1160px;margin:0 auto;padding:0 20px 48px}
-.ob-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 0 14px;margin-bottom:16px;border-bottom:1px solid rgba(255,255,255,.08);backdrop-filter:blur(18px);position:sticky;top:0;z-index:25;background:rgba(5,10,21,.72)}
-.ob-logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:900;letter-spacing:.8px;text-transform:uppercase}
-.ob-logo-icon{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--primary-neon),var(--secondary-neon));display:flex;align-items:center;justify-content:center;color:#00121f;box-shadow:0 0 18px rgba(0,242,255,.35)}
-.ob-progress{flex:1;display:flex;align-items:center;justify-content:center;gap:12px;position:relative;min-width:0;padding:0 8px}
-.ob-progress-line{position:absolute;left:56px;right:56px;top:50%;height:2px;background:rgba(255,255,255,.08);transform:translateY(-50%);border-radius:2px;overflow:hidden}
-.ob-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--primary-neon),var(--secondary-neon));box-shadow:0 0 14px rgba(0,242,255,.45);transition:width .45s ease}
-.ob-step{width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;transition:all .35s;z-index:2;font:inherit;color:rgba(255,255,255,.48);backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.18)}
-.ob-step:hover{transform:translateY(-2px);border-color:rgba(0,242,255,.35);color:#fff}
-.ob-step.active{border-color:var(--primary-neon);color:var(--primary-neon);background:rgba(0,242,255,.08);box-shadow:0 0 0 1px rgba(0,242,255,.25),0 0 18px rgba(0,242,255,.18)}
-.ob-step.completed{background:linear-gradient(135deg,var(--primary-neon),var(--secondary-neon));color:#04111f;border-color:transparent}
+/* Per-theme onboarding tokens */
+[data-theme="dark"] #page-onboarding{--pn:#00c8ff;--sn:#7000ff;--ob-card:rgba(255,255,255,.045);--ob-card-h:rgba(255,255,255,.08);--ob-bdr:rgba(255,255,255,.11);--ob-sel-bg:rgba(0,200,255,.07);--ob-sel-bdr:#00c8ff;--ob-hdr:rgba(6,12,24,.88);--ob-acc:#00c8ff;--ob-tx:#ffffff;--ob-tx2:rgba(255,255,255,.68);--ob-tx3:rgba(255,255,255,.38);--ob-logo-c:#fff}
+[data-theme="sky"] #page-onboarding{--pn:#0066dd;--sn:#7c3aed;--ob-card:rgba(255,255,255,.82);--ob-card-h:rgba(255,255,255,.97);--ob-bdr:rgba(0,90,180,.16);--ob-sel-bg:rgba(0,102,221,.07);--ob-sel-bdr:#0066dd;--ob-hdr:rgba(232,244,255,.93);--ob-acc:#0066dd;--ob-tx:#0a1628;--ob-tx2:#2a4a72;--ob-tx3:#6a8aae;--ob-logo-c:#0a1628}
+[data-theme="dark"] #page-onboarding::before{content:'';position:fixed;inset:0;background-image:radial-gradient(ellipse 70% 45% at 50% 0%,rgba(0,200,255,.07),transparent),linear-gradient(rgba(0,200,255,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(0,200,255,.022) 1px,transparent 1px);background-size:100% 100%,52px 52px,52px 52px;pointer-events:none;z-index:0}
+
+/* Shell */
+.ob-shell{max-width:1200px;margin:0 auto;padding:0 24px 72px;position:relative;z-index:1}
+
+/* ── Header ── */
+.ob-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:16px 0 14px;border-bottom:1px solid var(--ob-bdr);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);position:sticky;top:0;z-index:25;background:var(--ob-hdr)}
+.ob-logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:var(--ob-logo-c)}
+.ob-logo-icon{width:36px;height:36px;border-radius:11px;background:linear-gradient(135deg,var(--pn),var(--sn));display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px}
+[data-theme="dark"] .ob-logo-icon{box-shadow:0 0 14px rgba(0,200,255,.3)}
+.ob-avatar{width:38px;height:38px;border-radius:50%;background:var(--ob-sel-bg);border:2px solid var(--ob-bdr);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--ob-acc);flex-shrink:0}
+
+/* ── Progress stepper ── */
+.ob-progress{flex:1;display:flex;align-items:center;justify-content:center;position:relative;padding:0 8px}
+.ob-progress-line{position:absolute;left:calc(50% - 148px);right:calc(50% - 148px);top:50%;height:2px;background:var(--ob-bdr);transform:translateY(-50%);border-radius:2px;overflow:hidden}
+.ob-progress-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--pn),var(--sn));transition:width .5s cubic-bezier(.4,0,.2,1)}
+[data-theme="dark"] .ob-progress-fill{box-shadow:0 0 10px rgba(0,200,255,.4)}
+.ob-step-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;z-index:2;padding:0 24px}
+.ob-step{width:40px;height:40px;border-radius:50%;background:var(--ob-card);border:2px solid var(--ob-bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .3s;font:inherit;color:var(--ob-tx3);font-weight:800;font-size:14px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.ob-step:hover{border-color:var(--pn);color:var(--pn);transform:translateY(-2px)}
+.ob-step.active{border-color:var(--pn);color:var(--pn);background:var(--ob-sel-bg)}
+[data-theme="dark"] .ob-step.active{box-shadow:0 0 0 3px rgba(0,200,255,.18),0 0 14px rgba(0,200,255,.14)}
+[data-theme="sky"] .ob-step.active{box-shadow:0 0 0 3px rgba(0,102,221,.14),0 2px 10px rgba(0,102,221,.1)}
+.ob-step.completed{background:linear-gradient(135deg,var(--pn),var(--sn));border-color:transparent;color:#fff}
+[data-theme="dark"] .ob-step.completed{box-shadow:0 0 12px rgba(0,200,255,.28)}
 .ob-step-circle{font-size:13px;font-weight:900;line-height:1}
-.ob-step-label{font-size:0;line-height:0}
-.ob-avatar{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:var(--primary-neon);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(12px)}
-.ob-main{padding:10px 0 0}
-.ob-heading{font-size:clamp(2rem,4.5vw,3.5rem);font-weight:200;text-align:center;letter-spacing:3px;margin-bottom:28px;text-transform:uppercase;color:#fff}
-.ob-heading span{font-weight:900;color:var(--primary-neon);text-shadow:0 0 14px rgba(0,242,255,.28)}
-.ob-panel{display:none;animation:fadeIn .45s ease both;padding-top:6px}
+.ob-step-label{font-size:9px;font-weight:700;color:var(--ob-tx3);letter-spacing:.5px;text-transform:uppercase}
+
+/* ── Main / panels ── */
+.ob-main{padding:40px 0 0}
+.ob-panel{display:none;animation:fadeUp .4s var(--ease-out) both}
 .ob-panel.active{display:block}
-.ob-accent{font-size:11px;font-weight:900;color:var(--primary-neon);text-transform:uppercase;letter-spacing:2px;text-align:center;margin-bottom:10px}
-.ob-title{font-size:clamp(1.9rem,3.8vw,2.8rem);font-weight:300;letter-spacing:-1px;margin-bottom:10px;text-align:center;color:#fff}
-.ob-plat-sub{font-size:16px;color:rgba(255,255,255,.68);margin-bottom:1.6rem;line-height:1.6;text-align:center;max-width:920px;margin-left:auto;margin-right:auto}
-.ob-persona-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
-.ob-role-card{background:rgba(255,255,255,.05);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:22px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .35s cubic-bezier(0.175,0.885,0.32,1.275);position:relative;overflow:hidden;color:#fff;box-shadow:0 10px 32px rgba(0,0,0,.22);font:inherit;text-align:left}
-.ob-role-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,242,255,.08),rgba(112,0,255,.06));opacity:0;transition:opacity .35s;pointer-events:none}
-.ob-role-card:hover{transform:translateY(-8px) scale(1.015);border-color:rgba(0,242,255,.35);box-shadow:0 20px 40px rgba(0,0,0,.35),0 0 20px rgba(0,242,255,.12)}
+.ob-heading{font-size:clamp(1.9rem,4.5vw,3.4rem);font-weight:200;text-align:center;letter-spacing:4px;margin-bottom:32px;text-transform:uppercase;color:var(--ob-tx)}
+.ob-heading span{font-weight:900;color:var(--pn)}
+[data-theme="dark"] .ob-heading span{text-shadow:0 0 12px rgba(0,200,255,.25)}
+.ob-accent{font-size:11px;font-weight:800;color:var(--ob-acc);text-transform:uppercase;letter-spacing:2.5px;text-align:center;margin-bottom:10px}
+.ob-title{font-size:clamp(1.7rem,3.2vw,2.5rem);font-weight:700;letter-spacing:-.5px;margin-bottom:8px;text-align:center;color:var(--ob-tx);line-height:1.15}
+.ob-plat-sub{font-size:15px;color:var(--ob-tx2);margin-bottom:1.75rem;line-height:1.65;text-align:center;max-width:600px;margin-left:auto;margin-right:auto}
+
+/* ── Step 1: Persona cards ── */
+.ob-persona-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:980px;margin:0 auto}
+.ob-role-card{background:var(--ob-card);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--ob-bdr);border-radius:18px;padding:22px 20px 18px;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;font:inherit;text-align:left}
+[data-theme="dark"] .ob-role-card{box-shadow:0 8px 28px rgba(0,0,0,.25)}
+[data-theme="sky"] .ob-role-card{box-shadow:0 2px 10px rgba(0,80,180,.07)}
+.ob-role-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,200,255,.06),rgba(112,0,255,.04));opacity:0;transition:opacity .3s;pointer-events:none}
+[data-theme="sky"] .ob-role-card::before{background:linear-gradient(135deg,rgba(0,102,221,.06),rgba(124,58,237,.04))}
+.ob-role-card:hover{transform:translateY(-5px);border-color:var(--ob-sel-bdr)}
+[data-theme="dark"] .ob-role-card:hover{box-shadow:0 14px 34px rgba(0,0,0,.32),0 0 14px rgba(0,200,255,.1)}
+[data-theme="sky"] .ob-role-card:hover{box-shadow:0 6px 22px rgba(0,80,180,.14)}
 .ob-role-card:hover::before,.ob-role-card.selected::before{opacity:1}
-.ob-role-card.selected{border-color:var(--primary-neon);background:rgba(0,242,255,.06);box-shadow:0 0 0 1px rgba(0,242,255,.25),0 0 22px rgba(0,242,255,.16)}
-.ob-role-card.selected::after{content:'✓';position:absolute;top:14px;right:14px;color:var(--primary-neon);font-size:14px;font-weight:900}
-.ob-role-icon{font-size:2.15rem;line-height:1;color:var(--primary-neon);flex-shrink:0;text-shadow:0 0 14px rgba(0,242,255,.25)}
-.ob-role-text{flex:1;min-width:0}
-.ob-role-name{font-size:16px;font-weight:800;color:#fff;margin-bottom:4px}
-.ob-role-desc{font-size:13px;color:rgba(255,255,255,.62);line-height:1.45}
-.ob-connection-hero{max-width:1040px;margin:22px auto 0;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:18px;min-height:112px;display:flex;align-items:center;justify-content:center;padding:18px;backdrop-filter:blur(18px);box-shadow:0 10px 30px rgba(0,0,0,.2)}
-.ob-connection-hero button{display:inline-flex;align-items:center;gap:10px;border:none;background:transparent;color:#fff;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;transition:transform .25s,color .25s}
-.ob-connection-hero button:hover{transform:translateY(-1px);color:var(--primary-neon)}
-.ob-connection-hero button .plus{font-size:28px;line-height:1;color:var(--primary-neon)}
-.ob-empty-note{margin:22px auto 0;max-width:760px;text-align:center;font-size:14px;color:rgba(255,255,255,.52)}
-.ob-plats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:20px 0 10px}
-.ob-plat-card{background:rgba(255,255,255,.05);backdrop-filter:blur(15px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:12px;transition:all .32s;min-height:112px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
-.ob-plat-card:hover{transform:translateY(-6px);border-color:rgba(0,242,255,.28);box-shadow:0 18px 34px rgba(0,0,0,.28),0 0 18px rgba(0,242,255,.1)}
-.ob-plat-icon{font-size:1.8rem;line-height:1;color:var(--primary-neon);text-shadow:0 0 10px rgba(0,242,255,.18)}
-.ob-plat-name{font-size:16px;font-weight:800;color:#fff;text-align:left}
-.ob-add-btn{width:100%;padding:10px 12px;border-radius:10px;background:linear-gradient(135deg,var(--primary-neon),var(--secondary-neon));color:#04111f;font-size:13px;font-weight:900;border:none;cursor:pointer;font-family:inherit;transition:all .25s;box-shadow:0 0 18px rgba(0,242,255,.16)}
-.ob-add-btn:hover{transform:translateY(-1px);filter:brightness(1.03)}
-.ob-add-btn.connected{background:rgba(0,242,255,.16);color:var(--primary-neon);border:1px solid rgba(0,242,255,.24);box-shadow:none}
-.ob-frequency-card{max-width:640px;margin:0 auto;background:rgba(255,255,255,.05);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:28px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-.ob-frequency-icon{font-size:3rem;line-height:1;color:var(--primary-neon);margin-bottom:16px;text-shadow:0 0 14px rgba(0,242,255,.22)}
-.ob-frequency-card h3{font-size:22px;margin-bottom:8px;color:#fff}
-.ob-frequency-card p{font-size:14px;color:rgba(255,255,255,.62);line-height:1.55;margin-bottom:18px}
-.ob-frequency-card input[type="range"]{width:100%;accent-color:var(--primary-neon)}
-.ob-frequency-value{margin-top:14px;font-size:15px;font-weight:800;color:var(--primary-neon)}
-.ob-summary{max-width:820px;margin:0 auto;background:rgba(255,255,255,.05);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:22px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
-.ob-summary h3{font-size:18px;margin-bottom:12px;color:#fff}
-.ob-summary-list{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
-.ob-summary-chip{padding:8px 12px;border-radius:999px;background:rgba(0,242,255,.1);color:var(--primary-neon);font-size:13px;font-weight:800;border:1px solid rgba(0,242,255,.18)}
-.ob-final-copy{margin-top:22px;text-align:center;font-size:3rem;font-weight:200;letter-spacing:1px;color:#fff}
-.ob-final-sub{text-align:center;color:rgba(255,255,255,.68);margin-top:6px;font-size:15px}
-.ob-footer{margin-top:28px;display:flex;justify-content:space-between;gap:16px}
-.btn-back{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.12)}
-.btn-back:hover{background:rgba(255,255,255,.05)}
-.btn-next{background:linear-gradient(135deg,var(--primary-neon),var(--secondary-neon));color:#04111f;box-shadow:0 0 20px rgba(0,242,255,.26)}
-.btn-next:hover{box-shadow:0 0 30px rgba(0,242,255,.36);transform:translateY(-1px)}
+.ob-role-card.selected{border-color:var(--ob-sel-bdr);background:var(--ob-sel-bg)}
+[data-theme="dark"] .ob-role-card.selected{box-shadow:0 0 0 1px rgba(0,200,255,.22),0 0 20px rgba(0,200,255,.14)}
+[data-theme="sky"] .ob-role-card.selected{box-shadow:0 0 0 2px rgba(0,102,221,.2),0 4px 16px rgba(0,80,180,.1)}
+.ob-role-card.selected::after{content:'✓';position:absolute;top:14px;right:16px;color:var(--ob-acc);font-size:15px;font-weight:900}
+.ob-role-icon{font-size:2.1rem;line-height:1;margin-bottom:12px;display:block}
+[data-theme="dark"] .ob-role-icon{filter:drop-shadow(0 0 5px rgba(0,200,255,.18))}
+.ob-role-name{font-size:15px;font-weight:800;color:var(--ob-tx);margin-bottom:5px;line-height:1.2}
+.ob-role-desc{font-size:12.5px;color:var(--ob-tx2);line-height:1.5;flex:1}
+.ob-choose-label{margin-top:14px;width:100%;padding:8px 12px;border-radius:10px;background:linear-gradient(135deg,var(--pn),var(--sn));color:#fff;font-size:13px;font-weight:800;text-align:center;opacity:0;transform:translateY(5px);transition:all .28s;pointer-events:none}
+[data-theme="dark"] .ob-choose-label{color:#04111f}
+.ob-role-card.selected .ob-choose-label{opacity:1;transform:none}
 
-@media (max-width: 960px) {
+/* ── Step 2: Channels ── */
+.ob-connection-hero{margin:0 auto 18px;background:var(--ob-card);border:1.5px dashed var(--ob-bdr);border-radius:16px;min-height:88px;display:flex;align-items:center;justify-content:center;padding:18px;transition:all .22s;backdrop-filter:blur(12px)}
+.ob-connection-hero:hover{border-color:var(--pn);background:var(--ob-sel-bg)}
+.ob-connection-hero button{display:inline-flex;align-items:center;gap:10px;border:none;background:transparent;color:var(--ob-tx2);font-size:17px;font-weight:700;cursor:pointer;font-family:inherit;transition:color .2s}
+.ob-connection-hero:hover button{color:var(--ob-tx)}
+.ob-connection-hero .plus{font-size:26px;line-height:1;color:var(--ob-acc)}
+.ob-plats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:0 0 12px}
+.ob-plat-card{background:var(--ob-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--ob-bdr);border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;transition:all .28s;min-height:130px}
+[data-theme="dark"] .ob-plat-card{box-shadow:0 6px 20px rgba(0,0,0,.2)}
+[data-theme="sky"] .ob-plat-card{box-shadow:0 1px 6px rgba(0,80,180,.05)}
+.ob-plat-card:hover{transform:translateY(-4px);border-color:var(--pn)}
+[data-theme="dark"] .ob-plat-card:hover{box-shadow:0 12px 28px rgba(0,0,0,.28),0 0 12px rgba(0,200,255,.08)}
+[data-theme="sky"] .ob-plat-card:hover{box-shadow:0 6px 18px rgba(0,80,180,.12)}
+.ob-plat-icon{font-size:1.75rem;line-height:1;margin-bottom:4px}
+.ob-plat-name{font-size:15px;font-weight:800;color:var(--ob-tx)}
+.ob-plat-desc{font-size:11.5px;color:var(--ob-tx3);line-height:1.4;flex:1;margin-bottom:4px}
+.ob-add-btn{width:100%;padding:9px 12px;border-radius:9px;background:linear-gradient(135deg,var(--pn),var(--sn));color:#fff;font-size:12.5px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .22s;margin-top:auto;letter-spacing:.2px}
+[data-theme="dark"] .ob-add-btn{color:#04111f;box-shadow:0 0 12px rgba(0,200,255,.16)}
+.ob-add-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
+[data-theme="dark"] .ob-add-btn:hover{box-shadow:0 0 20px rgba(0,200,255,.32),0 4px 14px rgba(0,0,0,.2)}
+[data-theme="sky"] .ob-add-btn:hover{box-shadow:0 4px 16px rgba(0,102,221,.38)}
+.ob-add-btn.connected{background:var(--ob-sel-bg);color:var(--ob-acc);border:1.5px solid var(--ob-sel-bdr);box-shadow:none;filter:none;transform:none}
+.ob-empty-note{margin:14px auto 0;max-width:600px;text-align:center;font-size:14px;color:var(--ob-tx3);line-height:1.55}
+
+/* ── Step 3: Frequency ── */
+.ob-frequency-card{max-width:540px;margin:0 auto;background:var(--ob-card);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--ob-bdr);border-radius:20px;padding:32px 28px;text-align:center}
+[data-theme="dark"] .ob-frequency-card{box-shadow:0 10px 28px rgba(0,0,0,.22)}
+[data-theme="sky"] .ob-frequency-card{box-shadow:0 2px 12px rgba(0,80,180,.08)}
+.ob-frequency-icon{font-size:2.6rem;margin-bottom:14px;display:block}
+.ob-frequency-card h3{font-size:21px;font-weight:800;margin-bottom:8px;color:var(--ob-tx)}
+.ob-frequency-card p{font-size:14px;color:var(--ob-tx2);line-height:1.6;margin-bottom:24px}
+.ob-frequency-card input[type="range"]{width:100%;accent-color:#ef4444;cursor:pointer}
+.ob-freq-labels{display:flex;justify-content:space-between;margin-top:10px;padding:0 2px}
+.ob-freq-lbl{font-size:11px;font-weight:700;color:var(--ob-tx3);text-align:center}
+.ob-frequency-value{margin-top:20px;font-size:20px;font-weight:900;color:var(--ob-tx);background:var(--ob-sel-bg);border:1.5px solid var(--ob-sel-bdr);border-radius:12px;padding:10px 24px;display:inline-block}
+[data-theme="dark"] .ob-frequency-value{text-shadow:0 0 10px rgba(0,200,255,.15)}
+
+/* ── Step 4: Verification ── */
+.ob-summary{max-width:680px;margin:0 auto 28px;background:var(--ob-card);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--ob-bdr);border-radius:20px;padding:24px}
+[data-theme="dark"] .ob-summary{box-shadow:0 10px 28px rgba(0,0,0,.22)}
+[data-theme="sky"] .ob-summary{box-shadow:0 2px 12px rgba(0,80,180,.08)}
+.ob-summary h3{font-size:16px;font-weight:800;margin-bottom:14px;color:var(--ob-tx)}
+.ob-summary-list{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:8px}
+.ob-summary-chip{padding:7px 15px;border-radius:999px;background:var(--ob-sel-bg);color:var(--ob-acc);font-size:13px;font-weight:800;border:1px solid var(--ob-bdr)}
+.ob-final-copy{font-size:clamp(2.2rem,4.5vw,3.6rem);font-weight:200;letter-spacing:2px;color:var(--ob-tx);text-align:center;margin-top:24px;margin-bottom:8px;line-height:1}
+[data-theme="dark"] .ob-final-copy{text-shadow:0 0 28px rgba(0,200,255,.08)}
+.ob-final-sub{text-align:center;color:var(--ob-tx2);font-size:15px;line-height:1.55;margin-bottom:0}
+
+/* ── Footer nav ── */
+.ob-footer{margin-top:32px;display:flex;justify-content:space-between;align-items:center;gap:16px;max-width:980px;margin-left:auto;margin-right:auto}
+.btn{padding:13px 26px;border-radius:13px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .25s;border:none}
+.btn-back{background:var(--ob-card);color:var(--ob-tx2);border:1px solid var(--ob-bdr)}
+.btn-back:hover{color:var(--ob-tx);border-color:var(--pn)}
+.btn-next{background:linear-gradient(135deg,var(--pn),var(--sn));color:#fff;padding:14px 38px;font-size:15px}
+[data-theme="dark"] .btn-next{color:#04111f;box-shadow:0 0 18px rgba(0,200,255,.22)}
+[data-theme="sky"] .btn-next{box-shadow:0 4px 16px rgba(0,102,221,.28)}
+.btn-next:hover{transform:translateY(-2px)}
+[data-theme="dark"] .btn-next:hover{box-shadow:0 0 28px rgba(0,200,255,.36)}
+[data-theme="sky"] .btn-next:hover{box-shadow:0 8px 22px rgba(0,102,221,.38)}
+
+@media(max-width:960px){
   .ob-header{flex-wrap:wrap;justify-content:center}
-  .ob-progress{order:3;flex-basis:100%}
-  .ob-progress-line{left:44px;right:44px}
-  .ob-plats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ob-progress{order:3;width:100%}
+  .ob-progress-line{left:40px;right:40px}
+  .ob-persona-grid,.ob-plats-grid{grid-template-columns:repeat(2,1fr)}
+  .ob-step-wrap{padding:0 14px}
 }
-
-@media (max-width: 768px) {
+@media(max-width:600px){
   .ob-shell{padding-inline:14px}
-  .ob-heading{font-size:1.85rem;letter-spacing:2px}
-  .ob-title{font-size:1.8rem}
-  .ob-plat-sub{font-size:15px}
+  .ob-heading{letter-spacing:2px}
   .ob-persona-grid,.ob-plats-grid{grid-template-columns:1fr}
-  .ob-footer{flex-direction:column-reverse}
-  .btn{width:100%}
+  .ob-footer{flex-direction:column-reverse;margin-top:20px}
+  .btn{width:100%;text-align:center}
+  .ob-frequency-card{padding:24px 16px}
 }
 
 /* Platform connect modal */
@@ -668,35 +680,91 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       </div>
       <div class="ob-progress">
         <div class="ob-progress-line"><div class="ob-progress-fill" id="ob-progress-fill"></div></div>
-        <button class="ob-step active" id="ob-step-1" type="button" onclick="obGoStep(1)"><span class="ob-step-circle">1</span><span class="ob-step-label">Persona</span></button>
-        <button class="ob-step" id="ob-step-2" type="button" onclick="obGoStep(2)"><span class="ob-step-circle">2</span><span class="ob-step-label">Channels</span></button>
-        <button class="ob-step" id="ob-step-3" type="button" onclick="obGoStep(3)"><span class="ob-step-circle">3</span><span class="ob-step-label">Rhythm</span></button>
-        <button class="ob-step" id="ob-step-4" type="button" onclick="obGoStep(4)"><span class="ob-step-circle">4</span><span class="ob-step-label">Launch</span></button>
+        <div class="ob-step-wrap">
+          <button class="ob-step active" id="ob-step-1" type="button" onclick="obGoStep(1)">1</button>
+          <span class="ob-step-label">Persona</span>
+        </div>
+        <div class="ob-step-wrap">
+          <button class="ob-step" id="ob-step-2" type="button" onclick="obGoStep(2)">2</button>
+          <span class="ob-step-label">Channels</span>
+        </div>
+        <div class="ob-step-wrap">
+          <button class="ob-step" id="ob-step-3" type="button" onclick="obGoStep(3)">3</button>
+          <span class="ob-step-label">Rhythm</span>
+        </div>
+        <div class="ob-step-wrap">
+          <button class="ob-step" id="ob-step-4" type="button" onclick="obGoStep(4)">4</button>
+          <span class="ob-step-label">Launch</span>
+        </div>
       </div>
       <div class="ob-avatar" id="ob-avatar">?</div>
     </div>
 
     <main class="ob-main">
-      <h1 class="ob-heading" id="ob-heading">LET'S GET <span>YOU SET</span></h1>
+      <h1 class="ob-heading" id="ob-heading">LET’S GET <span>YOU SET</span></h1>
 
+      <!-- Step 1: Persona -->
       <div class="ob-panel active" id="ob-panel-1">
         <div class="ob-accent">step 1 of 4</div>
         <div class="ob-title">Choose your persona</div>
-        <div class="ob-plat-sub">Pick the profile that best matches how you publish.</div>
+        <div class="ob-plat-sub">Pick the profile that best matches how you publish content.</div>
         <div class="ob-persona-grid">
-          <button class="ob-role-card" type="button" onclick="selectRole(this,'founder')"><span class="ob-role-icon">🚀</span><div class="ob-role-text"><div class="ob-role-name">Entrepreneur / Startup</div><div class="ob-role-desc">Building a business with scaling goals.</div></div></button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,'creator')"><span class="ob-role-icon">📣</span><div class="ob-role-text"><div class="ob-role-name">Influencer / Creator</div><div class="ob-role-desc">Grow your brand and community.</div></div></button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,'agency')"><span class="ob-role-icon">🤝</span><div class="ob-role-text"><div class="ob-role-name">Agency / Consultant</div><div class="ob-role-desc">Manage client accounts with precision.</div></div></button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,'enterprise')"><span class="ob-role-icon">🏢</span><div class="ob-role-text"><div class="ob-role-name">Corporate Operation</div><div class="ob-role-desc">Enterprise-scale publishing workflows.</div></div></button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,'small_business')"><span class="ob-role-icon">💼</span><div class="ob-role-text"><div class="ob-role-name">Brands / Professionals</div><div class="ob-role-desc">Professional presence and small business reach.</div></div></button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,'personal')"><span class="ob-role-icon">🧭</span><div class="ob-role-text"><div class="ob-role-name">Individual / Explorer</div><div class="ob-role-desc">Explore channels and personal connections.</div></div></button>
+          <button class="ob-role-card" type="button" onclick="selectRole(this,’founder’)">
+            <span class="ob-role-icon">🚀</span>
+            <div class="ob-role-text">
+              <div class="ob-role-name">Entrepreneur / Startup</div>
+              <div class="ob-role-desc">Building a business with scaling goals and growth-first content strategy.</div>
+            </div>
+            <div class="ob-choose-label">✓ Choose This Persona</div>
+          </button>
+          <button class="ob-role-card" type="button" onclick="selectRole(this,’creator’)">
+            <span class="ob-role-icon">📣</span>
+            <div class="ob-role-text">
+              <div class="ob-role-name">Influencer / Creator</div>
+              <div class="ob-role-desc">Grow your personal brand, audience, and monetize your creative output.</div>
+            </div>
+            <div class="ob-choose-label">✓ Choose This Persona</div>
+          </button>
+          <button class="ob-role-card" type="button" onclick="selectRole(this,’agency’)">
+            <span class="ob-role-icon">🤝</span>
+            <div class="ob-role-text">
+              <div class="ob-role-name">Agency / Consultant</div>
+              <div class="ob-role-desc">Manage multiple client accounts and campaigns with precision and scale.</div>
+            </div>
+            <div class="ob-choose-label">✓ Choose This Persona</div>
+          </button>
+          <button class="ob-role-card" type="button" onclick="selectRole(this,’enterprise’)">
+            <span class="ob-role-icon">🏢</span>
+            <div class="ob-role-text">
+              <div class="ob-role-name">Corporate Operation</div>
+              <div class="ob-role-desc">Enterprise-scale publishing workflows with team collaboration and approvals.</div>
+            </div>
+            <div class="ob-choose-label">✓ Choose This Persona</div>
+          </button>
+          <button class="ob-role-card" type="button" onclick="selectRole(this,’small_business’)">
+            <span class="ob-role-icon">💼</span>
+            <div class="ob-role-text">
+              <div class="ob-role-name">Brand / Professional</div>
+              <div class="ob-role-desc">Professional presence, local reach, and consistent small business marketing.</div>
+            </div>
+            <div class="ob-choose-label">✓ Choose This Persona</div>
+          </button>
+          <button class="ob-role-card" type="button" onclick="selectRole(this,’personal’)">
+            <span class="ob-role-icon">🧭</span>
+            <div class="ob-role-text">
+              <div class="ob-role-name">Individual / Explorer</div>
+              <div class="ob-role-desc">Explore platforms, build personal connections, and share your story freely.</div>
+            </div>
+            <div class="ob-choose-label">✓ Choose This Persona</div>
+          </button>
         </div>
       </div>
 
+      <!-- Step 2: Channels -->
       <div class="ob-panel" id="ob-panel-2">
         <div class="ob-accent">step 2 of 4</div>
         <div class="ob-title">Connect your channels</div>
-        <div class="ob-plat-sub">Connect your social accounts to publish everywhere from one workspace.</div>
+        <div class="ob-plat-sub">Link your social accounts to publish everywhere from one workspace.</div>
         <div class="ob-connection-hero">
           <button type="button" id="ob-add-connection-btn"><span class="plus">+</span><span>Add connection</span></button>
         </div>
@@ -704,30 +772,41 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
         <div class="ob-empty-note" id="ob-empty-note">No connected accounts yet. Use the "Add connection" button to get started.</div>
       </div>
 
+      <!-- Step 3: Rhythm -->
       <div class="ob-panel" id="ob-panel-3">
         <div class="ob-accent">step 3 of 4</div>
-        <div class="ob-title">Set your rhythm</div>
+        <div class="ob-title">Optimize your cadence</div>
         <div class="ob-plat-sub">How often do you want OmniPublish to help you ship content?</div>
         <div class="ob-frequency-card">
           <div class="ob-frequency-icon">◷</div>
-          <h3>Set Your Frequency</h3>
-          <p>Choose a publishing cadence that matches your workflow.</p>
+          <h3>Publishing Frequency</h3>
+          <p>Choose a cadence that fits your workflow. You can always adjust this later.</p>
           <input id="ob-frequency" type="range" min="1" max="7" value="3" step="1" oninput="updateFrequencyDisplay(this.value)">
+          <div class="ob-freq-labels">
+            <span class="ob-freq-lbl">1×</span>
+            <span class="ob-freq-lbl">2×</span>
+            <span class="ob-freq-lbl">3×</span>
+            <span class="ob-freq-lbl">4×</span>
+            <span class="ob-freq-lbl">5×</span>
+            <span class="ob-freq-lbl">6×</span>
+            <span class="ob-freq-lbl">7×</span>
+          </div>
           <div class="ob-frequency-value" id="ob-frequency-value">3 posts / week</div>
         </div>
       </div>
 
+      <!-- Step 4: Verification -->
       <div class="ob-panel" id="ob-panel-4">
         <div class="ob-accent">step 4 of 4</div>
-        <div class="ob-title">Review your setup</div>
-        <div class="ob-plat-sub">You’re ready to start posting everywhere. Review your connected accounts below.</div>
+        <div class="ob-title">Final verification</div>
+        <div class="ob-plat-sub">Review your setup below, then launch your workspace.</div>
         <div class="ob-summary">
           <h3>Connected accounts</h3>
           <div class="ob-summary-list" id="ob-summary-list"></div>
           <div class="ob-empty-note" id="ob-summary-empty">No connected accounts yet. Go back and add at least one social account.</div>
         </div>
         <div class="ob-final-copy">Systems Calibrated.</div>
-        <p class="ob-final-sub">Your OmniPublish workspace is ready for launch.</p>
+        <p class="ob-final-sub">Your OmniPublish workspace is configured and ready for launch.</p>
       </div>
 
       <div class="footer-nav ob-footer">
@@ -1608,20 +1687,20 @@ async function verifyMagicToken(token) {
    ONBOARDING
 ══════════════════════════════════════ */
 const OB_PLATFORMS = [
-  { id: 'facebook',  name: 'Facebook',   icon: '📘', reqs: ['Use a Facebook/Meta access token', 'Page access or profile access is required'] },
-  { id: 'instagram', name: 'Instagram',  icon: '📷', reqs: ['Use an Instagram Graph API token', 'Business or Creator account required'] },
-  { id: 'x',         name: 'X (Twitter)', icon: '𝕏', reqs: ['Use an X API bearer token', 'Account must be in good standing'] },
-  { id: 'tiktok',    name: 'TikTok',     icon: '🎵', reqs: ['Use a TikTok API access token', 'Business or Creator account required'] },
-  { id: 'linkedin',  name: 'LinkedIn',   icon: '💼', reqs: ['Use a LinkedIn OAuth access token', 'Personal or company profile required'] },
-  { id: 'youtube',   name: 'YouTube',    icon: '▶️', reqs: ['Use a Google OAuth access token', 'Channel must be verified'] },
-  { id: 'reddit',    name: 'Reddit',     icon: '👽', reqs: ['Use a Reddit OAuth access token', 'Subreddit posting permissions required'] },
-  { id: 'threads',   name: 'Threads',    icon: '🧵', reqs: ['Use a Threads/Meta access token', 'Instagram-linked account required'] },
-  { id: 'telegram',  name: 'Telegram',   icon: '✈️', reqs: ['Use a Telegram bot token', 'Bot must be added to the destination chat'] },
-  { id: 'pinterest', name: 'Pinterest',  icon: '📌', reqs: ['Use a Pinterest OAuth access token', 'Business account recommended'] },
-  { id: 'rumble',    name: 'Rumble',     icon: '🟩', reqs: ['Store your Rumble credentials or upload workflow token', 'Manual upload fallback is supported'] },
-  { id: 'bluesky',   name: 'Bluesky',    icon: '☁️', reqs: ['Use a Bluesky handle and app password', 'AT Protocol access is required'] },
-  { id: 'snapchat',  name: 'Snapchat',   icon: '👻', reqs: ['Use Snap Creative Kit credentials', 'Approval may be required'] },
-  { id: 'twitch',    name: 'Twitch',     icon: '🎮', reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
+  { id: 'facebook',  name: 'Facebook',    icon: '📘', desc: 'Community engagement and group-driven content',         reqs: ['Use a Facebook/Meta access token', 'Page access or profile access is required'] },
+  { id: 'instagram', name: 'Instagram',   icon: '📷', desc: 'Visual storytelling and Reels-first growth',            reqs: ['Use an Instagram Graph API token', 'Business or Creator account required'] },
+  { id: 'x',         name: 'X (Twitter)', icon: '𝕏',  desc: 'Real-time conversations and trending topics',          reqs: ['Use an X API bearer token', 'Account must be in good standing'] },
+  { id: 'tiktok',    name: 'TikTok',      icon: '🎵', desc: 'Short-form video with viral discovery potential',       reqs: ['Use a TikTok API access token', 'Business or Creator account required'] },
+  { id: 'linkedin',  name: 'LinkedIn',    icon: '💼', desc: 'Professional networking and B2B thought leadership',    reqs: ['Use a LinkedIn OAuth access token', 'Personal or company profile required'] },
+  { id: 'youtube',   name: 'YouTube',     icon: '▶️', desc: 'Long-form video and monetized creator content',         reqs: ['Use a Google OAuth access token', 'Channel must be verified'] },
+  { id: 'reddit',    name: 'Reddit',      icon: '👽', desc: 'Community discussions and niche audience reach',        reqs: ['Use a Reddit OAuth access token', 'Subreddit posting permissions required'] },
+  { id: 'threads',   name: 'Threads',     icon: '🧵', desc: 'Text-forward social built on Instagram\'s network',    reqs: ['Use a Threads/Meta access token', 'Instagram-linked account required'] },
+  { id: 'telegram',  name: 'Telegram',    icon: '✈️', desc: 'Channel broadcasts and direct community messaging',    reqs: ['Use a Telegram bot token', 'Bot must be added to the destination chat'] },
+  { id: 'pinterest', name: 'Pinterest',   icon: '📌', desc: 'Visual discovery, pins, and product inspiration',      reqs: ['Use a Pinterest OAuth access token', 'Business account recommended'] },
+  { id: 'rumble',    name: 'Rumble',      icon: '🟩', desc: 'Video-first platform with free-speech positioning',    reqs: ['Store your Rumble credentials or upload workflow token', 'Manual upload fallback is supported'] },
+  { id: 'bluesky',   name: 'Bluesky',     icon: '☁️', desc: 'Open protocol social with decentralized reach',        reqs: ['Use a Bluesky handle and app password', 'AT Protocol access is required'] },
+  { id: 'snapchat',  name: 'Snapchat',    icon: '👻', desc: 'Ephemeral stories and Gen-Z audience engagement',      reqs: ['Use Snap Creative Kit credentials', 'Approval may be required'] },
+  { id: 'twitch',    name: 'Twitch',      icon: '🎮', desc: 'Live streaming, gaming, and real-time community',      reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
 ];
 
 let _platformConnections = {};
@@ -1741,6 +1820,7 @@ function renderObPlatforms() {
     <div class="ob-plat-card" id="ob-plat-${p.id}">
       <div class="ob-plat-icon">${p.icon}</div>
       <div class="ob-plat-name">${p.name}</div>
+      <div class="ob-plat-desc">${p.desc}</div>
       <button class="ob-add-btn" id="ob-add-${p.id}" type="button" data-plat="${p.id}">Add</button>
     </div>
   `).join('');

@@ -108,7 +108,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
   const { email, password } = req.body;
 
   const { data: user } = await supabase.from('users')
-    .select('id, email, password_hash, role, plan, is_active, failed_login_attempts, locked_until')
+    .select('id, email, password_hash, role, plan, is_active, is_verified, failed_login_attempts, locked_until')
     .eq('email', email).single();
 
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
