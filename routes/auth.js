@@ -17,7 +17,6 @@ const { authRateLimiter, authSlowDown } = require('../middleware/rateLimit');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { BCRYPT_ROUNDS, LOCKOUT_POLICY, validatePassword, JWT_CONFIG } = require('../config/security');
 const { logger }      = require('../utils/logger');
-const { issueConfirmationLink } = require('../services/authLinkService');
 
 const router = express.Router();
 
@@ -63,10 +62,17 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
 
   let user = existing;
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const sessionUser = { is_verified: true };
 
   if (user) {
     const { data: updated, error } = await supabase.from('users')
-      .update({ password_hash: passwordHash, full_name: fullName || user.full_name || null, is_active: true })
+      .update({
+        password_hash: passwordHash,
+        full_name: fullName || user.full_name || null,
+        is_active: true,
+        is_verified: true,
+        last_login_at: new Date(),
+      })
       .eq('id', user.id)
       .select('id, email, full_name, is_verified, role, plan')
       .single();
@@ -74,21 +80,29 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
     user = updated;
   } else {
     const { data: created, error } = await supabase.from('users')
-      .insert({ id: uuidv4(), email, password_hash: passwordHash, full_name: fullName || null, role: 'user', plan: 'free', is_active: true, is_verified: false })
+      .insert({
+        id: uuidv4(),
+        email,
+        password_hash: passwordHash,
+        full_name: fullName || null,
+        role: 'user',
+        plan: 'free',
+        is_active: true,
+        is_verified: true,
+        last_login_at: new Date(),
+      })
       .select('id, email, full_name, is_verified, role, plan')
       .single();
     if (error) { logger.error('Register failed', { err: error.message }); return res.status(500).json({ error: 'Registration failed' }); }
     user = created;
   }
 
-  await issueConfirmationLink(user, {
-    subject: 'Confirm your OmniPublish email',
-    headline: 'Confirm your email to start onboarding',
-    cta: 'Confirm and start onboarding',
-  });
-
-  logger.info('Verification email sent after registration', { userId: user.id });
-  res.status(202).json({ message: 'Check your email for a confirmation link to start onboarding.' });
+  const tokens = issueTokens({ ...user, ...sessionUser });
+  const csrfToken = generateCSRFToken();
+  res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+  setRefreshCookie(res, tokens.refreshToken);
+  logger.info('User registered', { userId: user.id });
+  res.json(buildAuthResponse({ user: { ...user, ...sessionUser }, tokens, csrfToken }));
 });
 
 /* ── POST /auth/login ── */

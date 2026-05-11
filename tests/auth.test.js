@@ -47,17 +47,35 @@ beforeEach(() => jest.clearAllMocks());
 // ── POST /api/v1/auth/register ─────────────────────────────
 
 describe('POST /api/v1/auth/register', () => {
-  it('202 — creates user and sends confirmation link', async () => {
+  it('200 — creates user and returns a session', async () => {
     supabase.from
       .mockReturnValueOnce(mockChain({ data: null, error: null }))           // email check
-      .mockReturnValueOnce(mockChain({ data: { id: TEST_USER.id, email: TEST_USER.email, role: 'user', plan: 'free' }, error: null })); // insert
+      .mockReturnValueOnce(mockChain({ data: { id: TEST_USER.id, email: 'new@example.com', role: 'user', plan: 'free' }, error: null })); // insert
 
     const res = await request(app)
       .post('/api/v1/auth/register')
       .send({ email: 'new@example.com', password: 'ValidPass123!', fullName: 'Test User' });
 
-    expect(res.status).toBe(202);
-    expect(res.body.message).toMatch(/confirmation link/i);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body.user.email).toBe('new@example.com');
+    expect(res.body.user).not.toHaveProperty('password_hash');
+    expect(res.headers['set-cookie']).toBeDefined();
+  });
+
+  it('200 — upgrades an existing unverified account into an active session', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { id: 'existing-id', email: 'legacy@example.com', full_name: 'Legacy User', is_verified: false, role: 'user', plan: 'free' }, error: null }))
+      .mockReturnValueOnce(mockChain({ data: { id: 'existing-id', email: 'legacy@example.com', full_name: 'Legacy User', is_verified: true, role: 'user', plan: 'free' }, error: null }));
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'legacy@example.com', password: 'ValidPass123!', fullName: 'Legacy User' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe('legacy@example.com');
+    expect(res.body.user).toHaveProperty('role', 'user');
+    expect(res.body).toHaveProperty('accessToken');
   });
 
   it('409 — rejects duplicate email', async () => {
