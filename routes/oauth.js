@@ -3,10 +3,12 @@
 const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
+const bcrypt  = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { supabase }   = require('../config/database');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
+const { BCRYPT_ROUNDS } = require('../config/security');
 const { logger }            = require('../utils/logger');
 const { issueConfirmationLink } = require('../services/authLinkService');
 
@@ -32,11 +34,19 @@ if (hasGoogle) {
         .select('id, email, role, plan, full_name, is_verified').eq('email', email).single();
 
       if (!user) {
-        const { data: created, error } = await supabase.from('users')
-          .insert({ id: uuidv4(), email, full_name: fullName, password_hash: null, role: 'user', plan: 'free', is_active: true, is_verified: false })
-          .select('id, email, role, plan, full_name, is_verified').single();
-        if (error) return done(error);
-        user = created;
+        const baseUser = { id: uuidv4(), email, full_name: fullName, role: 'user', plan: 'free', is_active: true, is_verified: false };
+        const insertUser = async (passwordHash) => supabase.from('users')
+          .insert({ ...baseUser, password_hash: passwordHash })
+          .select('id, email, role, plan, full_name, is_verified')
+          .single();
+
+        let createdRes = await insertUser(null);
+        if (createdRes.error && (createdRes.error.code === '23502' || /null value in column .*password_hash/i.test(createdRes.error.message || ''))) {
+          const fallbackHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
+          createdRes = await insertUser(fallbackHash);
+        }
+        if (createdRes.error) return done(createdRes.error);
+        user = createdRes.data;
         logger.info('Google OAuth new user created', { userId: user.id });
       } else {
         await supabase.from('users').update({ last_login_at: new Date() }).eq('id', user.id);
