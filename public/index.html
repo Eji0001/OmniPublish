@@ -1002,7 +1002,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
   </div>
 </div>
 
-<script>
+<script nonce="__CSP_NONCE__">
 /* ══════════════════════════════════════
    AUTH STATE
 ══════════════════════════════════════ */
@@ -1491,7 +1491,7 @@ function updateCompatibility() {
 function renderPlatforms() {
   document.getElementById('plats-grid').innerHTML = PLATFORMS.map(p => {
     const lim = p.limit>=1000?(p.limit/1000).toFixed(0)+'k':p.limit;
-    return `<div class="plat-card" id="pc-${p.id}" style="--pc:${p.color}" onclick="toggle('${p.id}')">
+    return `<div class="plat-card" id="pc-${p.id}" style="--pc:${p.color}" data-platform-id="${p.id}">
       <div class="plat-icon" style="background:${p.color}">${p.abbr}</div>
       <div class="plat-info"><div class="plat-name">${p.name}</div><div class="plat-meta">${lim} chars · ${p.reach}</div></div>
       <div class="plat-toggle" id="pt-${p.id}"></div>
@@ -1606,7 +1606,7 @@ function renderAdapted(sel) {
   document.getElementById('adapted-list').innerHTML = sel.map(p=>{
     const txt=adapted[p.id]||'';const pct=Math.min(txt.length/p.limit,1);
     const barC=pct>.9?'var(--err)':pct>.7?'var(--warn)':'var(--acc3)';
-    return `<div class="adapted-card"><div class="adapted-head"><div class="a-plat-icon" style="background:${p.color}">${p.abbr}</div><span class="a-plat-name">${p.name}</span><span class="a-chars">${txt.length}/${p.limit}</span><button class="a-copy-btn" onclick="copyText('${p.id}')">Copy</button></div><div class="adapted-text">${escHtml(txt)}</div><div class="mini-prog"><div class="mini-prog-fill" style="width:${Math.round(pct*100)}%;background:${barC}"></div></div></div>`;
+    return `<div class="adapted-card"><div class="adapted-head"><div class="a-plat-icon" style="background:${p.color}">${p.abbr}</div><span class="a-plat-name">${p.name}</span><span class="a-chars">${txt.length}/${p.limit}</span><button class="a-copy-btn" data-copy-pid="${p.id}">Copy</button></div><div class="adapted-text">${escHtml(txt)}</div><div class="mini-prog"><div class="mini-prog-fill" style="width:${Math.round(pct*100)}%;background:${barC}"></div></div></div>`;
   }).join('');
 }
 function copyText(pid) { if(adapted[pid]){navigator.clipboard.writeText(adapted[pid]);toast('Copied!','ok');} }
@@ -2058,6 +2058,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   bindLink('forgot-link', () => switchAuthForm('forgot'));
   bindLink('forgot-back-link', () => switchAuthForm('login'));
   bindLink('su-login-link', () => showPage('auth', { tab: 'login' }));
+
+  document.getElementById('plats-grid')?.addEventListener('click', (e) => {
+    const card = e.target.closest('.plat-card[data-platform-id]');
+    if (card?.dataset.platformId) toggle(card.dataset.platformId);
+  });
+  document.getElementById('adapted-list')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.a-copy-btn[data-copy-pid]');
+    if (btn?.dataset.copyPid) copyText(btn.dataset.copyPid);
+  });
 
   applyTheme(currentTheme);
   buildMarquee();

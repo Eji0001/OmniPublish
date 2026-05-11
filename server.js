@@ -8,6 +8,9 @@
 require('dotenv').config();
 require('express-async-errors');
 
+const crypto     = require('crypto');
+const fs         = require('fs');
+const path       = require('path');
 const express     = require('express');
 const helmet      = require('helmet');
 const cors        = require('cors');
@@ -44,6 +47,39 @@ const { healthReadinessCheck, healthLivenessCheck } = require('./middleware/heal
 const { limiter } = require('./middleware/concurrencyLimit');
 const { setupGracefulShutdown } = require('./utils/gracefulShutdown');
 
+const PUBLIC_INDEX_PATH = path.join(__dirname, 'public', 'index.html');
+const PUBLIC_INDEX_TEMPLATE = fs.readFileSync(PUBLIC_INDEX_PATH, 'utf8');
+const INLINE_EVENT_HANDLER_HASHES = [...new Set([
+  ...PUBLIC_INDEX_TEMPLATE.matchAll(/\son[a-z]+="([^"]*)"/gi),
+].map(match => match[1].trim()))].map(handler => {
+  const digest = crypto.createHash('sha256').update(handler, 'utf8').digest('base64');
+  return `'sha256-${digest}'`;
+});
+
+const createNonce = () => crypto.randomBytes(16).toString('base64');
+
+const buildCspHeader = (nonce) => {
+  const attrHashes = INLINE_EVENT_HANDLER_HASHES.join(' ');
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'unsafe-hashes'${attrHashes ? ` ${attrHashes}` : ''}`,
+    `script-src-elem 'self' 'nonce-${nonce}'`,
+    `script-src-attr 'unsafe-hashes'${attrHashes ? ` ${attrHashes}` : ''}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: *.supabase.co *.cloudfront.net",
+    "connect-src 'self' https://api.anthropic.com https://*.supabase.co",
+    "media-src 'self' blob: *.cloudfront.net",
+    "font-src 'self' https://fonts.gstatic.com",
+    "object-src 'none'",
+    "frame-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    'upgrade-insecure-requests',
+  ].join('; ');
+};
+
+const renderIndexHtml = (nonce) => PUBLIC_INDEX_TEMPLATE.replace('nonce="__CSP_NONCE__"', `nonce="${nonce}"`);
+
 /* ─────────────────────────────────────────
    App bootstrap
 ───────────────────────────────────────── */
@@ -58,23 +94,13 @@ app.disable('x-powered-by');
    LAYER 1 — Security Headers (Helmet)
    Covers: OWASP A05 · CSP · HSTS · XFO
 ───────────────────────────────────────── */
+app.use((req, res, next) => {
+  res.locals.cspNonce = createNonce();
+  next();
+});
+
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc:     ["'self'"],
-      scriptSrc:      ["'self'", "'unsafe-inline'"],    // tighten to nonce-based when JS is extracted to app.js
-      styleSrc:       ["'self'", "'unsafe-inline'"],
-      imgSrc:         ["'self'", 'data:', 'blob:', '*.supabase.co', '*.cloudfront.net'],
-      connectSrc:     ["'self'", 'https://api.anthropic.com', 'https://*.supabase.co'],
-      mediaSrc:       ["'self'", 'blob:', '*.cloudfront.net'],
-      fontSrc:        ["'self'", 'https://fonts.gstatic.com'],
-      objectSrc:      ["'none'"],
-      frameSrc:       ["'none'"],
-      baseUri:        ["'self'"],
-      formAction:     ["'self'"],
-      upgradeInsecureRequests: [],
-    },
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: true,
   crossOriginOpenerPolicy:   { policy: 'same-origin' },
   crossOriginResourcePolicy: { policy: 'same-site' },
@@ -93,6 +119,11 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   xssFilter:   true,
 }));
+
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', buildCspHeader(res.locals.cspNonce));
+  next();
+});
 
 // Extra custom security headers
 app.use(securityHeaders);
@@ -245,6 +276,11 @@ app.use('/api/v1/admin', requireApiKey, (req, res) => {
 });
 
 // Serve static UI
+app.get(['/', '/index.html'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('html').send(renderIndexHtml(res.locals.cspNonce));
+});
+
 app.use(express.static('public'));
 
 // Catch-all 404
