@@ -314,47 +314,55 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .su-msg.ok{color:var(--acc3)}.su-msg.err{color:var(--err)}
 
 /* ═══ ONBOARDING PAGE ═══ */
-#page-onboarding{display:none;min-height:100vh;background:var(--bg);padding:3rem 2rem}
+#page-onboarding{display:none;min-height:100vh;background:#ededed;padding:0;color:#253145}
 #page-onboarding.active{display:block}
-.ob-wrap{max-width:620px;margin:0 auto}
-.ob-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2.5rem}
-.ob-steps{display:flex;align-items:center;gap:0}
+.ob-wrap{max-width:1120px;margin:0 auto;padding:0 24px 48px}
+.ob-header{display:flex;align-items:center;justify-content:space-between;padding:20px 4px 18px;margin:0 0 12px;border-bottom:1px solid #d9d9d9;background:#fff;position:sticky;top:0;z-index:30}
+.ob-steps{display:flex;align-items:center;gap:0;flex:1;justify-content:center}
 .ob-step{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
-.ob-step-circle{width:32px;height:32px;border-radius:50%;border:2px solid var(--bd3);background:var(--s2);color:var(--tx3);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .35s}
-.ob-step.done .ob-step-circle{background:#00b894;border-color:#00b894;color:#fff}
-.ob-step.active .ob-step-circle{background:var(--btn-grad);border-color:transparent;color:#fff;box-shadow:0 4px 12px rgba(108,92,231,.4)}
-.ob-step-label{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px}
-.ob-step.active .ob-step-label,.ob-step.done .ob-step-label{color:var(--tx2)}
-.ob-connector{width:60px;height:2px;background:var(--bd2);margin:0 4px;margin-bottom:14px;transition:background .35s}
-.ob-connector.done{background:#00b894}
-.ob-avatar{width:36px;height:36px;border-radius:50%;background:var(--btn-grad);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff}
-.ob-panel{display:none;animation:fadeUp .4s var(--ease-out) both}
+.ob-step-circle{width:38px;height:38px;border-radius:50%;border:1px solid #c9c9c9;background:#dcdcdc;color:#596175;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;transition:all .35s}
+.ob-step.done .ob-step-circle{background:#7ecf89;border-color:#7ecf89;color:#1f3f24}
+.ob-step.active .ob-step-circle{background:#7ecf89;border-color:#7ecf89;color:#1f3f24;box-shadow:none}
+.ob-step-label{display:none}
+.ob-connector{width:112px;height:2px;background:#c7c7c7;margin:0 10px 12px;transition:background .35s}
+.ob-connector.done{background:#7ecf89}
+.ob-avatar{width:36px;height:36px;border-radius:50%;background:#dff4df;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#78b978}
+.ob-panel{display:none;animation:fadeUp .4s var(--ease-out) both;padding-top:10px}
 .ob-panel.active{display:block}
-.ob-accent{font-size:12px;font-weight:700;color:#00b894;text-transform:uppercase;letter-spacing:1px;margin-bottom:.5rem}
-.ob-title{font-size:clamp(1.5rem,4vw,2rem);font-weight:900;letter-spacing:-.5px;margin-bottom:2rem}
+.ob-accent{font-size:12px;font-weight:800;color:#00a376;text-transform:uppercase;letter-spacing:1.4px;margin-bottom:10px;text-align:center}
+.ob-title{font-size:clamp(2.1rem,4vw,3rem);font-weight:900;letter-spacing:-1.2px;margin-bottom:10px;text-align:center;color:#253145}
 .ob-roles{display:flex;flex-direction:column;gap:8px}
-.ob-role-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--s1);border:1.5px solid var(--bd2);border-radius:12px;cursor:pointer;transition:all .2s;position:relative}
-.ob-role-card:hover{border-color:var(--acc);background:var(--s2)}
-.ob-role-card.selected{border-color:#00b894;background:rgba(0,184,148,.06)}
-.ob-role-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--bd3);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
-.ob-role-card.selected .ob-role-radio{border-color:#00b894;background:#00b894}
+.ob-role-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;border:1px solid #d7d7d7;border-radius:12px;cursor:pointer;transition:all .2s;position:relative}
+.ob-role-card:hover{border-color:#bfc7cf;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.ob-role-card.selected{border-color:#7ecf89;background:#f5fbf5}
+.ob-role-radio{width:18px;height:18px;border-radius:50%;border:2px solid #bfc7cf;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.ob-role-card.selected .ob-role-radio{border-color:#7ecf89;background:#7ecf89}
 .ob-role-card.selected .ob-role-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
 .ob-role-icon{font-size:1.3rem;flex-shrink:0}
 .ob-role-text{flex:1}
-.ob-role-name{font-size:14px;font-weight:800;color:var(--tx)}
-.ob-role-desc{font-size:12px;color:var(--tx3);margin-top:1px}
-.ob-plat-sub{font-size:14px;color:var(--tx2);margin-bottom:1.75rem;line-height:1.5}
-.ob-plats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:2rem}
-.ob-plat-card{background:var(--s1);border:1px solid var(--bd2);border-radius:12px;padding:14px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;transition:all .2s}
-.ob-plat-card:hover{border-color:var(--bd3);box-shadow:0 4px 16px rgba(0,0,0,.2)}
-.ob-plat-icon{font-size:1.8rem;line-height:1}
-.ob-plat-name{font-size:12px;font-weight:700;color:var(--tx);text-align:center}
-.ob-add-btn{width:100%;padding:7px;border-radius:8px;background:#00b894;color:#fff;font-size:12px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
-.ob-add-btn:hover{background:#00a381;transform:translateY(-1px)}
-.ob-add-btn.connected{background:rgba(0,184,148,.15);color:#00b894;border:1px solid rgba(0,184,148,.4);cursor:default}
-.ob-continue{padding:12px 28px;border-radius:12px;background:var(--btn-grad);color:#fff;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;float:right;transition:all .25s;box-shadow:0 6px 20px var(--glow)}
-.ob-continue:hover{transform:translateY(-1px);box-shadow:0 10px 28px var(--glow)}
+.ob-role-name{font-size:14px;font-weight:800;color:#253145}
+.ob-role-desc{font-size:12px;color:#69768a;margin-top:1px}
+.ob-connection-hero{max-width:1040px;margin:34px auto 0;background:#fff;border:2px dashed #d2d2d2;border-radius:16px;min-height:110px;display:flex;align-items:center;justify-content:center;padding:18px}
+.ob-connection-hero button{display:inline-flex;align-items:center;gap:10px;border:none;background:transparent;color:#5a6779;font-size:18px;font-weight:500;cursor:pointer;font-family:inherit}
+.ob-connection-hero button .plus{font-size:28px;line-height:1;color:#8d95a4}
+.ob-empty-note{margin:28px auto 0;max-width:760px;text-align:center;font-size:14px;color:#8a96a8}
+.ob-plat-sub{font-size:18px;color:#5d6a7d;margin-bottom:1.75rem;line-height:1.5;text-align:center;max-width:920px;margin-left:auto;margin-right:auto}
+.ob-plats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-bottom:2rem}
+.ob-plat-card{background:#fff;border:1px solid #d7d7d7;border-radius:12px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:12px;transition:all .2s;min-height:110px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.ob-plat-card:hover{border-color:#bfc7cf;box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.ob-plat-icon{font-size:1.8rem;line-height:1;color:#253145}
+.ob-plat-name{font-size:16px;font-weight:700;color:#253145;text-align:left}
+.ob-add-btn{width:100%;padding:10px 12px;border-radius:8px;background:#7ecf89;color:#23312c;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:inherit;transition:all .2s}
+.ob-add-btn:hover{background:#6cc779;transform:translateY(-1px)}
+.ob-add-btn.connected{background:#dff4df;color:#2b6a38;border:1px solid #b4ddb8;cursor:pointer}
+.ob-step-cta{display:flex;justify-content:flex-end;margin-top:4px}
+.ob-continue{padding:12px 28px;border-radius:12px;background:#7ecf89;color:#23312c;font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .25s;box-shadow:none}
+.ob-continue:hover{transform:translateY(-1px);filter:brightness(.97)}
 .ob-clearfix{clear:both;padding-bottom:2rem}
+.ob-summary{max-width:820px;margin:28px auto 0;background:#fff;border:1px solid #d7d7d7;border-radius:16px;padding:20px}
+.ob-summary h3{font-size:18px;margin-bottom:10px;color:#253145}
+.ob-summary-list{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.ob-summary-chip{padding:8px 12px;border-radius:999px;background:#f2f6f4;color:#2f4b39;font-size:13px;font-weight:700;border:1px solid #d7e6d9}
 
 /* Platform connect modal */
 .pm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:600;display:flex;align-items:center;justify-content:center;animation:fadeUp .2s ease}
@@ -365,11 +373,18 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .pm-reqs{list-style:none;margin-bottom:1.5rem;display:flex;flex-direction:column;gap:8px}
 .pm-req{display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--tx2);line-height:1.5}
 .pm-req::before{content:'•';color:#00b894;font-weight:900;flex-shrink:0;margin-top:1px}
+.pm-note{font-size:12px;color:var(--tx3);line-height:1.45;margin-bottom:1rem}
+.pm-fields{display:grid;gap:10px;margin-bottom:1rem}
+.pm-status{min-height:16px;font-size:12px;font-weight:700;color:var(--acc3)}
+.pm-status.err{color:var(--err)}
 .pm-actions{display:flex;gap:8px;justify-content:flex-end}
 .pm-cancel{padding:9px 18px;border-radius:10px;background:var(--s3);border:none;color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
 .pm-cancel:hover{background:var(--s4)}
 .pm-connect{padding:9px 18px;border-radius:10px;background:#00b894;border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s}
 .pm-connect:hover{background:#00a381;transform:translateY(-1px)}
+.pm-disconnect{padding:9px 18px;border-radius:10px;background:var(--err);border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s}
+.pm-disconnect:hover{filter:brightness(0.95);transform:translateY(-1px)}
+.pm-connect:disabled,.pm-disconnect:disabled{opacity:.55;cursor:not-allowed;transform:none}
 </style>
 </head>
 <body>
@@ -592,70 +607,38 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="ob-avatar" id="ob-avatar">?</div>
     </div>
 
-    <!-- Step 1: Role -->
+    <!-- Step 1: Connect Accounts -->
     <div class="ob-panel active" id="ob-panel-1">
-      <div class="ob-accent">almost ready</div>
-      <div class="ob-title">What Best Describe You</div>
-      <div class="ob-roles" id="ob-roles">
-        <div class="ob-role-card" onclick="selectRole(this,'founder')">
-          <div class="ob-role-radio"></div>
-          <div class="ob-role-icon">🚀</div>
-          <div class="ob-role-text">
-            <div class="ob-role-name">Entrepreneur / Startup</div>
-            <div class="ob-role-desc">Building a business</div>
-          </div>
-        </div>
-        <div class="ob-role-card" onclick="selectRole(this,'creator')">
-          <div class="ob-role-radio"></div>
-          <div class="ob-role-icon">🎨</div>
-          <div class="ob-role-text">
-            <div class="ob-role-name">Influencer / Digital Contentor</div>
-            <div class="ob-role-desc">Growing an audience</div>
-          </div>
-        </div>
-        <div class="ob-role-card" onclick="selectRole(this,'agency')">
-          <div class="ob-role-radio"></div>
-          <div class="ob-role-icon">🏢</div>
-          <div class="ob-role-text">
-            <div class="ob-role-name">Marketer / Consultant</div>
-            <div class="ob-role-desc">Managing client accounts</div>
-          </div>
-        </div>
-        <div class="ob-role-card" onclick="selectRole(this,'enterprise')">
-          <div class="ob-role-radio"></div>
-          <div class="ob-role-icon">🏗️</div>
-          <div class="ob-role-text">
-            <div class="ob-role-name">Corporate Operation</div>
-            <div class="ob-role-desc">Big company team</div>
-          </div>
-        </div>
-        <div class="ob-role-card" onclick="selectRole(this,'small_business')">
-          <div class="ob-role-radio"></div>
-          <div class="ob-role-icon">🛍️</div>
-          <div class="ob-role-text">
-            <div class="ob-role-name">Brands / Professionals</div>
-            <div class="ob-role-desc">Running a small business</div>
-          </div>
-        </div>
-        <div class="ob-role-card" onclick="selectRole(this,'personal')">
-          <div class="ob-role-radio"></div>
-          <div class="ob-role-icon">👤</div>
-          <div class="ob-role-text">
-            <div class="ob-role-name">Individual / Explorer</div>
-            <div class="ob-role-desc">Just for me</div>
-          </div>
-        </div>
+      <div class="ob-accent">step 1 of 3</div>
+      <div class="ob-title">Connect your accounts</div>
+      <div class="ob-plat-sub">Connect and then manage all your social media accounts from one place.</div>
+      <div class="ob-connection-hero">
+        <button type="button" id="ob-add-connection-btn"><span class="plus">+</span><span>Add connection</span></button>
       </div>
+      <div class="ob-empty-note">No connected accounts yet. Use the "Add connection" button to get started.</div>
     </div>
 
     <!-- Step 2: Platforms -->
     <div class="ob-panel" id="ob-panel-2">
       <div class="ob-accent">step 2 of 3</div>
       <div class="ob-title">Add all your accounts</div>
-      <div class="ob-plat-sub">Connect your social media accounts to post to all of them at once.</div>
+      <div class="ob-plat-sub">Connect your social media accounts to post bridge and post to all of them at once.</div>
       <div class="ob-plats-grid" id="ob-plats-grid"></div>
-      <button class="ob-continue" onclick="finishOnboarding()">Continue →</button>
+      <div class="ob-step-cta"><button class="ob-continue" id="ob-step2-next-btn" type="button">Continue →</button></div>
       <div class="ob-clearfix"></div>
+    </div>
+
+    <!-- Step 3: Review -->
+    <div class="ob-panel" id="ob-panel-3">
+      <div class="ob-accent">step 3 of 3</div>
+      <div class="ob-title">Review your connections</div>
+      <div class="ob-plat-sub">You’re ready to start posting everywhere. Review your connected accounts below.</div>
+      <div class="ob-summary">
+        <h3>Connected accounts</h3>
+        <div class="ob-summary-list" id="ob-summary-list"></div>
+        <div class="ob-empty-note" id="ob-summary-empty">No connected accounts yet. Go back and add at least one social account.</div>
+      </div>
+      <div class="ob-step-cta" style="margin-top:18px"><button class="ob-continue" id="ob-finish-btn" type="button">Finish setup →</button></div>
     </div>
   </div>
 </div>
@@ -668,9 +651,30 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <span class="pm-title" id="pm-title">Connect Platform</span>
     </div>
     <ul class="pm-reqs" id="pm-reqs"></ul>
+    <div class="pm-note" id="pm-note">Paste the connection details for this platform. We encrypt tokens before storing them.</div>
+    <div class="pm-fields">
+      <div class="modal-field">
+        <label class="modal-label" for="pm-username">Platform username</label>
+        <input class="modal-input" id="pm-username" type="text" placeholder="@yourhandle or page name">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label" for="pm-user-id">Platform user ID</label>
+        <input class="modal-input" id="pm-user-id" type="text" placeholder="Optional account / channel / board ID">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label" for="pm-token">Access token / app password</label>
+        <input class="modal-input" id="pm-token" type="password" placeholder="Required to connect">
+      </div>
+      <div class="modal-field">
+        <label class="modal-label" for="pm-expires">Token expires at</label>
+        <input class="modal-input" id="pm-expires" type="datetime-local">
+      </div>
+    </div>
+    <div class="pm-status" id="pm-status"></div>
     <div class="pm-actions">
-      <button class="pm-cancel" onclick="closePlatModal()">Cancel</button>
-      <button class="pm-connect" id="pm-connect-btn" onclick="connectPlatform()">Connect</button>
+      <button class="pm-cancel" id="pm-cancel-btn" type="button">Cancel</button>
+      <button class="pm-disconnect" id="pm-disconnect-btn" type="button" style="display:none">Disconnect</button>
+      <button class="pm-connect" id="pm-connect-btn" type="button">Connect</button>
     </div>
   </div>
 </div>
@@ -693,7 +697,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="sel-badge" id="hdr-badge">0 Platforms</div>
       <button class="theme-toggle" id="dash-theme-btn">☀️ Sky Blue</button>
       <button class="dash-icon-btn" onclick="openSettings()">⚙️</button>
-      <button class="logout-btn" onclick="doLogout()">Logout →</button>
+      <button class="logout-btn" id="dash-logout-btn" type="button">Logout →</button>
     </div>
   </header>
 
@@ -1071,14 +1075,18 @@ async function doForgot() {
 }
 
 async function doLogout() {
+  let ok = false;
   try {
-    await api('POST', '/api/v1/auth/logout');
-  } catch {}
+    const res = await api('POST', '/api/v1/auth/logout');
+    ok = res.ok;
+  } catch (err) {
+    ok = false;
+  }
   auth.clear();
   _dashInit = false;
   selected.clear();
   adapted = {};
-  toast('Logged out.', 'ok');
+  toast(ok ? 'Logged out.' : 'Logged out locally. Server session may already be expired.', ok ? 'ok' : 'err');
   showPage('home');
 }
 
@@ -1495,19 +1503,25 @@ async function verifyMagicToken(token) {
    ONBOARDING
 ══════════════════════════════════════ */
 const OB_PLATFORMS = [
-  { id: 'instagram', name: 'Instagram', icon: '📷', reqs: ['Must be a Business or Creator profile', 'Be logged into the account you want to connect'] },
-  { id: 'twitter',   name: 'X (Twitter)', icon: '𝕏',  reqs: ['Must have a verified phone number', 'Account must be in good standing'] },
-  { id: 'tiktok',    name: 'TikTok',    icon: '🎵', reqs: ['Must be a Business or Creator profile', 'Account must be older than 48 hours', 'Be logged into the account you want to connect'] },
-  { id: 'youtube',   name: 'YouTube',   icon: '▶️', reqs: ['Must have a Google account linked', 'Channel must be verified for uploads > 15 min'] },
-  { id: 'facebook',  name: 'Facebook',  icon: '👍', reqs: ['Must be an Admin of the Page', 'Page must be published and not restricted'] },
-  { id: 'linkedin',  name: 'LinkedIn',  icon: '💼', reqs: ['Personal profile or Company Page', 'Must be signed in to the account to connect'] },
-  { id: 'bluesky',   name: 'Bluesky',   icon: '☁️', reqs: ['Bluesky account required', 'Use your handle and app password'] },
-  { id: 'threads',   name: 'Threads',   icon: '🧵', reqs: ['Must have an Instagram account linked', 'Threads app must be installed'] },
-  { id: 'pinterest', name: 'Pinterest', icon: '📌', reqs: ['Must be a Business account', 'Account must be verified'] },
+  { id: 'facebook',  name: 'Facebook',   icon: '📘', reqs: ['Use a Facebook/Meta access token', 'Page access or profile access is required'] },
+  { id: 'instagram', name: 'Instagram',  icon: '📷', reqs: ['Use an Instagram Graph API token', 'Business or Creator account required'] },
+  { id: 'x',         name: 'X (Twitter)', icon: '𝕏', reqs: ['Use an X API bearer token', 'Account must be in good standing'] },
+  { id: 'tiktok',    name: 'TikTok',     icon: '🎵', reqs: ['Use a TikTok API access token', 'Business or Creator account required'] },
+  { id: 'linkedin',  name: 'LinkedIn',   icon: '💼', reqs: ['Use a LinkedIn OAuth access token', 'Personal or company profile required'] },
+  { id: 'youtube',   name: 'YouTube',    icon: '▶️', reqs: ['Use a Google OAuth access token', 'Channel must be verified'] },
+  { id: 'reddit',    name: 'Reddit',     icon: '👽', reqs: ['Use a Reddit OAuth access token', 'Subreddit posting permissions required'] },
+  { id: 'threads',   name: 'Threads',    icon: '🧵', reqs: ['Use a Threads/Meta access token', 'Instagram-linked account required'] },
+  { id: 'telegram',  name: 'Telegram',   icon: '✈️', reqs: ['Use a Telegram bot token', 'Bot must be added to the destination chat'] },
+  { id: 'pinterest', name: 'Pinterest',  icon: '📌', reqs: ['Use a Pinterest OAuth access token', 'Business account recommended'] },
+  { id: 'rumble',    name: 'Rumble',     icon: '🟩', reqs: ['Store your Rumble credentials or upload workflow token', 'Manual upload fallback is supported'] },
+  { id: 'bluesky',   name: 'Bluesky',    icon: '☁️', reqs: ['Use a Bluesky handle and app password', 'AT Protocol access is required'] },
+  { id: 'snapchat',  name: 'Snapchat',   icon: '👻', reqs: ['Use Snap Creative Kit credentials', 'Approval may be required'] },
+  { id: 'twitch',    name: 'Twitch',     icon: '🎮', reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
 ];
 
-let _obConnected = {};
+let _platformConnections = {};
 let _currentPlatId = null;
+let _connectingPlatform = false;
 
 function initOnboarding() {
   const u = auth.user;
@@ -1516,8 +1530,10 @@ function initOnboarding() {
     document.getElementById('ob-avatar').textContent = initials;
   }
   obGoStep(1);
-  _obConnected = {};
+  _platformConnections = {};
   renderObPlatforms();
+  renderOnboardingIntro();
+  loadPlatformConnections().catch(() => {});
 }
 
 function obGoStep(n) {
@@ -1532,6 +1548,7 @@ function obGoStep(n) {
     const conn = document.getElementById('ob-conn-' + i);
     if (conn) conn.className = 'ob-connector' + (i < n ? ' done' : '');
   });
+  if (n === 3) renderOnboardingSummary();
 }
 
 function selectRole(card, role) {
@@ -1542,15 +1559,61 @@ function selectRole(card, role) {
   setTimeout(() => obGoStep(2), 300);
 }
 
+function syncPlatformCard(platId) {
+  const btn = document.getElementById('ob-add-' + platId);
+  if (!btn) return;
+  const connected = !!_platformConnections[platId];
+  btn.textContent = connected ? '✓ Connected' : 'Add';
+  btn.classList.toggle('connected', connected);
+  btn.title = connected ? 'Click to manage connection' : 'Click to connect';
+}
+
+function renderOnboardingIntro() {
+  const count = Object.values(_platformConnections).filter(c => c?.is_active !== false).length;
+  const btn = document.getElementById('ob-add-connection-btn');
+  const note = document.getElementById('ob-empty-note');
+  if (btn) btn.lastElementChild.textContent = count ? 'Add another connection' : 'Add connection';
+  if (note) {
+    note.textContent = count
+      ? `${count} connected account${count === 1 ? '' : 's'} ready. Add another connection or continue to the next step.`
+      : 'No connected accounts yet. Use the "Add connection" button to get started.';
+  }
+}
+
+function renderOnboardingSummary() {
+  const list = document.getElementById('ob-summary-list');
+  const empty = document.getElementById('ob-summary-empty');
+  if (!list || !empty) return;
+  const active = Object.values(_platformConnections).filter(c => c?.is_active !== false);
+  list.innerHTML = active.map(conn => {
+    const plat = OB_PLATFORMS.find(p => p.id === conn.platform);
+    return `<div class="ob-summary-chip">${escHtml(plat?.name || conn.platform)}</div>`;
+  }).join('');
+  empty.style.display = active.length ? 'none' : 'block';
+}
+
 function renderObPlatforms() {
   const grid = document.getElementById('ob-plats-grid');
   grid.innerHTML = OB_PLATFORMS.map(p => `
     <div class="ob-plat-card" id="ob-plat-${p.id}">
       <div class="ob-plat-icon">${p.icon}</div>
       <div class="ob-plat-name">${p.name}</div>
-      <button class="ob-add-btn" id="ob-add-${p.id}" onclick="openPlatModal('${p.id}')">Add</button>
+      <button class="ob-add-btn" id="ob-add-${p.id}" type="button" data-plat="${p.id}">Add</button>
     </div>
   `).join('');
+  OB_PLATFORMS.forEach(p => syncPlatformCard(p.id));
+}
+
+async function loadPlatformConnections() {
+  const res = await api('GET', '/api/v1/platforms');
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to load platform connections');
+  _platformConnections = {};
+  (data.platforms || []).forEach(conn => {
+    if (conn.is_active !== false) _platformConnections[conn.platform] = conn;
+  });
+  OB_PLATFORMS.forEach(p => syncPlatformCard(p.id));
+  renderOnboardingIntro();
 }
 
 function openPlatModal(platId) {
@@ -1560,7 +1623,18 @@ function openPlatModal(platId) {
   document.getElementById('pm-icon').textContent = p.icon;
   document.getElementById('pm-title').textContent = 'Connect ' + p.name;
   document.getElementById('pm-reqs').innerHTML = p.reqs.map(r => `<li class="pm-req">${escHtml(r)}</li>`).join('');
-  document.getElementById('pm-connect-btn').textContent = 'Connect ' + p.name;
+  const conn = _platformConnections[platId];
+  document.getElementById('pm-note').textContent = conn
+    ? `Connected as ${conn.platform_username || 'this account'}. Reconnect to replace the saved token.`
+    : 'Paste the connection details for this platform. We encrypt tokens before storing them.';
+  document.getElementById('pm-username').value = conn?.platform_username || '';
+  document.getElementById('pm-user-id').value = conn?.platform_user_id || '';
+  document.getElementById('pm-token').value = '';
+  document.getElementById('pm-expires').value = conn?.token_expires_at ? new Date(conn.token_expires_at).toISOString().slice(0, 16) : '';
+  document.getElementById('pm-status').textContent = conn ? 'Platform already connected.' : '';
+  document.getElementById('pm-status').className = 'pm-status';
+  document.getElementById('pm-connect-btn').textContent = conn ? 'Reconnect' : 'Connect';
+  document.getElementById('pm-disconnect-btn').style.display = conn ? 'inline-flex' : 'none';
   document.getElementById('pm-overlay').style.display = 'flex';
 }
 
@@ -1569,19 +1643,101 @@ function closePlatModal() {
   _currentPlatId = null;
 }
 
-function connectPlatform() {
-  if (!_currentPlatId) return;
+async function connectPlatform() {
+  if (!_currentPlatId || _connectingPlatform) return;
   const platId = _currentPlatId;
   const p = OB_PLATFORMS.find(x => x.id === platId);
-  closePlatModal();
-  // In dev: mark as connected with a toast
-  _obConnected[platId] = true;
-  const btn = document.getElementById('ob-add-' + platId);
-  if (btn) { btn.textContent = '✓ Connected'; btn.className = 'ob-add-btn connected'; btn.onclick = null; }
-  toast(p.name + ' connected! (dev mode)', 'ok');
+  const username = document.getElementById('pm-username').value.trim();
+  const userId = document.getElementById('pm-user-id').value.trim();
+  const token = document.getElementById('pm-token').value.trim();
+  const expiresAt = document.getElementById('pm-expires').value;
+  const statusEl = document.getElementById('pm-status');
+  const connectBtn = document.getElementById('pm-connect-btn');
+  const disconnectBtn = document.getElementById('pm-disconnect-btn');
+  if (!token) {
+    statusEl.textContent = 'Access token / app password is required.';
+    statusEl.className = 'pm-status err';
+    return;
+  }
+  _connectingPlatform = true;
+  connectBtn.disabled = true;
+  disconnectBtn.disabled = true;
+  statusEl.textContent = 'Connecting…';
+  statusEl.className = 'pm-status';
+  try {
+    const payload = { platform: platId, accessToken: token };
+    if (username) payload.platformUsername = username;
+    if (userId) payload.platformUserId = userId;
+    if (expiresAt) payload.expiresAt = new Date(expiresAt).toISOString();
+    const res = await api('POST', '/api/v1/platforms/connect', payload);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to save platform connection');
+    _platformConnections[platId] = {
+      id: data.connection.id,
+      platform: platId,
+      platform_username: data.connection.platform_username || username || '',
+      platform_user_id: userId || '',
+      is_active: true,
+    };
+    syncPlatformCard(platId);
+    renderOnboardingIntro();
+    renderOnboardingSummary();
+    statusEl.textContent = `${p.name} connected.`;
+    statusEl.className = 'pm-status';
+    toast(`${p.name} connected!`, 'ok');
+    closePlatModal();
+  } catch (err) {
+    statusEl.textContent = err.message || 'Connection failed.';
+    statusEl.className = 'pm-status err';
+    toast(`Connection failed: ${err.message}`, 'err');
+  } finally {
+    _connectingPlatform = false;
+    connectBtn.disabled = false;
+    disconnectBtn.disabled = false;
+  }
+}
+
+async function disconnectPlatform() {
+  if (!_currentPlatId) return;
+  const conn = _platformConnections[_currentPlatId];
+  const p = OB_PLATFORMS.find(x => x.id === _currentPlatId);
+  const statusEl = document.getElementById('pm-status');
+  const disconnectBtn = document.getElementById('pm-disconnect-btn');
+  if (!conn?.id) {
+    closePlatModal();
+    return;
+  }
+  disconnectBtn.disabled = true;
+  statusEl.textContent = 'Disconnecting…';
+  statusEl.className = 'pm-status';
+  try {
+    const res = await api('DELETE', `/api/v1/platforms/${conn.id}`);
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to disconnect platform');
+    }
+    delete _platformConnections[_currentPlatId];
+    syncPlatformCard(_currentPlatId);
+    renderOnboardingIntro();
+    renderOnboardingSummary();
+    statusEl.textContent = `${p.name} disconnected.`;
+    toast(`${p.name} disconnected.`, 'ok');
+    closePlatModal();
+  } catch (err) {
+    statusEl.textContent = err.message || 'Disconnect failed.';
+    statusEl.className = 'pm-status err';
+    toast(`Disconnect failed: ${err.message}`, 'err');
+  } finally {
+    disconnectBtn.disabled = false;
+  }
 }
 
 async function finishOnboarding() {
+  if (!Object.values(_platformConnections).some(c => c?.is_active !== false)) {
+    toast('Connect at least one social account to continue.', 'err');
+    obGoStep(2);
+    return;
+  }
   localStorage.setItem('omni_onboarding_done', '1');
   await api('PATCH', '/api/v1/auth/me/profile', { onboardingCompleted: true }).catch(() => {});
   showPage('dashboard');
@@ -1594,8 +1750,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Bind button event handlers
   const bind = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
   const bindLink = (id, fn) => document.getElementById(id)?.addEventListener('click', e => { e.preventDefault(); fn(e); });
+  const obGrid = document.getElementById('ob-plats-grid');
+  if (obGrid && !obGrid.dataset.bound) {
+    obGrid.addEventListener('click', e => {
+      const btn = e.target.closest('.ob-add-btn');
+      if (btn?.dataset.plat) openPlatModal(btn.dataset.plat);
+    });
+    obGrid.dataset.bound = '1';
+  }
   bind('home-theme-btn', toggleTheme);
   bind('dash-theme-btn', toggleTheme);
+  bind('ob-add-connection-btn', () => obGoStep(2));
   bind('auth-back-btn', () => showPage('home'));
   bind('su-back-btn', () => showPage('home'));
   bind('tab-register', () => switchAuthForm('register'));
@@ -1605,11 +1770,17 @@ document.addEventListener('DOMContentLoaded', () => {
   bind('forgot-btn', doForgot);
   bind('su-google-btn', doGoogleSignup);
   bind('su-link-btn', doMagicLink);
+  bind('ob-step2-next-btn', () => obGoStep(3));
+  bind('ob-finish-btn', finishOnboarding);
   bind('nav-login-btn',  () => goAuth('login'));
   bind('hero-login-btn', () => goAuth('login'));
   bind('nav-signup-btn',  doGoogleSignup);
   bind('hero-start-btn',  doGoogleSignup);
   bind('cta-start-btn',   doGoogleSignup);
+  bind('pm-cancel-btn', closePlatModal);
+  bind('pm-connect-btn', connectPlatform);
+  bind('pm-disconnect-btn', disconnectPlatform);
+  bind('dash-logout-btn', doLogout);
   bindLink('reg-login-link', () => switchAuthForm('login'));
   bindLink('login-register-link', () => switchAuthForm('register'));
   bindLink('forgot-link', () => switchAuthForm('forgot'));
