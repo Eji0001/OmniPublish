@@ -5,40 +5,28 @@
 
 'use strict';
 
-const { v4: uuidv4 } = require('uuid');
-const { supabase } = require('../config/database');
+const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const { JWT_CONFIG } = require('../config/security');
 const { logger } = require('../utils/logger');
 
 /**
- * generateOAuthState — Create and store OAuth state token
- * State tokens prevent CSRF attacks on OAuth redirects
+ * generateOAuthState — Create a signed OAuth state token
+ * State tokens prevent CSRF attacks on OAuth redirects without DB storage
  */
 const generateOAuthState = async (platform, userId = null) => {
-  const state = uuidv4();
-  const nonce = require('crypto').randomBytes(32).toString('hex');
-
-  try {
-    await supabase
-      .from('oauth_states')
-      .insert({
-        state,
-        user_id: userId,
-        platform,
-        nonce,
-        expires_at: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
-      });
-
-    logger.debug('OAuth state created', { platform, userId });
-    return { state, nonce };
-  } catch (err) {
-    logger.error('Failed to store OAuth state', { err: err.message });
-    throw new Error('OAuth initialization failed');
-  }
+  const nonce = crypto.randomBytes(32).toString('hex');
+  const state = jwt.sign(
+    { platform, userId, nonce },
+    JWT_CONFIG.accessSecret,
+    { expiresIn: '15m', issuer: JWT_CONFIG.issuer, audience: JWT_CONFIG.audience, algorithm: JWT_CONFIG.algorithm }
+  );
+  logger.debug('OAuth state created', { platform, userId });
+  return { state, nonce };
 };
 
 /**
- * verifyOAuthState — Validate state parameter and return stored values
- * Also performs cleanup of used states
+ * verifyOAuthState — Validate a signed state parameter and return its payload
  */
 const verifyOAuthState = async (state, platform) => {
   if (!state || typeof state !== 'string') {
@@ -47,28 +35,19 @@ const verifyOAuthState = async (state, platform) => {
   }
 
   try {
-    // Retrieve state record
-    const { data: record, error } = await supabase
-      .from('oauth_states')
-      .select('user_id, nonce')
-      .eq('state', state)
-      .eq('platform', platform)
-      .gt('expires_at', new Date().toISOString())
-      .single();
+    const record = jwt.verify(state, JWT_CONFIG.accessSecret, {
+      algorithms: [JWT_CONFIG.algorithm],
+      issuer: JWT_CONFIG.issuer,
+      audience: JWT_CONFIG.audience,
+    });
 
-    if (error || !record) {
-      logger.warn('OAuth state verification failed', { state: state.slice(0, 8), platform, error: error?.message });
+    if (record.platform !== platform) {
+      logger.warn('OAuth state verification failed', { platform, error: 'Platform mismatch' });
       throw new Error('Invalid or expired state parameter');
     }
 
-    // Delete the used state (one-time use)
-    await supabase
-      .from('oauth_states')
-      .delete()
-      .eq('state', state);
-
-    logger.info('OAuth state verified', { platform, userId: record.user_id });
-    return { userId: record.user_id, nonce: record.nonce };
+    logger.info('OAuth state verified', { platform, userId: record.userId });
+    return { userId: record.userId || null, nonce: record.nonce };
   } catch (err) {
     logger.error('OAuth state verification error', { err: err.message });
     throw err;
@@ -76,24 +55,10 @@ const verifyOAuthState = async (state, platform) => {
 };
 
 /**
- * cleanupExpiredOAuthStates — Periodic cleanup of expired state records
- * Call from scheduler service every hour
+ * cleanupExpiredOAuthStates — No-op with stateless OAuth state tokens
  */
 const cleanupExpiredOAuthStates = async () => {
-  try {
-    const { error } = await supabase
-      .from('oauth_states')
-      .delete()
-      .lt('expires_at', new Date().toISOString());
-
-    if (error) {
-      logger.error('OAuth state cleanup error', { err: error.message });
-    } else {
-      logger.debug('OAuth state cleanup completed');
-    }
-  } catch (err) {
-    logger.error('OAuth state cleanup failed', { err: err.message });
-  }
+  logger.debug('OAuth state cleanup skipped (stateless tokens)');
 };
 
 module.exports = {

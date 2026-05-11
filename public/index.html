@@ -1788,8 +1788,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (oauthError) {
     history.replaceState(null, '', '/');
     if (oauthError === 'not_configured') {
-      showPage('signup');
-      setTimeout(() => toast('Google OAuth coming soon — use email link for now', 'err'), 400);
+      showPage('home');
+      setTimeout(() => toast('Google OAuth is not configured yet. Use Register instead.', 'err'), 400);
     } else {
       showPage('home');
       setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
