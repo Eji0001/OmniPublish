@@ -14,14 +14,14 @@ const { logger } = require('../utils/logger');
  * generateOAuthState — Create a signed OAuth state token
  * State tokens prevent CSRF attacks on OAuth redirects without DB storage
  */
-const generateOAuthState = async (platform, userId = null) => {
+const generateOAuthState = async (platform, userId = null, returnTo = null) => {
   const nonce = crypto.randomBytes(32).toString('hex');
   const state = jwt.sign(
-    { platform, userId, nonce },
+    { platform, userId, nonce, returnTo },
     JWT_CONFIG.accessSecret,
     { expiresIn: '15m', issuer: JWT_CONFIG.issuer, audience: JWT_CONFIG.audience, algorithm: JWT_CONFIG.algorithm }
   );
-  logger.debug('OAuth state created', { platform, userId });
+  logger.debug('OAuth state created', { platform, userId, returnTo });
   return { state, nonce };
 };
 
@@ -47,7 +47,7 @@ const verifyOAuthState = async (state, platform) => {
     }
 
     logger.info('OAuth state verified', { platform, userId: record.userId });
-    return { userId: record.userId || null, nonce: record.nonce };
+    return { userId: record.userId || null, nonce: record.nonce, returnTo: record.returnTo || null };
   } catch (err) {
     logger.error('OAuth state verification error', { err: err.message });
     throw err;

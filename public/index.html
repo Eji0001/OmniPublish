@@ -853,7 +853,7 @@ async function api(method, path, body, skipCsrf = false) {
     const csrf = getCsrf();
     if (csrf) headers['X-CSRF-Token'] = csrf;
   }
-  const opts = { method, headers };
+  const opts = { method, headers, credentials: 'include' };
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(base() + path, opts);
   if (res.status === 401 && auth.token) {
@@ -1012,15 +1012,13 @@ async function doRegister() {
   setAuthLoading('reg-btn', true, 'Create Account →');
   try {
     const res  = await fetch(base() + '/api/v1/auth/register', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ email, password: pw, fullName: name || undefined })
     });
     const data = await res.json();
     if (!res.ok) { errEl.textContent = data.errors?.[0]?.message || data.error || 'Registration failed.'; return; }
-    auth.set(data);
+    enterOnboarding(data);
     if (okEl) { okEl.style.display = 'block'; okEl.textContent = '✓ Account created. Taking you to onboarding…'; }
-    toast('Account created. Welcome!', 'ok');
-    showPage('onboarding');
   } catch (e) {
     errEl.textContent = 'Connection error. Is the server running?';
   } finally {
@@ -1037,7 +1035,7 @@ async function doLogin() {
   setAuthLoading('login-btn', true, 'Login →');
   try {
     const res  = await fetch(base() + '/api/v1/auth/login', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ email, password: pw })
     });
     const data = await res.json();
@@ -1061,7 +1059,7 @@ async function doForgot() {
   setAuthLoading('forgot-btn', true, 'Send Reset Link →');
   try {
     const res = await fetch(base() + '/api/v1/auth/forgot-password', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
       body: JSON.stringify({ email })
     });
     okEl.style.display = 'block';
@@ -1443,6 +1441,12 @@ function toast(msg, type) {
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
+function enterOnboarding(data, message = 'Account created. Welcome!') {
+  auth.set(data);
+  toast(message, 'ok');
+  showPage('onboarding');
+}
+
 /* ══════════════════════════════════════
    SIGNUP & MAGIC LINK
 ══════════════════════════════════════ */
@@ -1482,13 +1486,12 @@ async function verifyMagicToken(token) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
-    auth.set({ ...data, user: data.user });
-    toast('Welcome to OmniPublish! 🚀', 'ok');
-    // Clean URL
     history.replaceState(null, '', '/');
     if (!localStorage.getItem('omni_onboarding_done')) {
-      showPage('onboarding');
+      enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
     } else {
+      auth.set({ ...data, user: data.user });
+      toast('Welcome to OmniPublish! 🚀', 'ok');
       showPage('dashboard');
     }
   } catch {
@@ -1810,8 +1813,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const res = await api('POST', '/api/v1/auth/confirm-email', { token: confirmToken });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Confirmation failed');
-        auth.set(data);
-        showPage('onboarding');
+        enterOnboarding(data, 'Welcome to OmniPublish! 🚀');
       } catch (err) {
         showPage('home');
         setTimeout(() => toast(err.message || 'Could not confirm your email.', 'err'), 400);
@@ -1837,8 +1839,7 @@ document.addEventListener('DOMContentLoaded', () => {
     (async () => {
       try {
         const data = await api('POST', '/api/v1/auth/oauth/exchange', { code: oauthCode });
-        auth.set(data);
-        showPage('onboarding');
+        enterOnboarding(data, 'Welcome to OmniPublish! 🚀');
       } catch {
         showPage('home');
         setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);

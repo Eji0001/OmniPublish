@@ -1,6 +1,7 @@
 'use strict';
 
 const { mockChain } = require('./helpers/db');
+const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
 
 jest.mock('../config/database', () => ({
   supabase: { from: jest.fn() },
@@ -68,5 +69,14 @@ describe('upsertGoogleOAuthUser', () => {
       is_verified: true,
       full_name: 'Google User',
     });
+  });
+});
+
+describe('OAuth state return target', () => {
+  it('round-trips the frontend return origin', async () => {
+    const { state } = await generateOAuthState('google', null, 'http://localhost:3000');
+    const payload = await verifyOAuthState(state, 'google');
+
+    expect(payload.returnTo).toBe('http://localhost:3000');
   });
 });

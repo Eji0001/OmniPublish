@@ -13,8 +13,28 @@ const { BCRYPT_ROUNDS, JWT_CONFIG } = require('../config/security');
 const { logger }            = require('../utils/logger');
 
 const isProd = process.env.NODE_ENV === 'production';
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
 
 const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+
+function getFrontendOrigin(req) {
+  const fallback = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:4000';
+  const candidates = [req.get('origin'), req.get('referer')].filter(Boolean);
+
+  for (const candidate of candidates) {
+    try {
+      const origin = new URL(candidate).origin;
+      if (!ALLOWED_ORIGINS.length || ALLOWED_ORIGINS.includes(origin)) return origin;
+    } catch {
+      // ignore malformed headers
+    }
+  }
+
+  return fallback;
+}
 
 async function upsertGoogleOAuthUser(email, fullName) {
   let { data: user } = await supabase.from('users')
@@ -90,7 +110,7 @@ if (hasGoogle) {
   router.get('/google',
     async (req, res, next) => {
       try {
-        const { state } = await generateOAuthState('google');
+        const { state } = await generateOAuthState('google', null, getFrontendOrigin(req));
         passport.authenticate('google', { scope: ['profile', 'email'], session: false, state })(req, res, next);
       } catch (err) {
         logger.error('OAuth initialisation error', { err: err.message });
@@ -102,7 +122,8 @@ if (hasGoogle) {
   router.get('/google/callback',
     async (req, res, next) => {
       try {
-        await verifyOAuthState(req.query.state, 'google');
+        const { returnTo } = await verifyOAuthState(req.query.state, 'google');
+        req.oauthReturnTo = returnTo || getFrontendOrigin(req);
         next();
       } catch {
         res.redirect('/?oauth_error=invalid_state');
@@ -127,7 +148,7 @@ if (hasGoogle) {
         res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
 
         // Redirect with signed exchange code only — no tokens in URL
-        res.redirect(`/?oauth_code=${code}#onboarding`);
+        res.redirect(`${req.oauthReturnTo || getFrontendOrigin(req)}/?oauth_code=${code}#onboarding`);
       } catch (err) {
         logger.error('OAuth callback error', { err: err.message });
         res.redirect('/?oauth_error=1');
