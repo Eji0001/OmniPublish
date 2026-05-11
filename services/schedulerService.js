@@ -18,6 +18,7 @@ const buildPlatformPostPayload = (post, platform) => {
 };
 
 const processScheduledPosts = async () => {
+  const nowIso = new Date().toISOString();
   const { data: duePosts } = await supabase
     .from('posts')
     .select('id, user_id, content, title, post_platforms(platform, custom_media_url), media_files(cdn_url)')
@@ -33,17 +34,45 @@ const processScheduledPosts = async () => {
     if (!platforms.length) continue;
 
     try {
-      const { data: connections } = await supabase
+      const { data: validConnections } = await supabase
         .from('platform_connections')
-        .select('platform, access_token_enc, platform_user_id')
+        .select('platform, access_token_enc, platform_user_id, token_expires_at')
         .eq('user_id', post.user_id)
         .in('platform', platforms)
-        .eq('is_active', true);
+        .eq('is_active', true)
+        .or(`token_expires_at.is.null,token_expires_at.gt.${nowIso}`);
 
-      const connMap = Object.fromEntries((connections || []).map(c => [c.platform, c]));
+      const { data: expiredConnections } = await supabase
+        .from('platform_connections')
+        .select('platform, token_expires_at')
+        .eq('user_id', post.user_id)
+        .in('platform', platforms)
+        .eq('is_active', true)
+        .lte('token_expires_at', nowIso);
+
+      const expiredPlatforms = new Set((expiredConnections || []).map(c => c.platform));
+      if (expiredPlatforms.size) {
+        logger.warn('Scheduled post has expired platform token(s)', {
+          postId: post.id,
+          userId: post.user_id,
+          platforms: [...expiredPlatforms],
+        });
+
+        await Promise.all(
+          [...expiredPlatforms].map(platform =>
+            supabase.from('post_platforms').update({
+              status: 'failed',
+              error_message: `Platform token expired. Reconnect ${platform} to resume scheduled publishing.`,
+            }).eq('post_id', post.id).eq('platform', platform)
+          )
+        );
+      }
+
+      const publishPlatforms = platforms.filter(platform => !expiredPlatforms.has(platform));
+      const connMap = Object.fromEntries((validConnections || []).map(c => [c.platform, c]));
 
       const results = await Promise.allSettled(
-        platforms.map(pl => {
+        publishPlatforms.map(pl => {
           const conn = connMap[pl];
           if (!conn) return Promise.reject(Object.assign(new Error(`${pl} not connected`), { platform: pl }));
           return publishToPlatform({ platform: pl, content: post.content, post: buildPlatformPostPayload(post, pl), conn });
@@ -51,8 +80,8 @@ const processScheduledPosts = async () => {
       );
 
       // Update per-platform status in post_platforms
-      for (let i = 0; i < platforms.length; i++) {
-        const pl  = platforms[i];
+      for (let i = 0; i < publishPlatforms.length; i++) {
+        const pl  = publishPlatforms[i];
         const res = results[i];
         if (res.status === 'fulfilled') {
           await supabase.from('post_platforms')

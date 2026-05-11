@@ -16,7 +16,7 @@ function mockChain(
   const chain = {};
   const methods = [
     'select', 'insert', 'update', 'delete', 'upsert',
-    'eq', 'neq', 'in', 'filter', 'is', 'lte', 'gte', 'gt',
+    'eq', 'neq', 'in', 'filter', 'is', 'lte', 'gte', 'gt', 'or',
     'order', 'range', 'limit',
   ];
   methods.forEach(m => { chain[m] = jest.fn(() => chain); });
