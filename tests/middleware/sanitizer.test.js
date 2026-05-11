@@ -93,6 +93,13 @@ describe('validateBody schemas', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('createPost: rejects invalid platform IDs', async () => {
+    const { res } = await runValidation('createPost', {
+      content: 'Hello world', platforms: ['not-a-real-platform'],
+    });
+    expect(res.status).toHaveBeenCalledWith(422);
+  });
+
   it('createPost: rejects empty content', async () => {
     const { res } = await runValidation('createPost', {
       content: '', platforms: ['x'],

@@ -17,6 +17,11 @@ const xssOptions = {
 };
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const PLATFORM_IDS = [
+  'facebook', 'instagram', 'x', 'youtube', 'tiktok', 'linkedin',
+  'bluesky', 'telegram', 'reddit', 'threads', 'pinterest', 'rumble',
+  'twitch', 'snapchat',
+];
 
 const sanitizeObject = (obj, depth = 0) => {
   if (depth > 10) return obj;
@@ -54,18 +59,18 @@ const schemas = {
     format:      z.enum(['post', 'video', 'short', 'story', 'article']).default('post'),
     aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5', '2:3']).default('16:9'),
     scheduledAt: z.string().datetime().optional(),
-    platforms:   z.array(z.string().max(50)).min(1).max(14),
+    platforms:   z.array(z.enum(PLATFORM_IDS)).min(1).max(14),
     mediaIds:    z.array(z.string().uuid()).max(10).optional(),
   }),
   adaptContent: z.object({
     content:   z.string().min(1).max(63206),
-    platforms: z.array(z.string().max(50)).min(1).max(14),
+    platforms: z.array(z.enum(PLATFORM_IDS)).min(1).max(14),
     format:    z.string().max(50).optional(),
     ratio:     z.string().max(10).optional(),
   }),
   publishPost: z.object({
     postId:    z.string().uuid(),
-    platforms: z.array(z.string().max(50)).min(1).max(14),
+    platforms: z.array(z.enum(PLATFORM_IDS)).min(1).max(14),
   }),
   forgotPassword: z.object({
     email: z.string().min(5).max(255).email().transform(e => e.toLowerCase().trim()),
@@ -112,4 +117,4 @@ const validateBody = (schemaKey) => (req, res, next) => {
   next();
 };
 
-module.exports = { requestSanitizer, validateBody, sanitizeObject, schemas };
+module.exports = { requestSanitizer, validateBody, sanitizeObject, schemas, PLATFORM_IDS };
