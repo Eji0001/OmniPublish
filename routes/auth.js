@@ -11,7 +11,7 @@ const crypto          = require('crypto');
 const jwt             = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { supabase }    = require('../config/database');
-const { issueTokens, rotateRefreshToken, revokeToken, verifyToken } = require('../middleware/auth');
+const { issueTokens, rotateRefreshToken, revokeToken, verifyToken, recordSession, revokeUserSessions } = require('../middleware/auth');
 const { validateBody }   = require('../middleware/sanitizer');
 const { authRateLimiter, authSlowDown } = require('../middleware/rateLimit');
 const { generateCSRFToken } = require('../middleware/csrf');
@@ -31,6 +31,12 @@ const buildAuthResponse = ({ user, tokens, csrfToken }) => ({
   accessToken: tokens.accessToken,
   csrfToken,
 });
+
+const issueSessionTokens = async (user) => {
+  const tokens = issueTokens(user);
+  await recordSession(user.id, tokens.jti);
+  return tokens;
+};
 
 // Set httpOnly refresh cookie alongside every response that issues tokens
 const setRefreshCookie = (res, refreshToken) => {
@@ -96,7 +102,7 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
     user = created;
   }
 
-  const tokens = issueTokens({ ...user, ...sessionUser });
+  const tokens = await issueSessionTokens({ ...user, ...sessionUser });
   const csrfToken = generateCSRFToken();
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
@@ -142,7 +148,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
 
   await supabase.from('users').update({ failed_login_attempts: 0, last_login_at: new Date() }).eq('id', user.id);
 
-  const tokens    = issueTokens(user);
+  const tokens    = await issueSessionTokens(user);
   const csrfToken = generateCSRFToken();
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
@@ -157,6 +163,7 @@ router.post('/refresh', async (req, res) => {
   if (!refreshToken) return res.status(422).json({ error: 'refreshToken required' });
   try {
     const tokens    = await rotateRefreshToken(refreshToken);
+    await recordSession(tokens.userId, tokens.jti);
     const csrfToken = generateCSRFToken();
     res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
     setRefreshCookie(res, tokens.refreshToken);
@@ -230,6 +237,8 @@ router.delete('/me', verifyToken, async (req, res) => {
     if (!valid) return res.status(401).json({ error: 'Incorrect password' });
   }
 
+  await revokeUserSessions(user.id, req.user.jti);
+
   const [userUpdate, connectionsUpdate] = await Promise.all([
     supabase.from('users').update({
       is_active: false,
@@ -247,8 +256,6 @@ router.delete('/me', verifyToken, async (req, res) => {
     });
     return res.status(500).json({ error: 'Account deletion failed' });
   }
-
-  await revokeToken(req.user.jti, user.id);
 
   res.clearCookie('csrf_token');
   res.clearCookie('omni_refresh', { httpOnly: true, secure: isProd, sameSite: 'Strict' });
@@ -361,7 +368,7 @@ router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, r
 
   await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
 
-  const tokens    = issueTokens(user);
+  const tokens    = await issueSessionTokens(user);
   const csrfToken = generateCSRFToken();
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
@@ -396,7 +403,7 @@ router.post('/confirm-email', validateBody('confirmEmail'), async (req, res) => 
 
   await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
 
-  const tokens    = issueTokens({ ...user, is_verified: true });
+  const tokens    = await issueSessionTokens({ ...user, is_verified: true });
   const csrfToken = generateCSRFToken();
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
@@ -444,7 +451,7 @@ router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) =
 
   await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
 
-  const tokens    = issueTokens(user);
+  const tokens    = await issueSessionTokens(user);
   const csrfToken = generateCSRFToken();
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);

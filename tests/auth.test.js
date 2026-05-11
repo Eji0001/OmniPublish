@@ -48,6 +48,13 @@ const DB_USER = {
 
 beforeEach(() => jest.clearAllMocks());
 
+beforeEach(() => {
+  supabase.from.mockImplementation((table) => {
+    if (table === 'user_sessions') return mockChain({ data: null, error: null });
+    return undefined;
+  });
+});
+
 // ── POST /api/v1/auth/register ─────────────────────────────
 
 describe('POST /api/v1/auth/register', () => {
@@ -347,11 +354,20 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
       { expiresIn: '10m', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
     );
 
-    supabase.from
-      .mockReturnValueOnce(mockChain({ data: { id: 'oauth-exchange-code-id' }, error: null }))
-      .mockReturnValueOnce(mockChain({ data: { ...DB_USER, is_verified: false }, error: null }))
-      .mockReturnValueOnce(mockChain({ data: null, error: null }))
-      .mockReturnValueOnce(mockChain({ data: null, error: { message: 'No rows updated' } }));
+    let passwordResetCalls = 0;
+    let userCalls = 0;
+    const firstCodeUse = mockChain({ data: { id: 'oauth-exchange-code-id' }, error: null });
+    const secondCodeUse = mockChain({ data: null, error: null }, { data: null, error: { message: 'No rows updated' } });
+    const userSelect = mockChain({ data: { ...DB_USER, is_verified: false }, error: null });
+    const userUpdate = mockChain({ data: null, error: null });
+    const sessionInsert = mockChain({ data: null, error: null });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'password_resets') return passwordResetCalls++ === 0 ? firstCodeUse : secondCodeUse;
+      if (table === 'users') return userCalls++ === 0 ? userSelect : userUpdate;
+      if (table === 'user_sessions') return sessionInsert;
+      return mockChain({ data: null, error: null });
+    });
 
     const first = await request(app)
       .post('/api/v1/auth/oauth/exchange')
@@ -388,6 +404,43 @@ describe('POST /api/v1/auth/logout', () => {
   it('401 — rejects request without token', async () => {
     const res = await request(app).post('/api/v1/auth/logout');
     expect(res.status).toBe(401);
+  });
+});
+
+// ── DELETE /api/v1/auth/me ──────────────────────────────────
+
+describe('DELETE /api/v1/auth/me', () => {
+  it('revokes all tracked sessions for the deleted account', async () => {
+    const { token, jti } = generateAccessToken(TEST_USER);
+    const password = 'ValidPass123!';
+    const sessionLookup = mockChain(
+      { data: null, error: null },
+      { data: [{ jti: 'session-a' }, { jti: 'session-b' }], error: null }
+    );
+    const revokedInsert = mockChain({ data: null, error: null });
+    const sessionUpdate = mockChain({ data: null, error: null });
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))
+      .mockReturnValueOnce(mockChain({ data: { id: TEST_USER.id, password_hash: HASH }, error: null }))
+      .mockReturnValueOnce(sessionLookup)
+      .mockReturnValueOnce(revokedInsert)
+      .mockReturnValueOnce(sessionUpdate)
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }));
+
+    const res = await request(app)
+      .delete('/api/v1/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password });
+
+    expect(res.status).toBe(200);
+    expect(revokedInsert.upsert).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ jti: 'session-a', user_id: TEST_USER.id }),
+      expect.objectContaining({ jti: 'session-b', user_id: TEST_USER.id }),
+      expect.objectContaining({ jti, user_id: TEST_USER.id }),
+    ]), { onConflict: 'jti' });
+    expect(sessionUpdate.update).toHaveBeenCalledWith(expect.objectContaining({ revoked_at: expect.any(Date) }));
   });
 });
 

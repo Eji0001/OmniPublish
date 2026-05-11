@@ -43,6 +43,41 @@ const verifyToken = async (req, res, next) => {
   next();
 };
 
+const recordSession = async (userId, jti) => {
+  const { error } = await supabase.from('user_sessions').upsert({
+    user_id: userId,
+    jti,
+    issued_at: new Date(),
+    last_seen_at: new Date(),
+    revoked_at: null,
+  }, { onConflict: 'jti' });
+  if (error) throw Object.assign(new Error(error.message || 'Failed to record session'), { status: 500, code: error.code });
+};
+
+const revokeSession = async (jti, userId) => {
+  await Promise.all([
+    supabase.from('revoked_tokens').insert({ jti, user_id: userId }),
+    supabase.from('user_sessions').update({ revoked_at: new Date() }).eq('jti', jti).eq('user_id', userId),
+  ]);
+};
+
+const revokeUserSessions = async (userId, currentJti = null) => {
+  const { data: sessions } = await supabase.from('user_sessions')
+    .select('jti')
+    .eq('user_id', userId);
+
+  const jtIs = [...new Set([...(sessions || []).map(s => s.jti), currentJti].filter(Boolean))];
+  if (!jtIs.length) return;
+
+  await Promise.all([
+    supabase.from('revoked_tokens').upsert(
+      jtIs.map(jti => ({ jti, user_id: userId })),
+      { onConflict: 'jti' }
+    ),
+    supabase.from('user_sessions').update({ revoked_at: new Date() }).eq('user_id', userId),
+  ]);
+};
+
 const requireRole = (...roles) => (req, res, next) => {
   if (!req.user) return res.status(401).json({ error: 'Unauthenticated' });
   if (!roles.includes(req.user.role)) {
@@ -87,11 +122,11 @@ const rotateRefreshToken = async (oldRefreshToken) => {
     .from('users').select('id, email, role, plan, is_active').eq('id', payload.sub).single();
   if (error || !user || !user.is_active)
     throw Object.assign(new Error('Account not found or inactive'), { status: 401 });
-  return issueTokens(user);
+  return { ...issueTokens(user), userId: user.id };
 };
 
 const revokeToken = async (jti, userId) => {
-  await supabase.from('revoked_tokens').insert({ jti, user_id: userId });
+  await revokeSession(jti, userId);
 };
 
-module.exports = { verifyToken, requireRole, requirePlan, issueTokens, rotateRefreshToken, revokeToken };
+module.exports = { verifyToken, requireRole, requirePlan, issueTokens, rotateRefreshToken, revokeToken, recordSession, revokeSession, revokeUserSessions };
