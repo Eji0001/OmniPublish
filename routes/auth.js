@@ -272,6 +272,7 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
     id: uuidv4(),
     user_id: user.id,
     token_hash: tokenHash,
+    purpose: 'password_reset',
     expires_at: expiresAt,
   });
 
@@ -327,6 +328,7 @@ router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (re
     id: uuidv4(),
     user_id: user.id,
     token_hash: tokenHash,
+    purpose: 'magic_link',
     expires_at: expiresAt,
   });
 

@@ -1980,8 +1980,20 @@ document.addEventListener('DOMContentLoaded', () => {
     history.replaceState(null, '', '/');
     (async () => {
       try {
-        const data = await api('POST', '/api/v1/auth/oauth/exchange', { code: oauthCode });
-        enterOnboarding(data, 'Welcome to OmniPublish! 🚀');
+        const res  = await api('POST', '/api/v1/auth/oauth/exchange', { code: oauthCode });
+        const data = await res.json();
+        if (!res.ok) {
+          showPage('home');
+          setTimeout(() => toast(data.error || 'Google sign-in failed. Please try again.', 'err'), 400);
+          return;
+        }
+        if (!localStorage.getItem('omni_onboarding_done')) {
+          enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
+        } else {
+          auth.set({ ...data, user: data.user });
+          toast('Welcome back! 👋', 'ok');
+          showPage('dashboard');
+        }
       } catch {
         showPage('home');
         setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
