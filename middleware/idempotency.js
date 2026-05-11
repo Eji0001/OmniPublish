@@ -10,7 +10,8 @@ const { supabase } = require('../config/database');
 const { logger } = require('../utils/logger');
 
 const IDEMPOTENT_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const IDEMPOTENT_PATHS = ['/publish', '/auth/password-change'];
+// Express strips the `/api/` mount prefix here, so include the post-mount path.
+const IDEMPOTENT_PATHS = ['/publish', '/v1/auth/reset-password', '/api/v1/auth/reset-password'];
 
 /**
  * idempotencyMiddleware — Check for cached idempotency result

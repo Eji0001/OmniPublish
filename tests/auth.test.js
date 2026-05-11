@@ -29,6 +29,10 @@ jest.mock('../middleware/csrf', () => ({
   generateCSRFToken: () => 'test-csrf-token',
 }));
 
+jest.mock('../middleware/idempotency', () => ({
+  idempotencyMiddleware: (_req, _res, next) => next(),
+}));
+
 const app = require('../server');
 const { supabase } = require('../config/database');
 
