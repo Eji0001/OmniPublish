@@ -313,16 +313,24 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
     expect(res.status).toBe(422);
   });
 
-  it('scopes exchange codes to oauth_exchange purpose', async () => {
-    const chain = mockChain({ data: null, error: { message: 'not found' } });
-    supabase.from.mockReturnValueOnce(chain);
+  it('200 — exchanges signed oauth codes for session tokens', async () => {
+    const code = jwt.sign(
+      { purpose: 'oauth_exchange', userId: TEST_USER.id, email: TEST_USER.email },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: '10m', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
+    );
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: { ...DB_USER, is_verified: false }, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }));
 
     const res = await request(app)
       .post('/api/v1/auth/oauth/exchange')
-      .send({ code: 'c'.repeat(48) });
+      .send({ code });
 
-    expect(res.status).toBe(400);
-    expect(chain.eq).toHaveBeenCalledWith('purpose', 'oauth_exchange');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body.user.email).toBe(TEST_USER.email);
   });
 });
 

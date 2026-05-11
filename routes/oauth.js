@@ -4,11 +4,12 @@ const express = require('express');
 const router  = express.Router();
 const crypto  = require('crypto');
 const bcrypt  = require('bcryptjs');
+const jwt     = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { supabase }   = require('../config/database');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
-const { BCRYPT_ROUNDS } = require('../config/security');
+const { BCRYPT_ROUNDS, JWT_CONFIG } = require('../config/security');
 const { logger }            = require('../utils/logger');
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -110,21 +111,22 @@ if (hasGoogle) {
     passport.authenticate('google', { session: false, failureRedirect: '/?oauth_error=1' }),
     async (req, res) => {
       try {
-        // Issue a short-lived one-time exchange code (5 min) stored in password_resets
-        const code     = crypto.randomBytes(24).toString('hex');
-        const codeHash = crypto.createHash('sha256').update(code).digest('hex');
-        await supabase.from('password_resets').insert({
-          id: uuidv4(), user_id: req.user.id,
-          token_hash: codeHash,
-          purpose: 'oauth_exchange',
-          expires_at: new Date(Date.now() + 5 * 60 * 1000),
-        });
+        const code = jwt.sign(
+          { purpose: 'oauth_exchange', userId: req.user.id, email: req.user.email },
+          JWT_CONFIG.accessSecret,
+          {
+            expiresIn: '10m',
+            issuer: JWT_CONFIG.issuer,
+            audience: JWT_CONFIG.audience,
+            algorithm: JWT_CONFIG.algorithm,
+          }
+        );
 
         // Set CSRF cookie now so frontend can use it immediately after exchange
         const csrfToken = generateCSRFToken();
         res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
 
-        // Redirect with opaque code only — no tokens in URL
+        // Redirect with signed exchange code only — no tokens in URL
         res.redirect(`/?oauth_code=${code}#onboarding`);
       } catch (err) {
         logger.error('OAuth callback error', { err: err.message });

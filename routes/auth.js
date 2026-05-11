@@ -407,18 +407,23 @@ router.post('/confirm-email', validateBody('confirmEmail'), async (req, res) => 
 router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) => {
   const { code } = req.body;
 
-  const tokenHash = crypto.createHash('sha256').update(code).digest('hex');
-  const { data: record } = await supabase.from('password_resets')
-    .select('id, user_id, expires_at, used_at').eq('token_hash', tokenHash).eq('purpose', TOKEN_PURPOSE.OAUTH_EXCHANGE).single();
+  let payload;
+  try {
+    payload = jwt.verify(code, JWT_CONFIG.accessSecret, {
+      algorithms: [JWT_CONFIG.algorithm],
+      issuer: JWT_CONFIG.issuer,
+      audience: JWT_CONFIG.audience,
+    });
+  } catch {
+    return res.status(400).json({ error: 'Invalid or expired code' });
+  }
 
-  if (!record)                                   return res.status(400).json({ error: 'Invalid or expired code' });
-  if (record.used_at)                            return res.status(400).json({ error: 'Code already used' });
-  if (new Date(record.expires_at) < new Date())  return res.status(400).json({ error: 'Code expired' });
-
-  await supabase.from('password_resets').update({ used_at: new Date() }).eq('id', record.id);
+  if (payload.purpose !== 'oauth_exchange' || !payload.userId) {
+    return res.status(400).json({ error: 'Invalid code' });
+  }
 
   const { data: user } = await supabase.from('users')
-    .select('id, email, role, plan, full_name, is_verified').eq('id', record.user_id).single();
+    .select('id, email, role, plan, full_name, is_verified').eq('id', payload.userId).single();
   if (!user) return res.status(400).json({ error: 'User not found' });
 
   await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);

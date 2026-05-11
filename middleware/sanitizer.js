@@ -92,7 +92,7 @@ const schemas = {
     token: z.string().min(20).max(2048),
   }),
   oauthExchange: z.object({
-    code: z.string().min(48).max(48),
+    code: z.string().min(20).max(2048),
   }),
   userProfile: z.object({
     userType: z.enum(['founder', 'creator', 'agency', 'enterprise', 'small_business', 'personal']).optional(),
