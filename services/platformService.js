@@ -9,7 +9,16 @@
 const { decrypt }  = require('../utils/encryption');
 const { platformApisBreaker } = require('../middleware/circuitBreaker');
 
-const platformRequest = (url, init) => platformApisBreaker.execute(() => fetch(url, init));
+const platformRequest = (url, init, timeoutMs = 15000) => platformApisBreaker.execute(async () => {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+});
 
 const requireMediaUrl = (post, platform) => {
   if (!post.media_url) {

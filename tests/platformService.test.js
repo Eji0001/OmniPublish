@@ -52,6 +52,40 @@ describe('publishToPlatform', () => {
     });
   });
 
+  it('aborts slow platform requests after 15 seconds', async () => {
+    jest.useFakeTimers();
+    try {
+      global.fetch.mockImplementation((_url, init) => new Promise((resolve, reject) => {
+        init.signal.addEventListener('abort', () => {
+          const err = new Error('The operation was aborted');
+          err.name = 'AbortError';
+          reject(err);
+        });
+      }));
+
+      const promise = publishToPlatform({
+        platform: 'x',
+        content: 'Hello platform breaker',
+        post: {},
+        conn: { access_token_enc: 'enc', platform_user_id: 'user-1' },
+      });
+
+      const rejection = expect(promise).rejects.toThrow('The operation was aborted');
+
+      await jest.advanceTimersByTimeAsync(15000);
+
+      await rejection;
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://api.twitter.com/2/tweets',
+        expect.objectContaining({
+          signal: expect.any(Object),
+        })
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it('stops before fetch when the breaker is open', async () => {
     mockPlatformBreakerExecute.mockRejectedValueOnce(new Error('Circuit breaker platform-apis is OPEN'));
 
