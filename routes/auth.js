@@ -269,7 +269,10 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
   const { data: user } = await supabase.from('users').select('id').eq('email', email).eq('is_active', true).single();
   if (!user) return res.json({ message: 'If that email is registered you will receive a reset link shortly' });
 
-  await supabase.from('password_resets').delete().eq('user_id', user.id).is('used_at', null);
+  await supabase.from('password_resets').delete()
+    .eq('user_id', user.id)
+    .eq('purpose', 'password_reset')
+    .is('used_at', null);
 
   const plainToken = `pr_${crypto.randomBytes(32).toString('hex')}`;
   const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');
@@ -325,7 +328,10 @@ router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (re
     return res.json({ message: 'If that email is registered you will receive a login link shortly' });
   }
 
-  await supabase.from('password_resets').delete().eq('user_id', user.id).is('used_at', null);
+  await supabase.from('password_resets').delete()
+    .eq('user_id', user.id)
+    .eq('purpose', 'magic_link')
+    .is('used_at', null);
 
   const plainToken = `ml_${crypto.randomBytes(32).toString('hex')}`;
   const tokenHash  = crypto.createHash('sha256').update(plainToken).digest('hex');

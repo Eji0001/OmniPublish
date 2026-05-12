@@ -283,6 +283,27 @@ describe('POST /api/v1/auth/reset-password', () => {
   });
 });
 
+describe('POST /api/v1/auth/forgot-password', () => {
+  it('deletes only password reset rows for the user', async () => {
+    const userSelect = mockChain({ data: { id: TEST_USER.id }, error: null });
+    const deleteChain = mockChain({ data: null, error: null });
+    const insertChain = mockChain({ data: null, error: null });
+
+    supabase.from
+      .mockReturnValueOnce(userSelect)
+      .mockReturnValueOnce(deleteChain)
+      .mockReturnValueOnce(insertChain);
+
+    const res = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: TEST_USER.email });
+
+    expect(res.status).toBe(200);
+    expect(deleteChain.eq).toHaveBeenCalledWith('user_id', TEST_USER.id);
+    expect(deleteChain.eq).toHaveBeenCalledWith('purpose', 'password_reset');
+  });
+});
+
 // ── POST /api/v1/auth/magic-link/verify ─────────────────────
 
 describe('POST /api/v1/auth/magic-link/verify', () => {
@@ -297,6 +318,27 @@ describe('POST /api/v1/auth/magic-link/verify', () => {
     expect(res.status).toBe(400);
     expect(chain.eq).toHaveBeenCalledWith('token_hash', expect.any(String));
     expect(chain.eq).not.toHaveBeenCalledWith('purpose', expect.anything());
+  });
+});
+
+describe('POST /api/v1/auth/magic-link', () => {
+  it('deletes only magic link rows for the user', async () => {
+    const userSelect = mockChain({ data: { id: TEST_USER.id }, error: null });
+    const deleteChain = mockChain({ data: null, error: null });
+    const insertChain = mockChain({ data: null, error: null });
+
+    supabase.from
+      .mockReturnValueOnce(userSelect)
+      .mockReturnValueOnce(deleteChain)
+      .mockReturnValueOnce(insertChain);
+
+    const res = await request(app)
+      .post('/api/v1/auth/magic-link')
+      .send({ email: TEST_USER.email });
+
+    expect(res.status).toBe(200);
+    expect(deleteChain.eq).toHaveBeenCalledWith('user_id', TEST_USER.id);
+    expect(deleteChain.eq).toHaveBeenCalledWith('purpose', 'magic_link');
   });
 });
 
