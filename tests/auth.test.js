@@ -46,13 +46,15 @@ const DB_USER = {
   is_active: true, is_verified: true, failed_login_attempts: 0, locked_until: null,
 };
 
-beforeEach(() => jest.clearAllMocks());
+const defaultSupabaseFrom = (table) => {
+  if (table === 'user_sessions') return mockChain({ data: null, error: null });
+  if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+  return undefined;
+};
 
 beforeEach(() => {
-  supabase.from.mockImplementation((table) => {
-    if (table === 'user_sessions') return mockChain({ data: null, error: null });
-    return undefined;
-  });
+  jest.clearAllMocks();
+  supabase.from.mockImplementation(defaultSupabaseFrom);
 });
 
 // ── POST /api/v1/auth/register ─────────────────────────────
@@ -83,7 +85,8 @@ describe('POST /api/v1/auth/register', () => {
     supabase.from.mockImplementation((table) => {
       if (table === 'users') return usersCalls++ === 0 ? userSelect : userInsert;
       if (table === 'user_sessions') return missingSessions;
-      return mockChain({ data: null, error: null });
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      return undefined;
     });
 
     const res = await request(app)
@@ -96,9 +99,19 @@ describe('POST /api/v1/auth/register', () => {
   });
 
   it('200 — upgrades an existing unverified account into an active session', async () => {
+    const existingUser = {
+      id: 'existing-id',
+      email: 'legacy@example.com',
+      full_name: 'Legacy User',
+      is_verified: false,
+      role: 'user',
+      plan: 'free',
+      failed_login_attempts: 3,
+      locked_until: new Date(Date.now() + 60_000).toISOString(),
+    };
     supabase.from
-      .mockReturnValueOnce(mockChain({ data: { id: 'existing-id', email: 'legacy@example.com', full_name: 'Legacy User', is_verified: false, role: 'user', plan: 'free' }, error: null }))
-      .mockReturnValueOnce(mockChain({ data: { id: 'existing-id', email: 'legacy@example.com', full_name: 'Legacy User', is_verified: true, role: 'user', plan: 'free' }, error: null }));
+      .mockReturnValueOnce(mockChain({ data: existingUser, error: null }))
+      .mockReturnValueOnce(mockChain({ data: { ...existingUser, is_verified: true, failed_login_attempts: 0, locked_until: null }, error: null }));
 
     const res = await request(app)
       .post('/api/v1/auth/register')
@@ -108,6 +121,12 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.body.user.email).toBe('legacy@example.com');
     expect(res.body.user).toHaveProperty('role', 'user');
     expect(res.body).toHaveProperty('accessToken');
+    expect(supabase.from.mock.results[1].value.update.mock.calls[0][0]).toMatchObject({
+      is_active: true,
+      is_verified: true,
+      failed_login_attempts: 0,
+      locked_until: null,
+    });
   });
 
   it('409 — rejects duplicate email', async () => {
@@ -177,6 +196,8 @@ describe('POST /api/v1/auth/login', () => {
 
     expect(res.status).toBe(200);
     expect(loginLookup.ilike).toHaveBeenCalledWith('email', 'legacy.user@example.com');
+    expect(loginLookup.order).toHaveBeenCalledWith('locked_until', { ascending: true, nullsFirst: true });
+    expect(loginLookup.order).toHaveBeenCalledWith('failed_login_attempts', { ascending: true });
   });
 
   it('401 — rejects password login for OAuth-only accounts', async () => {

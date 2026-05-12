@@ -43,6 +43,8 @@ async function upsertGoogleOAuthUser(email, fullName) {
   let { data: user } = await supabase.from('users')
     .select('id, email, role, plan, full_name, is_verified')
     .ilike('email', normalizedEmail)
+    .order('locked_until', { ascending: true, nullsFirst: true })
+    .order('failed_login_attempts', { ascending: true })
     .limit(1)
     .single();
 
@@ -73,6 +75,9 @@ async function upsertGoogleOAuthUser(email, fullName) {
   const { data: updated, error } = await supabase.from('users')
     .update({
       is_verified: true,
+      is_active: true,
+      failed_login_attempts: 0,
+      locked_until: null,
       last_login_at: new Date(),
       full_name: user.full_name || fullName || null,
     })

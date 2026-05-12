@@ -58,6 +58,8 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
   const { data: existing, error: existingError } = await supabase.from('users')
     .select('id, email, full_name, is_verified, password_hash, role, plan')
     .ilike('email', normalizedEmail)
+    .order('locked_until', { ascending: true, nullsFirst: true })
+    .order('failed_login_attempts', { ascending: true })
     .limit(1)
     .single();
 
@@ -79,6 +81,8 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
         full_name: fullName || user.full_name || null,
         is_active: true,
         is_verified: true,
+        failed_login_attempts: 0,
+        locked_until: null,
         last_login_at: new Date(),
       })
       .eq('id', user.id)
@@ -121,6 +125,8 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
   const { data: user } = await supabase.from('users')
     .select('id, email, password_hash, role, plan, is_active, is_verified, failed_login_attempts, locked_until')
     .ilike('email', normalizedEmail)
+    .order('locked_until', { ascending: true, nullsFirst: true })
+    .order('failed_login_attempts', { ascending: true })
     .limit(1)
     .single();
 
@@ -379,7 +385,7 @@ router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, r
     .select('id, email, role, plan, full_name, is_verified').eq('id', record.user_id).single();
   if (!user) return res.status(400).json({ error: 'User not found' });
 
-  await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
+  await supabase.from('users').update({ is_verified: true, failed_login_attempts: 0, locked_until: null, last_login_at: new Date() }).eq('id', user.id);
 
   const tokens    = await issueSessionTokens(user);
   const csrfToken = generateCSRFToken();
@@ -414,7 +420,7 @@ router.post('/confirm-email', validateBody('confirmEmail'), async (req, res) => 
     .single();
   if (!user) return res.status(400).json({ error: 'User not found' });
 
-  await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
+  await supabase.from('users').update({ is_verified: true, failed_login_attempts: 0, locked_until: null, last_login_at: new Date() }).eq('id', user.id);
 
   const tokens    = await issueSessionTokens({ ...user, is_verified: true });
   const csrfToken = generateCSRFToken();
@@ -462,7 +468,7 @@ router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) =
     .select('id, email, role, plan, full_name, is_verified').eq('id', payload.userId).single();
   if (!user) return res.status(400).json({ error: 'User not found' });
 
-  await supabase.from('users').update({ is_verified: true, last_login_at: new Date() }).eq('id', user.id);
+  await supabase.from('users').update({ is_verified: true, failed_login_attempts: 0, locked_until: null, last_login_at: new Date() }).eq('id', user.id);
 
   const tokens    = await issueSessionTokens(user);
   const csrfToken = generateCSRFToken();

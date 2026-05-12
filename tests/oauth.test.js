@@ -63,6 +63,8 @@ describe('upsertGoogleOAuthUser', () => {
 
     expect(user).toEqual(createdUser);
     expect(supabase.from.mock.results[0].value.ilike).toHaveBeenCalledWith('email', 'google@example.com');
+    expect(supabase.from.mock.results[0].value.order).toHaveBeenCalledWith('locked_until', { ascending: true, nullsFirst: true });
+    expect(supabase.from.mock.results[0].value.order).toHaveBeenCalledWith('failed_login_attempts', { ascending: true });
     expect(supabase.from.mock.results[1].value.insert.mock.calls[0][0].email).toBe('google@example.com');
   });
 
@@ -90,6 +92,9 @@ describe('upsertGoogleOAuthUser', () => {
     expect(user).toEqual(updatedUser);
     expect(supabase.from.mock.results[1].value.update.mock.calls[0][0]).toMatchObject({
       is_verified: true,
+      is_active: true,
+      failed_login_attempts: 0,
+      locked_until: null,
       full_name: 'Google User',
     });
   });
