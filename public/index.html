@@ -367,6 +367,8 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 /* ── Step 1: Persona cards ── */
 .ob-persona-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:980px;margin:0 auto}
 .ob-role-card{background:var(--ob-card);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--ob-bdr);border-radius:18px;padding:22px 20px 18px;display:flex;flex-direction:column;align-items:flex-start;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;font:inherit;text-align:left}
+.ob-role-card:disabled{opacity:1;cursor:default}
+.ob-role-card:disabled:hover{transform:none;border-color:var(--ob-sel-bdr)}
 [data-theme="dark"] .ob-role-card{box-shadow:0 8px 28px rgba(0,0,0,.25)}
 [data-theme="sky"] .ob-role-card{box-shadow:0 2px 10px rgba(0,80,180,.07)}
 .ob-role-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(0,200,255,.06),rgba(112,0,255,.04));opacity:0;transition:opacity .3s;pointer-events:none}
@@ -709,7 +711,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
         <div class="ob-title">Choose your persona</div>
         <div class="ob-plat-sub">Pick the profile that best matches how you publish content.</div>
         <div class="ob-persona-grid">
-          <button class="ob-role-card" type="button" onclick="selectRole(this,’founder’)">
+          <button class="ob-role-card" type="button" data-role="founder" onclick="selectRole(this, 'founder')">
             <span class="ob-role-icon">🚀</span>
             <div class="ob-role-text">
               <div class="ob-role-name">Entrepreneur / Startup</div>
@@ -717,7 +719,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
             </div>
             <div class="ob-choose-label">✓ Choose This Persona</div>
           </button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,’creator’)">
+          <button class="ob-role-card" type="button" data-role="creator" onclick="selectRole(this, 'creator')">
             <span class="ob-role-icon">📣</span>
             <div class="ob-role-text">
               <div class="ob-role-name">Influencer / Creator</div>
@@ -725,7 +727,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
             </div>
             <div class="ob-choose-label">✓ Choose This Persona</div>
           </button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,’agency’)">
+          <button class="ob-role-card" type="button" data-role="agency" onclick="selectRole(this, 'agency')">
             <span class="ob-role-icon">🤝</span>
             <div class="ob-role-text">
               <div class="ob-role-name">Agency / Consultant</div>
@@ -733,7 +735,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
             </div>
             <div class="ob-choose-label">✓ Choose This Persona</div>
           </button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,’enterprise’)">
+          <button class="ob-role-card" type="button" data-role="enterprise" onclick="selectRole(this, 'enterprise')">
             <span class="ob-role-icon">🏢</span>
             <div class="ob-role-text">
               <div class="ob-role-name">Corporate Operation</div>
@@ -741,7 +743,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
             </div>
             <div class="ob-choose-label">✓ Choose This Persona</div>
           </button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,’small_business’)">
+          <button class="ob-role-card" type="button" data-role="small_business" onclick="selectRole(this, 'small_business')">
             <span class="ob-role-icon">💼</span>
             <div class="ob-role-text">
               <div class="ob-role-name">Brand / Professional</div>
@@ -749,7 +751,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
             </div>
             <div class="ob-choose-label">✓ Choose This Persona</div>
           </button>
-          <button class="ob-role-card" type="button" onclick="selectRole(this,’personal’)">
+          <button class="ob-role-card" type="button" data-role="personal" onclick="selectRole(this, 'personal')">
             <span class="ob-role-icon">🧭</span>
             <div class="ob-role-text">
               <div class="ob-role-name">Individual / Explorer</div>
@@ -1768,6 +1770,7 @@ let _platformConnections = {};
 let _currentPlatId = null;
 let _connectingPlatform = false;
 let _onboardingStep = 1;
+let _selectedPersona = localStorage.getItem('omni_user_role') || '';
 
 function initOnboarding() {
   const u = auth.user;
@@ -1783,8 +1786,19 @@ function initOnboarding() {
   obGoStep(1);
   _platformConnections = {};
   renderObPlatforms();
+  syncPersonaSelection(_selectedPersona);
   renderOnboardingIntro();
   loadPlatformConnections().catch(() => {});
+}
+
+function syncPersonaSelection(role) {
+  const selectedRole = role || '';
+  document.querySelectorAll('.ob-role-card').forEach(card => {
+    const cardRole = card.dataset.role || '';
+    const isSelected = !!selectedRole && cardRole === selectedRole;
+    card.classList.toggle('selected', isSelected);
+    card.disabled = !!selectedRole;
+  });
 }
 
 function obGoStep(n) {
@@ -1816,11 +1830,12 @@ function obGoStep(n) {
 }
 
 function selectRole(card, role) {
-  document.querySelectorAll('.ob-role-card').forEach(c => c.classList.remove('selected'));
-  card.classList.add('selected');
+  if (_selectedPersona && _selectedPersona !== role) return;
+  _selectedPersona = role;
   localStorage.setItem('omni_user_role', role);
+  syncPersonaSelection(role);
   api('PATCH', '/api/v1/auth/me/profile', { userType: role }).catch(() => {});
-  setTimeout(() => obGoStep(2), 300);
+  setTimeout(() => obGoStep(2), 550);
 }
 
 function updateFrequencyDisplay(value) {
