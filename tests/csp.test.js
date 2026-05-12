@@ -42,5 +42,6 @@ describe('Content Security Policy', () => {
     expect(res.text).toMatch(/<script nonce="[^"]+">/);
     expect(res.text).not.toContain('onclick="toggle(');
     expect(res.text).not.toContain('onclick="copyText(');
+    expect(res.headers['expect-ct']).toBeUndefined();
   });
 });
