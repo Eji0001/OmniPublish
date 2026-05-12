@@ -16,6 +16,7 @@
     "migrate": "node db/migrate.js",
     "seed": "node db/seed.js",
     "sync:auth-users": "node scripts/sync-auth-users.js",
+    "reset:users": "node scripts/delete-all-users.js",
     "audit:deps": "npm audit --audit-level=moderate"
   },
   "dependencies": {

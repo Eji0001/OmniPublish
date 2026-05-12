@@ -1,5 +1,7 @@
 'use strict';
 
+require('dotenv').config();
+
 const { supabase } = require('../config/database');
 const { mirrorAuthUser } = require('../utils/authMirror');
 const { logger } = require('../utils/logger');
