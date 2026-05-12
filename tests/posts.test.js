@@ -73,6 +73,20 @@ describe('GET /api/v1/posts', () => {
     expect(res.body).toHaveProperty('total');
   });
 
+  it('200 — defaults malformed pagination parameters', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: [MOCK_POST], error: null, count: 1 }));
+
+    const res = await request(app)
+      .get('/api/v1/posts?page=abc&limit=xyz')
+      .set(authHeader());
+
+    expect(res.status).toBe(200);
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(20);
+  });
+
   it('401 — rejects unauthenticated request', async () => {
     const res = await request(app).get('/api/v1/posts');
     expect(res.status).toBe(401);

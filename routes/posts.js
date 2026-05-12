@@ -21,11 +21,7 @@ router.get('/', async (req, res) => {
   const { status, format } = req.query;
   const page = Math.max(1, Math.min(999, parseInt(req.query.page) || 1));
   const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
-  
-  if (isNaN(page) || isNaN(limit)) {
-    return res.status(400).json({ error: 'Invalid pagination parameters', code: 'PAGINATION_INVALID' });
-  }
-  
+
   const offset = (page - 1) * limit;
   let query = supabase.from('posts')
     .select('id,title,content,format,aspect_ratio,status,scheduled_at,published_at,created_at,post_platforms(platform,status,platform_post_url,published_at)', { count: 'exact' })
