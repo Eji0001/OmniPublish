@@ -16,6 +16,7 @@ const { validateBody }   = require('../middleware/sanitizer');
 const { authRateLimiter, authSlowDown } = require('../middleware/rateLimit');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { BCRYPT_ROUNDS, LOCKOUT_POLICY, validatePassword, JWT_CONFIG } = require('../config/security');
+const { mirrorAuthUser } = require('../utils/authMirror');
 const { logger }      = require('../utils/logger');
 
 const router = express.Router();
@@ -110,6 +111,7 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
   }
 
   const tokens = await issueSessionTokens({ ...user, ...sessionUser });
+  await mirrorAuthUser({ email: normalizedEmail, password, fullName, source: 'register' });
   const csrfToken = generateCSRFToken();
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
@@ -161,6 +163,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
   await supabase.from('users').update({ failed_login_attempts: 0, last_login_at: new Date() }).eq('id', user.id);
 
   const tokens    = await issueSessionTokens(user);
+  await mirrorAuthUser({ email: normalizedEmail, password, fullName: user.full_name || null, source: 'login' });
   const csrfToken = generateCSRFToken();
   res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
   setRefreshCookie(res, tokens.refreshToken);
@@ -386,6 +389,7 @@ router.post('/magic-link/verify', validateBody('magicLinkVerify'), async (req, r
   if (!user) return res.status(400).json({ error: 'User not found' });
 
   await supabase.from('users').update({ is_verified: true, failed_login_attempts: 0, locked_until: null, last_login_at: new Date() }).eq('id', user.id);
+  await mirrorAuthUser({ email: user.email, fullName: user.full_name || null, source: 'magic_link' });
 
   const tokens    = await issueSessionTokens(user);
   const csrfToken = generateCSRFToken();
@@ -421,6 +425,7 @@ router.post('/confirm-email', validateBody('confirmEmail'), async (req, res) => 
   if (!user) return res.status(400).json({ error: 'User not found' });
 
   await supabase.from('users').update({ is_verified: true, failed_login_attempts: 0, locked_until: null, last_login_at: new Date() }).eq('id', user.id);
+  await mirrorAuthUser({ email: user.email, fullName: user.full_name || null, source: 'confirm_email' });
 
   const tokens    = await issueSessionTokens({ ...user, is_verified: true });
   const csrfToken = generateCSRFToken();
@@ -469,6 +474,7 @@ router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) =
   if (!user) return res.status(400).json({ error: 'User not found' });
 
   await supabase.from('users').update({ is_verified: true, failed_login_attempts: 0, locked_until: null, last_login_at: new Date() }).eq('id', user.id);
+  await mirrorAuthUser({ email: user.email, fullName: user.full_name || null, source: 'oauth_exchange' });
 
   const tokens    = await issueSessionTokens(user);
   const csrfToken = generateCSRFToken();

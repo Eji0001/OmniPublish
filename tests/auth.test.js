@@ -9,7 +9,10 @@ const { TEST_USER, generateAccessToken, generateRefreshToken } = require('./help
 // ── Module mocks ───────────────────────────────────────────
 
 jest.mock('../config/database', () => ({
-  supabase: { from: jest.fn() },
+  supabase: {
+    from: jest.fn(),
+    auth: { admin: { createUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) } },
+  },
   supabasePublic: { from: jest.fn() },
   dbHealthCheck: jest.fn().mockResolvedValue(true),
   execute: jest.fn(),
@@ -74,6 +77,11 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.body.user.email).toBe('new@example.com');
     expect(res.body.user).not.toHaveProperty('password_hash');
     expect(res.headers['set-cookie']).toBeDefined();
+    expect(supabase.auth.admin.createUser).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'new@example.com',
+      password: 'ValidPass123!',
+      email_confirm: true,
+    }));
   });
 
   it('200 — succeeds even when user_sessions is missing', async () => {
@@ -96,6 +104,11 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
     expect(res.body.user.email).toBe('new@example.com');
+    expect(supabase.auth.admin.createUser).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'new@example.com',
+      password: 'ValidPass123!',
+      email_confirm: true,
+    }));
   });
 
   it('200 — upgrades an existing unverified account into an active session', async () => {
@@ -121,6 +134,11 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.body.user.email).toBe('legacy@example.com');
     expect(res.body.user).toHaveProperty('role', 'user');
     expect(res.body).toHaveProperty('accessToken');
+    expect(supabase.auth.admin.createUser).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'legacy@example.com',
+      password: 'ValidPass123!',
+      email_confirm: true,
+    }));
     expect(supabase.from.mock.results[1].value.update.mock.calls[0][0]).toMatchObject({
       is_active: true,
       is_verified: true,

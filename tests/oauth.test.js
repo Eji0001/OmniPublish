@@ -6,7 +6,10 @@ const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthSta
 jest.setTimeout(15000);
 
 jest.mock('../config/database', () => ({
-  supabase: { from: jest.fn() },
+  supabase: {
+    from: jest.fn(),
+    auth: { admin: { createUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) } },
+  },
   supabasePublic: { from: jest.fn() },
   dbHealthCheck: jest.fn().mockResolvedValue(true),
   execute: jest.fn(),
@@ -37,6 +40,10 @@ describe('upsertGoogleOAuthUser', () => {
 
     expect(user).toEqual(createdUser);
     expect(supabase.from).toHaveBeenCalledWith('users');
+    expect(supabase.auth.admin.createUser).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'google@example.com',
+      email_confirm: true,
+    }));
     expect(supabase.from.mock.results[1].value.insert.mock.calls[0][0]).toMatchObject({
       email: 'google@example.com',
       is_active: true,
@@ -65,6 +72,10 @@ describe('upsertGoogleOAuthUser', () => {
     expect(supabase.from.mock.results[0].value.ilike).toHaveBeenCalledWith('email', 'google@example.com');
     expect(supabase.from.mock.results[0].value.order).toHaveBeenCalledWith('locked_until', { ascending: true, nullsFirst: true });
     expect(supabase.from.mock.results[0].value.order).toHaveBeenCalledWith('failed_login_attempts', { ascending: true });
+    expect(supabase.auth.admin.createUser).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'google@example.com',
+      email_confirm: true,
+    }));
     expect(supabase.from.mock.results[1].value.insert.mock.calls[0][0].email).toBe('google@example.com');
   });
 
@@ -97,6 +108,10 @@ describe('upsertGoogleOAuthUser', () => {
       locked_until: null,
       full_name: 'Google User',
     });
+    expect(supabase.auth.admin.createUser).toHaveBeenCalledWith(expect.objectContaining({
+      email: 'google@example.com',
+      email_confirm: true,
+    }));
   });
 });
 

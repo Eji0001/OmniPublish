@@ -10,6 +10,7 @@ const { supabase }   = require('../config/database');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
 const { BCRYPT_ROUNDS, JWT_CONFIG } = require('../config/security');
+const { mirrorAuthUser } = require('../utils/authMirror');
 const { logger }            = require('../utils/logger');
 
 const isProd = process.env.NODE_ENV === 'production';
@@ -68,6 +69,8 @@ async function upsertGoogleOAuthUser(email, fullName) {
 
     if (error) throw error;
 
+    await mirrorAuthUser({ email: normalizedEmail, fullName, source: 'google_oauth' });
+
     logger.info('Google OAuth new user created', { userId: created.id });
     return created;
   }
@@ -86,6 +89,8 @@ async function upsertGoogleOAuthUser(email, fullName) {
     .single();
 
   if (error) throw error;
+
+  await mirrorAuthUser({ email: normalizedEmail, fullName: updated.full_name || fullName || null, source: 'google_oauth' });
 
   return updated || { ...user, is_verified: true };
 }
