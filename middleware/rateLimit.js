@@ -54,6 +54,15 @@ const mediaRateLimiter = rateLimit({
   standardHeaders: 'draft-7', legacyHeaders: false,
 });
 
+const gdprExportRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 2,
+  keyGenerator: userKey,
+  handler: limitHandler,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+
 const publishRateLimiter = rateLimit({
   windowMs: 24 * 60 * 60 * 1000,
   max: (req) => ({ free: 5, starter: 30, pro: 100, enterprise: 500 }[req.user?.plan] || 5),
@@ -63,5 +72,5 @@ const publishRateLimiter = rateLimit({
 
 module.exports = {
   globalRateLimiter, authRateLimiter, authSlowDown,
-  aiRateLimiter, mediaRateLimiter, publishRateLimiter,
+  aiRateLimiter, mediaRateLimiter, gdprExportRateLimiter, publishRateLimiter,
 };

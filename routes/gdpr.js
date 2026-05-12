@@ -4,13 +4,14 @@ const express = require('express');
 
 const { supabase } = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
+const { gdprExportRateLimiter } = require('../middleware/rateLimit');
 const { logger } = require('../utils/logger');
 
 const router = express.Router();
 
 router.use(verifyToken);
 
-router.post('/export-data', async (req, res) => {
+router.post('/export-data', gdprExportRateLimiter, async (req, res) => {
   const userId = req.user.id;
 
   try {

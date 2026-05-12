@@ -18,6 +18,7 @@ jest.mock('../middleware/rateLimit', () => {
     authSlowDown:       pass,
     aiRateLimiter:      pass,
     mediaRateLimiter:   pass,
+    gdprExportRateLimiter: pass,
     publishRateLimiter: pass,
   };
 });
