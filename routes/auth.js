@@ -158,8 +158,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
 
 /* ── POST /auth/refresh ── */
 router.post('/refresh', async (req, res) => {
-  // Accept refresh token from httpOnly cookie (preferred) or body (backward compat)
-  const refreshToken = req.cookies?.omni_refresh || req.body?.refreshToken;
+  const refreshToken = req.cookies?.omni_refresh;
   if (!refreshToken) return res.status(422).json({ error: 'refreshToken required' });
   try {
     const tokens    = await rotateRefreshToken(refreshToken);

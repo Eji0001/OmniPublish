@@ -232,17 +232,27 @@ describe('POST /api/v1/auth/refresh', () => {
 
     const res = await request(app)
       .post('/api/v1/auth/refresh')
-      .send({ refreshToken });
+      .set('Cookie', `omni_refresh=${refreshToken}`);
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('accessToken');
     expect(res.body).not.toHaveProperty('refreshToken');
   });
 
+  it('422 — rejects refresh token sent only in body', async () => {
+    const { token: refreshToken } = generateRefreshToken(TEST_USER);
+
+    const res = await request(app)
+      .post('/api/v1/auth/refresh')
+      .send({ refreshToken });
+
+    expect(res.status).toBe(422);
+  });
+
   it('401 — rejects invalid refresh token', async () => {
     const res = await request(app)
       .post('/api/v1/auth/refresh')
-      .send({ refreshToken: 'invalid.token.here' });
+      .set('Cookie', 'omni_refresh=invalid.token.here');
 
     expect(res.status).toBe(401);
   });
