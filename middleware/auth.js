@@ -12,6 +12,13 @@ const { supabase }   = require('../config/database');
 const { JWT_CONFIG } = require('../config/security');
 const { logger }     = require('../utils/logger');
 
+const isMissingUserSessionsTableError = (error) => {
+  const message = error?.message || '';
+  return error?.code === 'PGRST205'
+    || /Could not find the table 'public\.user_sessions' in the schema cache/i.test(message)
+    || /relation "?public\.user_sessions"? does not exist/i.test(message);
+};
+
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader?.startsWith('Bearer '))
@@ -51,31 +58,60 @@ const recordSession = async (userId, jti) => {
     last_seen_at: new Date(),
     revoked_at: null,
   }, { onConflict: 'jti' });
+  if (error && isMissingUserSessionsTableError(error)) {
+    logger.warn('user_sessions table unavailable; skipping session persistence', { userId, err: error.message });
+    return;
+  }
   if (error) throw Object.assign(new Error(error.message || 'Failed to record session'), { status: 500, code: error.code });
 };
 
 const revokeSession = async (jti, userId) => {
-  await Promise.all([
+  const [revokedResult, sessionResult] = await Promise.all([
     supabase.from('revoked_tokens').insert({ jti, user_id: userId }),
     supabase.from('user_sessions').update({ revoked_at: new Date() }).eq('jti', jti).eq('user_id', userId),
   ]);
+
+  if (sessionResult?.error && !isMissingUserSessionsTableError(sessionResult.error)) {
+    throw Object.assign(new Error(sessionResult.error.message || 'Failed to revoke session'), { status: 500, code: sessionResult.error.code });
+  }
+
+  return revokedResult;
 };
 
 const revokeUserSessions = async (userId, currentJti = null) => {
-  const { data: sessions } = await supabase.from('user_sessions')
+  const { data: sessions, error } = await supabase.from('user_sessions')
     .select('jti')
     .eq('user_id', userId);
+
+  if (error && isMissingUserSessionsTableError(error)) {
+    logger.warn('user_sessions table unavailable; skipping tracked session revocation', { userId, err: error.message });
+    const jtIs = [...new Set([currentJti].filter(Boolean))];
+    if (!jtIs.length) return;
+    await supabase.from('revoked_tokens').upsert(
+      jtIs.map(jti => ({ jti, user_id: userId })),
+      { onConflict: 'jti' }
+    );
+    return;
+  }
+
+  if (error) throw Object.assign(new Error(error.message || 'Failed to load sessions'), { status: 500, code: error.code });
 
   const jtIs = [...new Set([...(sessions || []).map(s => s.jti), currentJti].filter(Boolean))];
   if (!jtIs.length) return;
 
-  await Promise.all([
+  const [revokedResult, sessionUpdateResult] = await Promise.all([
     supabase.from('revoked_tokens').upsert(
       jtIs.map(jti => ({ jti, user_id: userId })),
       { onConflict: 'jti' }
     ),
     supabase.from('user_sessions').update({ revoked_at: new Date() }).eq('user_id', userId),
   ]);
+
+  if (sessionUpdateResult?.error && !isMissingUserSessionsTableError(sessionUpdateResult.error)) {
+    throw Object.assign(new Error(sessionUpdateResult.error.message || 'Failed to revoke tracked sessions'), { status: 500, code: sessionUpdateResult.error.code });
+  }
+
+  return revokedResult;
 };
 
 const requireRole = (...roles) => (req, res, next) => {

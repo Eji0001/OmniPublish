@@ -74,6 +74,27 @@ describe('POST /api/v1/auth/register', () => {
     expect(res.headers['set-cookie']).toBeDefined();
   });
 
+  it('200 — succeeds even when user_sessions is missing', async () => {
+    const userSelect = mockChain({ data: null, error: null });
+    const userInsert = mockChain({ data: { id: TEST_USER.id, email: 'new@example.com', role: 'user', plan: 'free' }, error: null });
+    const missingSessions = mockChain({ data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.user_sessions' in the schema cache" } });
+
+    let usersCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'users') return usersCalls++ === 0 ? userSelect : userInsert;
+      if (table === 'user_sessions') return missingSessions;
+      return mockChain({ data: null, error: null });
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/register')
+      .send({ email: 'new@example.com', password: 'ValidPass123!', fullName: 'Test User' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body.user.email).toBe('new@example.com');
+  });
+
   it('200 — upgrades an existing unverified account into an active session', async () => {
     supabase.from
       .mockReturnValueOnce(mockChain({ data: { id: 'existing-id', email: 'legacy@example.com', full_name: 'Legacy User', is_verified: false, role: 'user', plan: 'free' }, error: null }))
@@ -404,6 +425,36 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
       .mockReturnValueOnce(mockChain({ data: { id: 'oauth-exchange-code-id' }, error: null }))
       .mockReturnValueOnce(mockChain({ data: { ...DB_USER, is_verified: false }, error: null }))
       .mockReturnValueOnce(mockChain({ data: null, error: null }));
+
+    const res = await request(app)
+      .post('/api/v1/auth/oauth/exchange')
+      .send({ code });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body.user.email).toBe(TEST_USER.email);
+  });
+
+  it('200 — succeeds when user_sessions table is unavailable', async () => {
+    const code = jwt.sign(
+      { purpose: 'oauth_exchange', userId: TEST_USER.id, email: TEST_USER.email },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: '10m', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
+    );
+
+    let passwordResetCalls = 0;
+    let userCalls = 0;
+    const codeUse = mockChain({ data: { id: 'oauth-exchange-code-id' }, error: null });
+    const userSelect = mockChain({ data: { ...DB_USER, is_verified: false }, error: null });
+    const userUpdate = mockChain({ data: null, error: null });
+    const missingSessions = mockChain({ data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.user_sessions' in the schema cache" } });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'password_resets') return passwordResetCalls++ === 0 ? codeUse : mockChain({ data: null, error: { message: 'No rows updated' } });
+      if (table === 'users') return userCalls++ === 0 ? userSelect : userUpdate;
+      if (table === 'user_sessions') return missingSessions;
+      return mockChain({ data: null, error: null });
+    });
 
     const res = await request(app)
       .post('/api/v1/auth/oauth/exchange')
