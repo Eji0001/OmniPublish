@@ -13,6 +13,8 @@ const { logger }      = require('../utils/logger');
 const router = express.Router();
 router.use(verifyToken);
 
+const isExpired = (tokenExpiresAt) => tokenExpiresAt && new Date(tokenExpiresAt) < new Date();
+
 /* ── GET /platforms — list connected platforms ── */
 router.get('/', async (req, res) => {
   const { data, error } = await supabase.from('platform_connections')
@@ -42,6 +44,47 @@ router.post('/connect', async (req, res) => {
   if (error) return res.status(500).json({ error: 'Failed to save platform connection' });
   logger.info('Platform connected', { userId: req.user.id, platform });
   res.status(201).json({ connection: data });
+});
+
+/* ── POST /platforms/:id/verify — verify connection status ── */
+router.post('/:id/verify', async (req, res) => {
+  const { data: connection, error } = await supabase.from('platform_connections')
+    .select('id, platform, platform_username, is_active, connected_at, token_expires_at')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .single();
+
+  if (error || !connection) return res.status(404).json({ error: 'Connection not found' });
+
+  const expired = isExpired(connection.token_expires_at);
+  const connectionStatus = connection.is_active
+    ? (expired ? 'expired' : 'active')
+    : 'inactive';
+
+  res.json({
+    connection: {
+      ...connection,
+      connection_status: connectionStatus,
+      token_valid: connection.is_active && !expired,
+    },
+  });
+});
+
+/* ── PATCH /platforms/:id — toggle connection on/off ── */
+router.patch('/:id', async (req, res) => {
+  const { is_active } = req.body || {};
+  if (typeof is_active !== 'boolean') return res.status(422).json({ error: 'is_active is required' });
+
+  const { data: connection, error } = await supabase.from('platform_connections')
+    .update({ is_active })
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .select('id, platform, platform_username, is_active, connected_at, token_expires_at')
+    .single();
+
+  if (error || !connection) return res.status(404).json({ error: 'Connection not found' });
+
+  res.json({ connection });
 });
 
 /* ── DELETE /platforms/:id — disconnect platform ── */
