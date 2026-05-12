@@ -280,6 +280,14 @@ app.get(['/', '/index.html'], (req, res) => {
   res.type('html').send(renderIndexHtml(res.locals.cspNonce));
 });
 
+const servePublicPage = (fileName) => (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'public', fileName));
+};
+
+app.get('/terms', servePublicPage('terms.html'));
+app.get('/privacy', servePublicPage('privacy.html'));
+
 app.use(express.static('public'));
 
 // Catch-all 404
