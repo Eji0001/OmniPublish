@@ -387,7 +387,7 @@ router.post('/confirm-email', validateBody('confirmEmail'), async (req, res) => 
 
   let payload;
   try {
-    payload = jwt.verify(token, JWT_CONFIG.accessSecret, {
+    payload = jwt.verify(token, JWT_CONFIG.emailConfirmSecret, {
       algorithms: [JWT_CONFIG.algorithm],
       issuer: JWT_CONFIG.issuer,
       audience: JWT_CONFIG.audience,

@@ -348,7 +348,7 @@ describe('POST /api/v1/auth/confirm-email', () => {
   it('200 — verifies email and returns session tokens', async () => {
     const token = jwt.sign(
       { purpose: 'email_confirm', userId: TEST_USER.id, email: TEST_USER.email },
-      process.env.JWT_ACCESS_SECRET,
+      process.env.JWT_EMAIL_CONFIRM_SECRET,
       { expiresIn: '1h', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
     );
 
@@ -364,6 +364,21 @@ describe('POST /api/v1/auth/confirm-email', () => {
     expect(res.body).toHaveProperty('accessToken');
     expect(res.body.user).toBeDefined();
     expect(supabase.from).toHaveBeenCalledWith('users');
+  });
+
+  it('400 — rejects email confirm tokens signed with the access secret', async () => {
+    const token = jwt.sign(
+      { purpose: 'email_confirm', userId: TEST_USER.id, email: TEST_USER.email },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: '1h', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
+    );
+
+    const res = await request(app)
+      .post('/api/v1/auth/confirm-email')
+      .send({ token });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/invalid or expired confirmation link/i);
   });
 });
 

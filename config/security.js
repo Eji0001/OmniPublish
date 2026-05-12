@@ -9,10 +9,12 @@
 if (process.env.NODE_ENV === 'production') {
   const DEV_ACCESS  = 'dev-access-secret-change-in-prod';
   const DEV_REFRESH = 'dev-refresh-secret-change-in-prod';
+  const DEV_EMAIL_CONFIRM = 'dev-email-confirm-secret-change-in-prod';
   if (!process.env.JWT_ACCESS_SECRET  || process.env.JWT_ACCESS_SECRET  === DEV_ACCESS ||
       !process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET === DEV_REFRESH ||
+      !process.env.JWT_EMAIL_CONFIRM_SECRET || process.env.JWT_EMAIL_CONFIRM_SECRET === DEV_EMAIL_CONFIRM ||
       !process.env.ENCRYPTION_KEY     || process.env.ENCRYPTION_KEY     === 'your_64_character_hex_string_here') {
-    console.error('FATAL: production secrets not configured. Set JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, and ENCRYPTION_KEY.');
+    console.error('FATAL: production secrets not configured. Set JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, JWT_EMAIL_CONFIRM_SECRET, and ENCRYPTION_KEY.');
     process.exit(1);
   }
 }
@@ -41,13 +43,14 @@ const securityHeaders = (req, res, next) => {
 };
 
 const JWT_CONFIG = {
-  accessSecret:     process.env.JWT_ACCESS_SECRET  || 'dev-access-secret-change-in-prod',
-  refreshSecret:    process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-prod',
-  accessExpiresIn:  '15m',
-  refreshExpiresIn: '7d',
-  algorithm:        'HS256',
-  issuer:           'omnipublish-api',
-  audience:         'omnipublish-client',
+  accessSecret:       process.env.JWT_ACCESS_SECRET || 'dev-access-secret-change-in-prod',
+  refreshSecret:      process.env.JWT_REFRESH_SECRET || 'dev-refresh-secret-change-in-prod',
+  emailConfirmSecret: process.env.JWT_EMAIL_CONFIRM_SECRET || 'dev-email-confirm-secret-change-in-prod',
+  accessExpiresIn:    '15m',
+  refreshExpiresIn:   '7d',
+  algorithm:          'HS256',
+  issuer:             'omnipublish-api',
+  audience:           'omnipublish-client',
 };
 
 const BCRYPT_ROUNDS = 12;
