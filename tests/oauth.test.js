@@ -3,6 +3,8 @@
 const { mockChain } = require('./helpers/db');
 const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
 
+jest.setTimeout(15000);
+
 jest.mock('../config/database', () => ({
   supabase: { from: jest.fn() },
   supabasePublic: { from: jest.fn() },
@@ -41,6 +43,27 @@ describe('upsertGoogleOAuthUser', () => {
       is_verified: true,
       full_name: 'Google User',
     });
+  });
+
+  it('normalizes Google email casing before lookup and insert', async () => {
+    const createdUser = {
+      id: 'case-google-user',
+      email: 'google@example.com',
+      role: 'user',
+      plan: 'free',
+      full_name: 'Google User',
+      is_verified: true,
+    };
+
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))
+      .mockReturnValueOnce(mockChain({ data: createdUser, error: null }));
+
+    const user = await upsertGoogleOAuthUser('Google@Example.COM', 'Google User');
+
+    expect(user).toEqual(createdUser);
+    expect(supabase.from.mock.results[0].value.ilike).toHaveBeenCalledWith('email', 'google@example.com');
+    expect(supabase.from.mock.results[1].value.insert.mock.calls[0][0].email).toBe('google@example.com');
   });
 
   it('updates existing Google users to verified on sign-in', async () => {

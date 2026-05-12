@@ -157,6 +157,28 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.headers['set-cookie']).toBeDefined();
   });
 
+  it('200 — logs in returning users with mixed-case stored emails', async () => {
+    const loginUser = { ...DB_USER, email: 'Legacy.User@Example.com' };
+    const loginLookup = mockChain({ data: loginUser, error: null });
+    const updateChain = mockChain({ data: null, error: null });
+    const sessionChain = mockChain({ data: null, error: null });
+    let userCalls = 0;
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'users') return userCalls++ === 0 ? loginLookup : updateChain;
+      if (table === 'user_sessions') return sessionChain;
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      return mockChain({ data: null, error: null });
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'legacy.user@example.com', password: 'ValidPass123!' });
+
+    expect(res.status).toBe(200);
+    expect(loginLookup.ilike).toHaveBeenCalledWith('email', 'legacy.user@example.com');
+  });
+
   it('401 — rejects password login for OAuth-only accounts', async () => {
     supabase.from
       .mockReturnValueOnce(mockChain({ data: { ...DB_USER, password_hash: null }, error: null }));

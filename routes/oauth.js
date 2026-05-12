@@ -13,6 +13,7 @@ const { BCRYPT_ROUNDS, JWT_CONFIG } = require('../config/security');
 const { logger }            = require('../utils/logger');
 
 const isProd = process.env.NODE_ENV === 'production';
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
   .map(o => o.trim())
@@ -38,16 +39,18 @@ function getFrontendOrigin(req) {
 }
 
 async function upsertGoogleOAuthUser(email, fullName) {
+  const normalizedEmail = normalizeEmail(email);
   let { data: user } = await supabase.from('users')
     .select('id, email, role, plan, full_name, is_verified')
-    .eq('email', email)
+    .ilike('email', normalizedEmail)
+    .limit(1)
     .single();
 
   if (!user) {
     const fallbackPasswordHash = await bcrypt.hash(crypto.randomBytes(32).toString('hex'), BCRYPT_ROUNDS);
     const baseUser = {
       id: uuidv4(),
-      email,
+      email: normalizedEmail,
       full_name: fullName,
       role: 'user',
       plan: 'free',

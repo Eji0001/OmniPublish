@@ -21,6 +21,7 @@ const { logger }      = require('../utils/logger');
 const router = express.Router();
 
 const isProd = process.env.NODE_ENV === 'production';
+const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 const TOKEN_PURPOSE = {
   OAUTH_EXCHANGE: 'oauth_exchange',
 };
@@ -49,13 +50,15 @@ const setRefreshCookie = (res, refreshToken) => {
 /* ── POST /auth/register ── */
 router.post('/register', authSlowDown, authRateLimiter, validateBody('register'), async (req, res) => {
   const { email, password, fullName } = req.body;
+  const normalizedEmail = normalizeEmail(email);
 
   const pwErrors = validatePassword(password);
   if (pwErrors.length) return res.status(422).json({ error: 'Weak password', errors: pwErrors });
 
   const { data: existing, error: existingError } = await supabase.from('users')
     .select('id, email, full_name, is_verified, password_hash, role, plan')
-    .eq('email', email)
+    .ilike('email', normalizedEmail)
+    .limit(1)
     .single();
 
   if (existingError && existingError.code !== 'PGRST116') {
@@ -87,7 +90,7 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
     const { data: created, error } = await supabase.from('users')
       .insert({
         id: uuidv4(),
-        email,
+        email: normalizedEmail,
         password_hash: passwordHash,
         full_name: fullName || null,
         role: 'user',
@@ -113,10 +116,13 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
 /* ── POST /auth/login ── */
 router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), async (req, res) => {
   const { email, password } = req.body;
+  const normalizedEmail = normalizeEmail(email);
 
   const { data: user } = await supabase.from('users')
     .select('id, email, password_hash, role, plan, is_active, is_verified, failed_login_attempts, locked_until')
-    .eq('email', email).single();
+    .ilike('email', normalizedEmail)
+    .limit(1)
+    .single();
 
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!user.is_active) return res.status(403).json({ error: 'Account deactivated' });
@@ -265,8 +271,9 @@ router.delete('/me', verifyToken, async (req, res) => {
 /* ── POST /auth/forgot-password ── */
 router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'), async (req, res) => {
   const { email } = req.body;
+  const normalizedEmail = normalizeEmail(email);
 
-  const { data: user } = await supabase.from('users').select('id').eq('email', email).eq('is_active', true).single();
+  const { data: user } = await supabase.from('users').select('id').ilike('email', normalizedEmail).eq('is_active', true).limit(1).single();
   if (!user) return res.json({ message: 'If that email is registered you will receive a reset link shortly' });
 
   await supabase.from('password_resets').delete()
@@ -319,9 +326,10 @@ router.post('/reset-password', authRateLimiter, validateBody('resetPassword'), a
 /* ── POST /auth/magic-link ── */
 router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (req, res) => {
   const { email } = req.body;
+  const normalizedEmail = normalizeEmail(email);
 
   const { data: user } = await supabase.from('users')
-    .select('id').eq('email', email).eq('is_active', true).single();
+    .select('id').ilike('email', normalizedEmail).eq('is_active', true).limit(1).single();
 
   if (!user) {
     logger.info('Magic link requested for unknown email (silently ignored)');
