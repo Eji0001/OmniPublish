@@ -523,11 +523,6 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
         <label class="modal-label" for="api-key-input">Anthropic API Key (optional — uses server key if blank)</label>
         <input class="modal-input" id="api-key-input" type="password" placeholder="sk-ant-..." autocomplete="off">
       </div>
-      <div class="modal-field" id="backend-url-control" style="display:none">
-        <label class="modal-label" for="backend-url-input">Backend URL</label>
-        <input class="modal-input" id="backend-url-input" type="text" placeholder="http://localhost:4000">
-        <div class="settings-status" id="settings-backend-status">Developer only. Use this to switch between local and hosted backends.</div>
-      </div>
       <div class="modal-actions">
         <button class="modal-btn cancel" onclick="closeSettings()">Cancel</button>
         <button class="modal-btn save" onclick="saveSettings()">Save</button>
@@ -841,42 +836,14 @@ function useTemplate(key) {
 /* ── SETTINGS ── */
 function openSettings() {
   document.getElementById('api-key-input').value = USER_API_KEY;
-  syncBackendUrlControl();
   document.getElementById('settings-modal').style.display = 'block';
 }
 function closeSettings(e) {
   if (!e || e.target === e.currentTarget) document.getElementById('settings-modal').style.display = 'none';
 }
-function canManageBackendUrl() {
-  return BACKEND_URL_POLICY.isDevHost(window.location.hostname);
-}
-function syncBackendUrlControl() {
-  const wrap = document.getElementById('backend-url-control');
-  if (!wrap) return;
-  const allowed = canManageBackendUrl();
-  wrap.style.display = allowed ? '' : 'none';
-  if (allowed) {
-    const input = document.getElementById('backend-url-input');
-    if (input) input.value = BACKEND_URL;
-  }
-}
 function saveSettings() {
   USER_API_KEY = document.getElementById('api-key-input').value.trim();
   localStorage.setItem('omni_api_key',    USER_API_KEY);
-  if (canManageBackendUrl()) {
-    const backendInput = document.getElementById('backend-url-input');
-    const nextBackendUrl = BACKEND_URL_POLICY.saveBackendUrl({
-      storage: localStorage,
-      origin: window.location.origin,
-      hostname: window.location.hostname,
-      candidate: backendInput ? backendInput.value : '',
-    });
-    if (nextBackendUrl === null) {
-      toast('Backend URL must be the current origin or localhost in development.', 'err');
-      return;
-    }
-    BACKEND_URL = nextBackendUrl;
-  }
   document.getElementById('settings-modal').style.display = 'none';
   toast('Settings saved!', 'ok');
 }
