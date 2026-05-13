@@ -25,6 +25,8 @@ const CSRF_SKIP = new Set([
   '/api/v1/auth/magic-link/verify',      '/v1/auth/magic-link/verify',
   '/api/v1/auth/confirm-email',          '/v1/auth/confirm-email',
   '/api/v1/auth/oauth/exchange',         '/v1/auth/oauth/exchange',
+  // Refresh is protected by httpOnly SameSite:Strict cookie — CSRF double-submit not needed
+  '/api/v1/auth/refresh',                '/v1/auth/refresh',
 ]);
 
 const verifyCSRF = (req, res, next) => {
