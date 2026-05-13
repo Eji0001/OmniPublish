@@ -262,13 +262,17 @@ app.use('/api/v1/publish',    publishRoutes);
 app.use('/api/v1/media',      mediaRoutes);
 
 // AI adapt endpoint (secure — keeps API key server-side)
-app.post('/api/v1/ai/adapt', require('./middleware/auth').verifyToken, require('./middleware/rateLimit').aiRateLimiter, async (req, res) => {
-  const { content, platforms, format, ratio } = req.body;
-  if (!content || !platforms?.length) return res.status(422).json({ error: 'content and platforms required' });
-  const { aiAdaptContent } = require('./services/aiService');
-  const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
-  res.json({ adapted });
-});
+app.post('/api/v1/ai/adapt',
+  require('./middleware/auth').verifyToken,
+  require('./middleware/rateLimit').aiRateLimiter,
+  require('./middleware/sanitizer').validateBody('adaptContent'),
+  async (req, res) => {
+    const { content, platforms, format, ratio } = req.body;
+    const { aiAdaptContent } = require('./services/aiService');
+    const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
+    res.json({ adapted });
+  }
+);
 // Admin-only route group — requires API key
 app.use('/api/v1/admin', requireApiKey, (req, res) => {
   res.json({ message: 'Admin API', user: req.user });

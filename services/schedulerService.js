@@ -19,12 +19,26 @@ const buildPlatformPostPayload = (post, platform) => {
 
 const processScheduledPosts = async () => {
   const nowIso = new Date().toISOString();
+
+  // Step 1: Find candidate IDs
+  const { data: candidates } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('status', 'scheduled')
+    .lte('scheduled_at', nowIso)
+    .limit(20);
+
+  if (!candidates?.length) return;
+  const candidateIds = candidates.map(p => p.id);
+
+  // Step 2: Atomically claim posts — only rows still in 'scheduled' state are returned.
+  // Any concurrent scheduler run that already claimed a post won't match eq('status','scheduled').
   const { data: duePosts } = await supabase
     .from('posts')
-    .select('id, user_id, content, title, post_platforms(platform, custom_media_url), media_files(cdn_url)')
+    .update({ status: 'published', published_at: new Date() })
+    .in('id', candidateIds)
     .eq('status', 'scheduled')
-    .lte('scheduled_at', new Date().toISOString())
-    .limit(20);
+    .select('id, user_id, content, title, post_platforms(platform, custom_media_url), media_files(cdn_url)');
 
   if (!duePosts?.length) return;
   logger.info(`Processing ${duePosts.length} scheduled post(s)`);
@@ -98,17 +112,14 @@ const processScheduledPosts = async () => {
       const anySucceeded = results.some(r => r.status === 'fulfilled');
       if (!anySucceeded) {
         logger.error('All platforms failed for scheduled post', { postId: post.id });
-        await supabase.from('posts').update({ status: 'failed' }).eq('id', post.id);
+        await supabase.from('posts').update({ status: 'failed', published_at: null }).eq('id', post.id);
         continue;
       }
-
-      await supabase.from('posts')
-        .update({ status: 'published', published_at: new Date() })
-        .eq('id', post.id);
+      // Post was optimistically marked 'published' during the claim step; no further update needed.
 
     } catch (e) {
       logger.error('Scheduled post failed', { postId: post.id, err: e.message });
-      await supabase.from('posts').update({ status: 'failed' }).eq('id', post.id);
+      await supabase.from('posts').update({ status: 'failed', published_at: null }).eq('id', post.id);
     }
   }
 };

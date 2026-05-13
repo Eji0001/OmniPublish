@@ -1658,11 +1658,12 @@ async function publishAll() {
     const csrf=getCsrf(); if(csrf)headers['X-CSRF-Token']=csrf;
     const pids=sel.map(p=>p.id);
     sel.forEach(p=>{document.getElementById('sid-'+p.id).textContent='Creating post…';});
-    const postRes=await fetch(base()+'/api/v1/posts',{method:'POST',headers,body:JSON.stringify({content:txt,platforms:pids,format:currentFormat,aspectRatio:currentRatio})});
+    const postRes=await fetch(base()+'/api/v1/posts',{method:'POST',headers,credentials:'include',body:JSON.stringify({content:txt,platforms:pids,format:currentFormat,aspectRatio:currentRatio})});
     if(!postRes.ok)throw new Error((await postRes.json()).error||'Failed to create post');
     const {post}=await postRes.json();
     sel.forEach(p=>{document.getElementById('sb-'+p.id).className='badge b-pub';document.getElementById('sb-'+p.id).textContent='Uploading';document.getElementById('sid-'+p.id).textContent='Connecting…';const f=document.getElementById('sif-'+p.id);if(f)f.style.width='50%';});
-    const pubRes=await fetch(base()+'/api/v1/publish',{method:'POST',headers,body:JSON.stringify({postId:post.id,platforms:pids})});
+    const pubHeaders={...headers,'Idempotency-Key':post.id};
+    const pubRes=await fetch(base()+'/api/v1/publish',{method:'POST',headers:pubHeaders,credentials:'include',body:JSON.stringify({postId:post.id,platforms:pids})});
     const result=await pubRes.json();
     if(!pubRes.ok)throw new Error(result.error||'Publish failed');
     const sm={};if(result.summary)result.summary.forEach(s=>{sm[s.platform]=s;});

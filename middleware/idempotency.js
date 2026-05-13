@@ -49,13 +49,17 @@ const idempotencyMiddleware = async (req, res, next) => {
       .single();
 
     if (cached) {
-      // Return cached response
       logger.info('Idempotent request (cached)', {
         idempotencyKey,
         userId: req.user?.id,
         age: Date.now() - new Date(cached.created_at).getTime(),
       });
-      return res.status(200).json(JSON.parse(cached.response));
+      let payload;
+      try { payload = JSON.parse(cached.response); } catch { payload = {}; }
+      // Unwrap envelope if stored with new format; fall back to 200 for legacy entries
+      const statusCode = (typeof payload._idempotency_status === 'number') ? payload._idempotency_status : 200;
+      const body = payload._idempotency_status !== undefined ? payload._idempotency_body : payload;
+      return res.status(statusCode).json(body);
     }
   } catch (err) {
     // Not found is expected; other errors log but don't block
@@ -67,14 +71,14 @@ const idempotencyMiddleware = async (req, res, next) => {
   // Store original res.json to intercept response
   const originalJson = res.json.bind(res);
   res.json = function (body) {
-    // Cache the response if request succeeded (2xx)
+    // Cache the response if request succeeded (2xx), wrapping body + status for faithful replay
     if (res.statusCode >= 200 && res.statusCode < 300) {
       supabase
         .from('idempotency_tokens')
         .insert({
           idempotency_key: idempotencyKey,
           user_id: req.user?.id || 'anonymous',
-          response: JSON.stringify(body),
+          response: JSON.stringify({ _idempotency_status: res.statusCode, _idempotency_body: body }),
           expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
         })
         .then(({ error: dbErr }) => {

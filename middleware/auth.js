@@ -19,6 +19,12 @@ const isMissingUserSessionsTableError = (error) => {
     || /relation "?public\.user_sessions"? does not exist/i.test(message);
 };
 
+const isDuplicateRevokedTokenError = (error) => {
+  const message = error?.message || '';
+  return error?.code === '23505'
+    || /duplicate key value violates unique constraint/i.test(message);
+};
+
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader?.startsWith('Bearer '))
@@ -76,7 +82,7 @@ const recordSession = async (userId, jti) => {
 
 const revokeSession = async (jti, userId) => {
   const [revokedResult, sessionResult] = await Promise.all([
-    supabase.from('revoked_tokens').insert({ jti, user_id: userId }),
+    supabase.from('revoked_tokens').insert({ jti, user_id: userId, revoked_at: new Date() }),
     supabase.from('user_sessions').update({ revoked_at: new Date() }).eq('jti', jti).eq('user_id', userId),
   ]);
 
@@ -97,7 +103,7 @@ const revokeUserSessions = async (userId, currentJti = null) => {
     const jtIs = [...new Set([currentJti].filter(Boolean))];
     if (!jtIs.length) return;
     await supabase.from('revoked_tokens').upsert(
-      jtIs.map(jti => ({ jti, user_id: userId })),
+      jtIs.map(jti => ({ jti, user_id: userId, revoked_at: new Date() })),
       { onConflict: 'jti' }
     );
     return;
@@ -110,7 +116,7 @@ const revokeUserSessions = async (userId, currentJti = null) => {
 
   const [revokedResult, sessionUpdateResult] = await Promise.all([
     supabase.from('revoked_tokens').upsert(
-      jtIs.map(jti => ({ jti, user_id: userId })),
+      jtIs.map(jti => ({ jti, user_id: userId, revoked_at: new Date() })),
       { onConflict: 'jti' }
     ),
     supabase.from('user_sessions').update({ revoked_at: new Date() }).eq('user_id', userId),
@@ -162,7 +168,12 @@ const rotateRefreshToken = async (oldRefreshToken) => {
     });
   } catch { throw Object.assign(new Error('Invalid refresh token'), { status: 401 }); }
 
-  await supabase.from('revoked_tokens').insert({ jti: payload.jti, user_id: payload.sub });
+  const { error: revokeError } = await supabase.from('revoked_tokens').insert({ jti: payload.jti, user_id: payload.sub, revoked_at: new Date() });
+  if (revokeError) {
+    if (isDuplicateRevokedTokenError(revokeError))
+      throw Object.assign(new Error('Token has been revoked'), { status: 401 });
+    throw Object.assign(new Error(revokeError.message || 'Failed to revoke refresh token'), { status: 500, code: revokeError.code });
+  }
   const { data: user, error } = await supabase
     .from('users').select('id, email, role, plan, is_active').eq('id', payload.sub).single();
   if (error || !user || !user.is_active)

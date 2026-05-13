@@ -76,7 +76,14 @@ router.post('/', validateBody('createPost'), async (req, res) => {
     .insert({ user_id: req.user.id, title: title || null, content, format: format || 'post', aspect_ratio: aspectRatio || '16:9', status: scheduledAt ? 'scheduled' : 'draft', scheduled_at: scheduledAt || null })
     .select().single();
   if (error) { logger.error('Create post error', { err: error.message }); return res.status(500).json({ error: 'Failed to create post' }); }
-  if (platforms?.length) await supabase.from('post_platforms').insert(platforms.map(p => ({ post_id: post.id, platform: p, status: 'pending' })));
+  if (platforms?.length) {
+    const { error: ppErr } = await supabase.from('post_platforms').insert(platforms.map(p => ({ post_id: post.id, platform: p, status: 'pending' })));
+    if (ppErr) {
+      logger.error('Failed to create post_platforms', { postId: post.id, err: ppErr.message });
+      await supabase.from('posts').delete().eq('id', post.id);
+      return res.status(500).json({ error: 'Failed to assign platforms to post' });
+    }
+  }
   if (mediaIds?.length) await supabase.from('media_files').update({ post_id: post.id }).in('id', mediaIds).eq('user_id', req.user.id);
   res.status(201).json({ post });
 });

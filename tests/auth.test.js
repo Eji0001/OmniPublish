@@ -321,6 +321,39 @@ describe('POST /api/v1/auth/refresh', () => {
     expect(res.body).not.toHaveProperty('refreshToken');
   });
 
+  it('401 — rejects replayed refresh tokens', async () => {
+    const { token: refreshToken } = generateRefreshToken(TEST_USER);
+    const revokedInsert = mockChain({ data: null, error: null });
+    const replayInsert = mockChain(
+      { data: null, error: null },
+      { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "revoked_tokens_jti_key"' } }
+    );
+    const userSelect = mockChain({ data: { ...TEST_USER, is_active: true }, error: null });
+    const sessionInsert = mockChain({ data: null, error: null });
+
+    let revokedTokensCalls = 0;
+    let usersCalls = 0;
+    let sessionsCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return revokedTokensCalls++ === 0 ? revokedInsert : replayInsert;
+      if (table === 'users') return usersCalls++ === 0 ? userSelect : mockChain({ data: null, error: null });
+      if (table === 'user_sessions') return sessionsCalls++ === 0 ? sessionInsert : mockChain({ data: null, error: null });
+      return mockChain({ data: null, error: null });
+    });
+
+    const first = await request(app)
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', `omni_refresh=${refreshToken}`);
+
+    const second = await request(app)
+      .post('/api/v1/auth/refresh')
+      .set('Cookie', `omni_refresh=${refreshToken}`);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(401);
+    expect(second.body.error).toMatch(/revoked/i);
+  });
+
   it('422 — rejects refresh token sent only in body', async () => {
     const { token: refreshToken } = generateRefreshToken(TEST_USER);
 

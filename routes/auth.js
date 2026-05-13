@@ -124,7 +124,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
   const { email, password } = req.body;
   const normalizedEmail = normalizeEmail(email);
 
-  const { data: user } = await supabase.from('users')
+  const { data: user, error: loginLookupErr } = await supabase.from('users')
     .select('id, email, password_hash, role, plan, is_active, is_verified, failed_login_attempts, locked_until')
     .ilike('email', normalizedEmail)
     .order('locked_until', { ascending: true, nullsFirst: true })
@@ -132,6 +132,10 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
     .limit(1)
     .single();
 
+  if (loginLookupErr && loginLookupErr.code !== 'PGRST116') {
+    logger.error('Login DB lookup failed', { err: loginLookupErr.message });
+    return res.status(500).json({ error: 'Login failed. Please try again.' });
+  }
   if (!user) return res.status(401).json({ error: 'Invalid credentials' });
   if (!user.is_active) return res.status(403).json({ error: 'Account deactivated' });
   if (!user.is_verified) return res.status(403).json({ error: 'Verify your email to continue.' });
@@ -172,7 +176,7 @@ router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), asyn
 });
 
 /* ── POST /auth/refresh ── */
-router.post('/refresh', async (req, res) => {
+router.post('/refresh', authRateLimiter, async (req, res) => {
   const refreshToken = req.cookies?.omni_refresh;
   if (!refreshToken) return res.status(422).json({ error: 'refreshToken required' });
   try {
@@ -210,8 +214,8 @@ router.get('/me', verifyToken, async (req, res) => {
 router.patch('/me/profile', verifyToken, validateBody('userProfile'), async (req, res) => {
   const { userType, onboardingCompleted } = req.body;
   const update = {};
-  if (userType) update.user_type = userType;
-  if (onboardingCompleted) update.onboarding_completed_at = new Date();
+  if (userType !== undefined) update.user_type = userType;
+  if (onboardingCompleted !== undefined) update.onboarding_completed_at = onboardingCompleted ? new Date() : null;
   if (!Object.keys(update).length) return res.status(422).json({ error: 'Nothing to update' });
 
   const { data: user, error } = await supabase.from('users')
@@ -282,7 +286,11 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
   const { email } = req.body;
   const normalizedEmail = normalizeEmail(email);
 
-  const { data: user } = await supabase.from('users').select('id').ilike('email', normalizedEmail).eq('is_active', true).limit(1).single();
+  const { data: user, error: fpLookupErr } = await supabase.from('users').select('id').ilike('email', normalizedEmail).eq('is_active', true).limit(1).single();
+  if (fpLookupErr && fpLookupErr.code !== 'PGRST116') {
+    logger.error('Forgot-password DB lookup failed', { err: fpLookupErr.message });
+    return res.status(500).json({ error: 'Request failed. Please try again.' });
+  }
   if (!user) return res.json({ message: 'If that email is registered you will receive a reset link shortly' });
 
   await supabase.from('password_resets').delete()
@@ -337,9 +345,13 @@ router.post('/magic-link', authRateLimiter, validateBody('magicLink'), async (re
   const { email } = req.body;
   const normalizedEmail = normalizeEmail(email);
 
-  const { data: user } = await supabase.from('users')
+  const { data: user, error: mlLookupErr } = await supabase.from('users')
     .select('id').ilike('email', normalizedEmail).eq('is_active', true).limit(1).single();
 
+  if (mlLookupErr && mlLookupErr.code !== 'PGRST116') {
+    logger.error('Magic-link DB lookup failed', { err: mlLookupErr.message });
+    return res.status(500).json({ error: 'Request failed. Please try again.' });
+  }
   if (!user) {
     logger.info('Magic link requested for unknown email (silently ignored)');
     return res.json({ message: 'If that email is registered you will receive a login link shortly' });
