@@ -14,6 +14,10 @@ jest.mock('../services/platformService', () => ({
   publishToPlatform: jest.fn(),
 }));
 
+jest.mock('../services/emailService', () => ({
+  sendEmail: jest.fn().mockResolvedValue({ skipped: true }),
+}));
+
 jest.mock('../utils/logger', () => ({
   logger: {
     info: jest.fn(),
@@ -25,6 +29,7 @@ jest.mock('../utils/logger', () => ({
 
 const { supabase } = require('../config/database');
 const { publishToPlatform } = require('../services/platformService');
+const { sendEmail } = require('../services/emailService');
 const { processScheduledPosts } = require('../services/schedulerService');
 
 beforeEach(() => jest.clearAllMocks());
@@ -51,23 +56,34 @@ describe('processScheduledPosts', () => {
       token_expires_at: new Date(Date.now() - 60 * 1000).toISOString(),
     }];
 
+    const candidateQuery = mockChain({ data: null, error: null }, { data: [duePost], error: null });
+    const claimQuery = mockChain({ data: null, error: null }, { data: [duePost], error: null });
+    const validQuery = mockChain({ data: null, error: null }, { data: validConnections, error: null });
+    const expiredQuery = mockChain({ data: null, error: null }, { data: expiredConnections, error: null });
+    const expiredUpdateQuery = mockChain({ data: null, error: null }, { data: null, error: null });
+    const publishedUpdateQuery = mockChain({ data: null, error: null }, { data: null, error: null });
+
     supabase.from
-      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: [duePost], error: null }))
-      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: validConnections, error: null }))
-      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: expiredConnections, error: null }))
+      .mockReturnValueOnce(candidateQuery)
+      .mockReturnValueOnce(claimQuery)
+      .mockReturnValueOnce(validQuery)
+      .mockReturnValueOnce(expiredQuery)
+      .mockReturnValueOnce(expiredUpdateQuery)
+      .mockReturnValueOnce(publishedUpdateQuery)
       .mockReturnValue(mockChain({ data: null, error: null }, { data: null, error: null }));
 
     publishToPlatform.mockResolvedValueOnce({ postId: 'x-123', url: 'https://x.com/i/web/status/x-123' });
 
     await processScheduledPosts();
 
-    expect(supabase.from.mock.results[1].value.or).toHaveBeenCalledWith(expect.stringContaining('token_expires_at.gt.'));
+    expect(validQuery.or).toHaveBeenCalledWith(expect.stringContaining('token_expires_at.gt.'));
     expect(publishToPlatform).toHaveBeenCalledTimes(1);
     expect(publishToPlatform).toHaveBeenCalledWith(expect.objectContaining({ platform: 'x' }));
-    expect(supabase.from.mock.results[3].value.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(expiredUpdateQuery.update).toHaveBeenCalledWith(expect.objectContaining({
       status: 'failed',
       error_message: expect.stringContaining('Platform token expired'),
     }));
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it('fails the post when all target tokens are expired', async () => {
@@ -80,19 +96,85 @@ describe('processScheduledPosts', () => {
       media_files: [],
     };
 
+    const candidateQuery = mockChain({ data: null, error: null }, { data: [duePost], error: null });
+    const claimQuery = mockChain({ data: null, error: null }, { data: [duePost], error: null });
+    const validQuery = mockChain({ data: null, error: null }, { data: [], error: null });
+    const expiredQuery = mockChain({ data: null, error: null }, { data: [{ platform: 'linkedin', token_expires_at: new Date(Date.now() - 60 * 1000).toISOString() }], error: null });
+    const expiredUpdateQuery = mockChain({ data: null, error: null }, { data: null, error: null });
+    const failedPostUpdateQuery = mockChain({ data: null, error: null }, { data: null, error: null });
+
     supabase.from
-      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: [duePost], error: null }))
-      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: [], error: null }))
-      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: [{ platform: 'linkedin', token_expires_at: new Date(Date.now() - 60 * 1000).toISOString() }], error: null }))
+      .mockReturnValueOnce(candidateQuery)
+      .mockReturnValueOnce(claimQuery)
+      .mockReturnValueOnce(validQuery)
+      .mockReturnValueOnce(expiredQuery)
+      .mockReturnValueOnce(expiredUpdateQuery)
+      .mockReturnValueOnce(failedPostUpdateQuery)
       .mockReturnValue(mockChain({ data: null, error: null }, { data: null, error: null }));
 
     await processScheduledPosts();
 
     expect(publishToPlatform).not.toHaveBeenCalled();
-    expect(supabase.from.mock.results[3].value.update).toHaveBeenCalledWith(expect.objectContaining({
+    expect(expiredUpdateQuery.update).toHaveBeenCalledWith(expect.objectContaining({
       status: 'failed',
       error_message: expect.stringContaining('Platform token expired'),
     }));
-    expect(supabase.from.mock.results[4].value.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+    expect(failedPostUpdateQuery.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+  });
+
+  it('sends a completion notification when every platform publishes successfully', async () => {
+    const duePost = {
+      id: 'post-3',
+      user_id: 'user-3',
+      content: 'Weekly update',
+      title: 'Weekly Wrap',
+      post_platforms: [{ platform: 'x' }, { platform: 'linkedin' }],
+      media_files: [],
+    };
+
+    const validConnections = [
+      {
+        platform: 'x',
+        access_token_enc: 'enc-x',
+        platform_user_id: 'x-user',
+        token_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+      {
+        platform: 'linkedin',
+        access_token_enc: 'enc-li',
+        platform_user_id: 'li-user',
+        token_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      },
+    ];
+
+    const candidateQuery = mockChain({ data: null, error: null }, { data: [duePost], error: null });
+    const claimQuery = mockChain({ data: null, error: null }, { data: [duePost], error: null });
+    const validQuery = mockChain({ data: null, error: null }, { data: validConnections, error: null });
+    const expiredQuery = mockChain({ data: null, error: null }, { data: [], error: null });
+    const xUpdateQuery = mockChain({ data: null, error: null }, { data: null, error: null });
+    const linkedinUpdateQuery = mockChain({ data: null, error: null }, { data: null, error: null });
+    const userQuery = mockChain({ data: { email: 'creator@example.com', full_name: 'Creator' }, error: null }, { data: null, error: null });
+
+    supabase.from
+      .mockReturnValueOnce(candidateQuery)
+      .mockReturnValueOnce(claimQuery)
+      .mockReturnValueOnce(validQuery)
+      .mockReturnValueOnce(expiredQuery)
+      .mockReturnValueOnce(xUpdateQuery)
+      .mockReturnValueOnce(linkedinUpdateQuery)
+      .mockReturnValueOnce(userQuery)
+      .mockReturnValue(mockChain({ data: null, error: null }, { data: null, error: null }));
+
+    publishToPlatform
+      .mockResolvedValueOnce({ postId: 'x-123', url: 'https://x.com/i/web/status/x-123' })
+      .mockResolvedValueOnce({ postId: 'li-123', url: 'https://www.linkedin.com/feed/update/li-123' });
+
+    await processScheduledPosts();
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'creator@example.com',
+      subject: expect.stringContaining('Weekly Wrap'),
+    }));
   });
 });

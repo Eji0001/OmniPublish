@@ -1432,6 +1432,7 @@ const TEMPLATES = {
 
 let selected = new Set();
 let adapted  = {};
+let selectedMediaFiles = [];
 let publishing = false;
 let currentFormat = 'post';
 let currentRatio  = '16:9';
@@ -1447,8 +1448,9 @@ function initDashboard() {
   const now = new Date();
   const sd = document.getElementById('s-date');
   const st = document.getElementById('s-time');
-  if (sd) sd.value = now.toISOString().split('T')[0];
-  if (st) st.value = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const scheduledDefault = new Date(now.getTime() + 60 * 60 * 1000);
+  if (sd) sd.value = scheduledDefault.toISOString().split('T')[0];
+  if (st) st.value = String(scheduledDefault.getHours()).padStart(2,'0') + ':' + String(scheduledDefault.getMinutes()).padStart(2,'0');
   const draft = localStorage.getItem('omni_draft');
   if (draft) {
     document.getElementById('content').value = draft;
@@ -1456,6 +1458,7 @@ function initDashboard() {
     document.getElementById('draft-bar-txt').textContent = 'Draft restored — ' + new Date(parseInt(localStorage.getItem('omni_draft_ts')||'0')).toLocaleTimeString();
     onContentChange();
   }
+  updatePublishButton();
 }
 
 /* ══════════════════════════════════════
@@ -1576,15 +1579,44 @@ function switchTab(contentId, btn, tabsId) {
   const panel = btn.closest('.panel')||document.body;
   panel.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById(contentId).classList.add('active');
+  updatePublishButton();
+}
+function updatePublishButton() {
+  const btn = document.getElementById('pub-btn');
+  if (!btn) return;
+  const scheduled = document.getElementById('tab-sched')?.classList.contains('active');
+  btn.innerHTML = scheduled ? '🗓️ &nbsp;Schedule to All Platforms' : '🚀 &nbsp;Publish to All Platforms';
 }
 function handleFiles(files) {
   document.getElementById('media-zone').classList.remove('drag');
   const prev = document.getElementById('media-previews');
-  Array.from(files).forEach(f=>{
-    if (f.type.startsWith('image/')) { const img=document.createElement('img');img.src=URL.createObjectURL(f);img.className='media-thumb';prev.appendChild(img); }
-    else { const tag=document.createElement('div');tag.style.cssText='display:inline-flex;align-items:center;gap:4px;background:var(--s3);padding:4px 8px;border-radius:6px;font-size:11px;color:var(--tx2);margin:4px';tag.textContent='🎬 '+f.name.slice(0,18);prev.appendChild(tag); }
+  Array.from(files || []).forEach(f => {
+    const key = `${f.name}:${f.size}:${f.lastModified}`;
+    if (!selectedMediaFiles.some(existing => `${existing.name}:${existing.size}:${existing.lastModified}` === key)) {
+      selectedMediaFiles.push(f);
+    }
   });
-  document.querySelector('.media-zone-txt').innerHTML = `${document.getElementById('media-previews').children.length} file(s) attached`;
+  prev.innerHTML = '';
+  selectedMediaFiles.forEach(f => {
+    if (f.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      img.className = 'media-thumb';
+      img.alt = f.name;
+      prev.appendChild(img);
+    } else {
+      const tag = document.createElement('div');
+      tag.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--s3);padding:4px 8px;border-radius:6px;font-size:11px;color:var(--tx2);margin:4px';
+      tag.textContent = '🎬 ' + f.name.slice(0, 18);
+      prev.appendChild(tag);
+    }
+  });
+  const mediaLabel = document.querySelector('.media-zone-txt');
+  if (mediaLabel) {
+    mediaLabel.innerHTML = selectedMediaFiles.length
+      ? `${selectedMediaFiles.length} file(s) attached`
+      : 'Drop media here or click to browse<br><span style="font-size:10px;opacity:.6">Images · Videos · GIFs · MP4 · MOV</span>';
+  }
 }
 function addMedia() { document.getElementById('media-input').click(); }
 function handleDrop(e) { e.preventDefault(); document.getElementById('media-zone').classList.remove('drag'); handleFiles(e.dataTransfer.files); }
@@ -1592,6 +1624,53 @@ function addHashtags() { const ta=document.getElementById('content');ta.value+=(
 function addEmoji() { const em=['🚀','💡','🔥','✨','💪','🎯','📈','🌟','💫','🎉','⚡','🎬','🏆'];document.getElementById('content').value+=' '+em[Math.floor(Math.random()*em.length)];onContentChange(); }
 function clearContent() { document.getElementById('content').value='';onContentChange(); }
 function useTemplate(key) { document.getElementById('content').value=TEMPLATES[key]||'';if(key==='shorts'){document.querySelector('[data-fmt="short"]')?.click();}onContentChange();toast('Template loaded!','ok'); }
+
+function getScheduledAt() {
+  const scheduledTab = document.getElementById('tab-sched');
+  if (!scheduledTab?.classList.contains('active')) return null;
+  const date = document.getElementById('s-date')?.value;
+  const time = document.getElementById('s-time')?.value;
+  if (!date || !time) throw new Error('Choose a date and time to schedule your post.');
+  const scheduledAt = new Date(`${date}T${time}`);
+  if (Number.isNaN(scheduledAt.getTime())) throw new Error('Choose a valid schedule time.');
+  if (scheduledAt <= new Date()) throw new Error('Schedule time must be in the future.');
+  return scheduledAt.toISOString();
+}
+
+async function uploadSelectedMedia() {
+  if (!selectedMediaFiles.length) return [];
+  const formData = new FormData();
+  selectedMediaFiles.forEach(file => formData.append('files', file));
+  const headers = {};
+  if (auth.token) headers.Authorization = `Bearer ${auth.token}`;
+  const csrf = getCsrf();
+  if (csrf) headers['X-CSRF-Token'] = csrf;
+  const res = await fetch(base() + '/api/v1/media/upload', {
+    method: 'POST',
+    headers,
+    body: formData,
+    credentials: 'include',
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.errors?.[0] || 'Media upload failed');
+  if (data.errors?.length) throw new Error(data.errors[0] || 'One or more media uploads failed');
+  return (data.uploaded || []).map(item => item.id);
+}
+
+async function cleanupUploadedMedia(mediaIds) {
+  if (!mediaIds?.length) return;
+  await Promise.allSettled(mediaIds.map(id => api('DELETE', `/api/v1/media/${id}`)));
+}
+
+function clearMediaSelection() {
+  selectedMediaFiles = [];
+  const input = document.getElementById('media-input');
+  if (input) input.value = '';
+  const prev = document.getElementById('media-previews');
+  if (prev) prev.innerHTML = '';
+  const mediaLabel = document.querySelector('.media-zone-txt');
+  if (mediaLabel) mediaLabel.innerHTML = 'Drop media here or click to browse<br><span style="font-size:10px;opacity:.6">Images · Videos · GIFs · MP4 · MOV</span>';
+}
 
 let _draftTimer;
 function autosaveDraft() {
@@ -1646,40 +1725,61 @@ async function publishAll() {
   if(!txt){toast('Write some content first!','err');return;}
   if(!sel.length){toast('Select at least one platform!','err');return;}
   if(publishing)return;
+  const scheduledAt = getScheduledAt();
+  const isScheduled = !!scheduledAt;
   publishing=true;
   const btn=document.getElementById('pub-btn');
-  btn.disabled=true;btn.classList.add('going');btn.textContent='⟳  Publishing…';
+  btn.disabled=true;btn.classList.add('going');btn.textContent=isScheduled?'⟳  Scheduling…':'⟳  Publishing…';
   document.querySelector('#right-tabs .tab-btn:last-child').click();
   document.getElementById('status-empty').style.display='none';
   const list=document.getElementById('status-list');
-  list.innerHTML=sel.map(p=>`<div class="stat-item" id="si-${p.id}"><div class="stat-item-icon" style="background:${p.color}">${p.abbr}</div><div class="stat-item-info"><div class="stat-item-name">${p.name}</div><div class="stat-item-detail" id="sid-${p.id}">Queued</div><div class="stat-item-prog"><div class="stat-item-fill" id="sif-${p.id}"></div></div></div><div class="badge b-wait" id="sb-${p.id}">Waiting</div></div>`).join('');
+  list.innerHTML=sel.map(p=>`<div class="stat-item" id="si-${p.id}"><div class="stat-item-icon" style="background:${p.color}">${p.abbr}</div><div class="stat-item-info"><div class="stat-item-name">${p.name}</div><div class="stat-item-detail" id="sid-${p.id}">${isScheduled ? 'Preparing schedule…' : 'Queued'}</div><div class="stat-item-prog"><div class="stat-item-fill" id="sif-${p.id}"></div></div></div><div class="badge b-wait" id="sb-${p.id}">${isScheduled ? 'Scheduling' : 'Waiting'}</div></div>`).join('');
+  let uploadedMediaIds = [];
+  let createdPost = null;
   try {
-    const headers={'Content-Type':'application/json','Authorization':`Bearer ${auth.token||''}`};
-    const csrf=getCsrf(); if(csrf)headers['X-CSRF-Token']=csrf;
     const pids=sel.map(p=>p.id);
-    sel.forEach(p=>{document.getElementById('sid-'+p.id).textContent='Creating post…';});
-    const postRes=await fetch(base()+'/api/v1/posts',{method:'POST',headers,credentials:'include',body:JSON.stringify({content:txt,platforms:pids,format:currentFormat,aspectRatio:currentRatio})});
-    if(!postRes.ok)throw new Error((await postRes.json()).error||'Failed to create post');
-    const {post}=await postRes.json();
-    sel.forEach(p=>{document.getElementById('sb-'+p.id).className='badge b-pub';document.getElementById('sb-'+p.id).textContent='Uploading';document.getElementById('sid-'+p.id).textContent='Connecting…';const f=document.getElementById('sif-'+p.id);if(f)f.style.width='50%';});
-    const pubHeaders={...headers,'Idempotency-Key':post.id};
-    const pubRes=await fetch(base()+'/api/v1/publish',{method:'POST',headers:pubHeaders,credentials:'include',body:JSON.stringify({postId:post.id,platforms:pids})});
-    const result=await pubRes.json();
-    if(!pubRes.ok)throw new Error(result.error||'Publish failed');
-    const sm={};if(result.summary)result.summary.forEach(s=>{sm[s.platform]=s;});
-    let ok=0;
-    sel.forEach(p=>{
-      const f=document.getElementById('sif-'+p.id);if(f)f.style.width='100%';
-      const r=sm[p.id]||{status:'failed',error:'Unknown'};
-      if(r.status==='published'||r.status==='fulfilled'){ok++;if(f)f.style.background='var(--acc3)';document.getElementById('sb-'+p.id).className='badge b-ok';document.getElementById('sb-'+p.id).textContent='✓ Live';document.getElementById('sid-'+p.id).innerHTML=`Published · ${new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}`;}
-      else{if(f)f.style.background='var(--err)';document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Failed';document.getElementById('sid-'+p.id).textContent=r.error||'Failed';}
-    });
-    toast(ok===sel.length?`🚀 Published to all ${sel.length} platforms!`:`Published ${ok}/${sel.length}`,(ok>0?'ok':'err'));
+    uploadedMediaIds = await uploadSelectedMedia();
+    sel.forEach(p=>{document.getElementById('sid-'+p.id).textContent=isScheduled?'Saving scheduled post…':'Creating post…';});
+    const createRes = await api('POST', '/api/v1/posts', { content: txt, platforms: pids, format: currentFormat, aspectRatio: currentRatio, ...(scheduledAt ? { scheduledAt } : {}), ...(uploadedMediaIds.length ? { mediaIds: uploadedMediaIds } : {}) });
+    const createData = await createRes.json();
+    if(!createRes.ok) throw new Error(createData.error || 'Failed to create post');
+    const { post } = createData;
+    createdPost = post;
+
+    if (isScheduled) {
+      const scheduledLabel = new Date(scheduledAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      sel.forEach(p=>{
+        const f=document.getElementById('sif-'+p.id); if(f){f.style.width='100%';f.style.background='var(--acc3)';}
+        document.getElementById('sb-'+p.id).className='badge b-ok';
+        document.getElementById('sb-'+p.id).textContent='Scheduled';
+        document.getElementById('sid-'+p.id).textContent=`Scheduled for ${scheduledLabel}`;
+      });
+      clearMediaSelection();
+      toast(`Scheduled to ${sel.length} platform${sel.length===1?'':'s'} for ${scheduledLabel}`,'ok');
+    } else {
+      sel.forEach(p=>{document.getElementById('sb-'+p.id).className='badge b-pub';document.getElementById('sb-'+p.id).textContent='Uploading';document.getElementById('sid-'+p.id).textContent='Connecting…';const f=document.getElementById('sif-'+p.id);if(f)f.style.width='50%';});
+      const pubRes=await api('POST','/api/v1/publish',{postId:post.id,platforms:pids});
+      const result=await pubRes.json();
+      if(!pubRes.ok)throw new Error(result.error||'Publish failed');
+      const sm={};if(result.summary)result.summary.forEach(s=>{sm[s.platform]=s;});
+      let ok=0;
+      sel.forEach(p=>{
+        const f=document.getElementById('sif-'+p.id);if(f)f.style.width='100%';
+        const r=sm[p.id]||{status:'failed',error:'Unknown'};
+        if(r.status==='published'||r.status==='fulfilled'){ok++;if(f)f.style.background='var(--acc3)';document.getElementById('sb-'+p.id).className='badge b-ok';document.getElementById('sb-'+p.id).textContent='✓ Live';document.getElementById('sid-'+p.id).innerHTML=`Published · ${new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}`;}
+        else{if(f)f.style.background='var(--err)';document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Failed';document.getElementById('sid-'+p.id).textContent=r.error||'Failed';}
+      });
+      clearMediaSelection();
+      toast(ok===sel.length?`🚀 Published to all ${sel.length} platforms!`:`Published ${ok}/${sel.length}`,(ok>0?'ok':'err'));
+    }
   } catch(err) {
+    if (uploadedMediaIds.length && !createdPost) {
+      await cleanupUploadedMedia(uploadedMediaIds);
+    }
     sel.forEach(p=>{const f=document.getElementById('sif-'+p.id);if(f){f.style.width='100%';f.style.background='var(--err)';}document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Error';document.getElementById('sid-'+p.id).textContent=err.message;});
     toast('Publishing failed: '+err.message,'err');
   }
-  btn.disabled=false;btn.classList.remove('going');btn.textContent='↺  Publish Again';
+  btn.disabled=false;btn.classList.remove('going');updatePublishButton();
   publishing=false;
 }
 

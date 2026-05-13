@@ -7,6 +7,7 @@
 
 const { supabase }          = require('../config/database');
 const { publishToPlatform } = require('./platformService');
+const { sendEmail }         = require('./emailService');
 const { logger }            = require('../utils/logger');
 
 const buildPlatformPostPayload = (post, platform) => {
@@ -15,6 +16,69 @@ const buildPlatformPostPayload = (post, platform) => {
     ...post,
     media_url: platformPost?.custom_media_url || post.media_files?.[0]?.cdn_url || null,
   };
+};
+
+const PLATFORM_LABELS = {
+  x: 'X (Twitter)',
+  youtube: 'YouTube',
+  linkedin: 'LinkedIn',
+  tiktok: 'TikTok',
+  bluesky: 'Bluesky',
+  instagram: 'Instagram',
+  facebook: 'Facebook',
+  telegram: 'Telegram',
+  reddit: 'Reddit',
+  threads: 'Threads',
+  pinterest: 'Pinterest',
+  rumble: 'Rumble',
+  twitch: 'Twitch',
+  snapchat: 'Snapchat',
+};
+
+const buildPlatformLabelList = (platforms) => platforms.map(platform => PLATFORM_LABELS[platform] || platform).join(', ');
+
+const escapeHtml = (value) => String(value)
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#39;');
+
+const sendScheduleSuccessNotification = async (post, platformNames) => {
+  const { data: user, error } = await supabase
+    .from('users')
+    .select('email, full_name')
+    .eq('id', post.user_id)
+    .single();
+
+  if (error || !user?.email) {
+    logger.warn('Could not load user for schedule notification', { postId: post.id, userId: post.user_id });
+    return;
+  }
+
+  const title = post.title || 'your scheduled post';
+  const platformList = buildPlatformLabelList(platformNames);
+  const subject = `OmniPublish: ${title} published successfully`;
+  const greetingName = user.full_name || 'there';
+  const text = [
+    `Hi ${greetingName},`,
+    '',
+    `Your scheduled post "${title}" was published successfully to: ${platformList}.`,
+    '',
+    'Open OmniPublish to review the publish summary.',
+  ].join('\n');
+  const html = [
+    `<p>Hi ${escapeHtml(greetingName)},</p>`,
+    `<p>Your scheduled post <strong>${escapeHtml(title)}</strong> was published successfully to: <strong>${escapeHtml(platformList)}</strong>.</p>`,
+    '<p>Open OmniPublish to review the publish summary.</p>',
+  ].join('');
+
+  try {
+    await sendEmail({ to: user.email, subject, text, html });
+    logger.info('Scheduled publish notification sent', { postId: post.id, userId: post.user_id, platforms: platformNames });
+  } catch (err) {
+    logger.warn('Scheduled publish notification failed', { postId: post.id, userId: post.user_id, err: err.message });
+  }
 };
 
 const processScheduledPosts = async () => {
@@ -114,6 +178,11 @@ const processScheduledPosts = async () => {
         logger.error('All platforms failed for scheduled post', { postId: post.id });
         await supabase.from('posts').update({ status: 'failed', published_at: null }).eq('id', post.id);
         continue;
+      }
+
+      const allSucceeded = publishPlatforms.length > 0 && results.every(r => r.status === 'fulfilled');
+      if (allSucceeded) {
+        await sendScheduleSuccessNotification(post, publishPlatforms);
       }
       // Post was optimistically marked 'published' during the claim step; no further update needed.
 
