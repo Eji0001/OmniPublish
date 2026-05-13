@@ -243,6 +243,35 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .stat-item-prog{height:2px;background:var(--bd2);border-radius:1px;margin-top:5px;overflow:hidden}.stat-item-fill{height:100%;border-radius:1px;transition:width .4s ease;background:var(--acc)}
 .badge{font-size:10px;padding:3px 9px;border-radius:20px;font-weight:700;white-space:nowrap}
 .b-wait{background:var(--s3);color:var(--tx3);border:1px solid var(--bd2)}.b-pub{background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border)}.b-ok{background:rgba(0,206,201,.12);color:var(--acc3);border:1px solid rgba(0,206,201,.3)}.b-err{background:rgba(225,112,85,.12);color:var(--err);border:1px solid rgba(225,112,85,.3)}
+.calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:.85rem}
+.calendar-nav{display:flex;align-items:center;gap:8px}
+.calendar-nav-btn{width:30px;height:30px;border-radius:9px;border:1px solid var(--bd);background:var(--s1);color:var(--tx2);cursor:pointer;font-family:inherit;font-weight:800;transition:all .2s}
+.calendar-nav-btn:hover{background:var(--s2);border-color:var(--bd2);color:var(--tx)}
+.calendar-title{font-size:13px;font-weight:800;color:var(--tx);letter-spacing:.2px}
+.calendar-sub{font-size:11px;color:var(--tx3);margin-top:2px}
+.calendar-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.9rem}
+.calendar-legend-item{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid var(--bd);background:var(--s1);color:var(--tx2)}
+.calendar-dot{width:8px;height:8px;border-radius:50%}
+.cd-blue{background:#3d7cff}.cd-green{background:#00cec9}.cd-red{background:#e17055}.cd-yellow{background:#fdcb6e}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calendar-dow,.calendar-day{min-width:0}
+.calendar-dow{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--tx3);text-align:center;padding:2px 0}
+.calendar-day{background:var(--s1);border:1px solid var(--bd);border-radius:11px;min-height:92px;padding:7px;box-shadow:var(--card-shadow);overflow:hidden}
+.calendar-day.other-month{opacity:.35}
+.calendar-day.today{border-color:var(--acc);box-shadow:0 0 0 2px var(--glow), var(--card-shadow)}
+.calendar-day-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px}
+.calendar-day-num{font-size:11px;font-weight:800;color:var(--tx)}
+.calendar-day-count{font-size:9px;color:var(--tx3)}
+.calendar-event{display:flex;flex-direction:column;gap:2px;padding:6px 7px;border-radius:9px;border:1px solid transparent;background:var(--s2);margin-bottom:5px}
+.calendar-event:last-child{margin-bottom:0}
+.calendar-event.blue{background:rgba(61,124,255,.12);border-color:rgba(61,124,255,.24);color:#3d7cff}
+.calendar-event.green{background:rgba(0,206,201,.12);border-color:rgba(0,206,201,.24);color:var(--acc3)}
+.calendar-event.red{background:rgba(225,112,85,.12);border-color:rgba(225,112,85,.24);color:var(--err)}
+.calendar-event.yellow{background:rgba(253,203,110,.14);border-color:rgba(253,203,110,.28);color:#d97706}
+.calendar-event-time{font-size:9px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;opacity:.9}
+.calendar-event-title{font-size:10px;font-weight:800;color:var(--tx);line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.calendar-event-meta{font-size:9px;color:var(--tx3);line-height:1.2}
+.calendar-empty{font-size:12px;color:var(--tx3);text-align:center;padding:1.5rem 1rem;display:none}
 .empty{text-align:center;padding:2.5rem 1rem;color:var(--tx3)}.empty-icon{font-size:2rem;margin-bottom:10px;display:block;opacity:.4}.empty-text{font-size:13px;line-height:1.6}
 .info-box{background:var(--s2);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;font-size:12px;color:var(--tx2);line-height:1.6;border-left:3px solid var(--acc)}
 .section-div{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--tx3);margin:.9rem 0 .6rem;display:flex;align-items:center;gap:8px}
@@ -296,7 +325,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 /* ═══ RESPONSIVE ═══ */
 @media(max-width:900px){.app{grid-template-columns:1fr}.panel{border-right:none;border-bottom:1px solid var(--bd);max-height:none}.features-grid{grid-template-columns:1fr 1fr}.dash-header{padding:0 1rem}}
 @media(max-width:760px){.settings-grid{grid-template-columns:1fr}}
-@media(max-width:600px){.stats-inner{grid-template-columns:repeat(2,1fr)}.plats-grid{grid-template-columns:1fr}.format-grid{grid-template-columns:repeat(3,1fr)}.features-grid{grid-template-columns:1fr}.hero{padding:120px 1.25rem 60px}}
+@media(max-width:600px){.stats-inner{grid-template-columns:repeat(2,1fr)}.plats-grid{grid-template-columns:1fr}.format-grid{grid-template-columns:repeat(3,1fr)}.features-grid{grid-template-columns:1fr}.hero{padding:120px 1.25rem 60px}.calendar-grid{gap:4px}.calendar-day{min-height:78px;padding:6px}.calendar-event{padding:5px 6px}}
 
 /* ═══ SIGNUP PAGE ═══ */
 #page-signup{display:none;min-height:100vh;align-items:center;justify-content:center;padding:2rem;background:var(--bg)}
@@ -992,6 +1021,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="tabs" id="right-tabs">
         <button class="tab-btn active" onclick="switchTab('tab-adapted',this,'right-tabs')">Adapted Content</button>
         <button class="tab-btn" onclick="switchTab('tab-status',this,'right-tabs')">Publish Status</button>
+        <button class="tab-btn" onclick="switchTab('tab-calendar',this,'right-tabs')">Calendar</button>
       </div>
       <div class="tab-content active" id="tab-adapted">
         <div class="empty" id="adapted-empty"><span class="empty-icon">✦</span><div class="empty-text">Click <strong style="color:var(--tx2)">AI Adapt</strong> to generate platform-optimised content for each network.</div></div>
@@ -1000,6 +1030,27 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="tab-content" id="tab-status">
         <div class="empty" id="status-empty"><span class="empty-icon">◉</span><div class="empty-text">Select platforms and click <strong style="color:var(--tx2)">Publish</strong> to start broadcasting.</div></div>
         <div id="status-list"></div>
+      </div>
+      <div class="tab-content" id="tab-calendar">
+        <div class="calendar-toolbar">
+          <div>
+            <div class="calendar-title" id="calendar-title">Content Calendar</div>
+            <div class="calendar-sub" id="calendar-sub">Scheduled date and time by status</div>
+          </div>
+          <div class="calendar-nav">
+            <button class="calendar-nav-btn" type="button" onclick="shiftCalendarMonth(-1)">←</button>
+            <button class="calendar-nav-btn" type="button" onclick="jumpToCurrentMonth()">Today</button>
+            <button class="calendar-nav-btn" type="button" onclick="shiftCalendarMonth(1)">→</button>
+          </div>
+        </div>
+        <div class="calendar-legend">
+          <div class="calendar-legend-item"><span class="calendar-dot cd-blue"></span>Scheduled / waiting</div>
+          <div class="calendar-legend-item"><span class="calendar-dot cd-green"></span>Successful post</div>
+          <div class="calendar-legend-item"><span class="calendar-dot cd-red"></span>Failed post</div>
+          <div class="calendar-legend-item"><span class="calendar-dot cd-yellow"></span>Incomplete / unsure</div>
+        </div>
+        <div class="calendar-grid" id="calendar-grid"></div>
+        <div class="calendar-empty" id="calendar-empty">Loading calendar…</div>
       </div>
     </div>
   </div>
@@ -1436,6 +1487,11 @@ let selectedMediaFiles = [];
 let publishing = false;
 let currentFormat = 'post';
 let currentRatio  = '16:9';
+let calendarMonth = new Date();
+let calendarPosts = [];
+let calendarLoading = false;
+
+const CALENDAR_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 /* ══════════════════════════════════════
    DASHBOARD INIT
@@ -1459,6 +1515,7 @@ function initDashboard() {
     onContentChange();
   }
   updatePublishButton();
+  loadCalendarPosts().catch(() => renderCalendar());
 }
 
 /* ══════════════════════════════════════
@@ -1580,6 +1637,9 @@ function switchTab(contentId, btn, tabsId) {
   panel.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
   document.getElementById(contentId).classList.add('active');
   updatePublishButton();
+  if (contentId === 'tab-calendar') {
+    loadCalendarPosts().catch(() => renderCalendar());
+  }
 }
 function updatePublishButton() {
   const btn = document.getElementById('pub-btn');
@@ -1672,6 +1732,191 @@ function clearMediaSelection() {
   if (mediaLabel) mediaLabel.innerHTML = 'Drop media here or click to browse<br><span style="font-size:10px;opacity:.6">Images · Videos · GIFs · MP4 · MOV</span>';
 }
 
+function jumpToCurrentMonth() {
+  calendarMonth = new Date();
+  renderCalendar();
+  loadCalendarPosts().catch(() => renderCalendar());
+}
+
+function shiftCalendarMonth(delta) {
+  calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
+  renderCalendar();
+}
+
+function getCalendarEventDate(post) {
+  const raw = post.scheduled_at || post.published_at || post.created_at;
+  return raw ? new Date(raw) : new Date();
+}
+
+function getCalendarStatus(post) {
+  const now = new Date();
+  const scheduledAt = post.scheduled_at ? new Date(post.scheduled_at) : null;
+  const platformStatuses = (post.post_platforms || []).map(p => p.status);
+  const totalPlatforms = platformStatuses.length;
+  const publishedCount = platformStatuses.filter(status => status === 'published').length;
+  const failedCount = platformStatuses.filter(status => status === 'failed').length;
+  const pendingCount = platformStatuses.filter(status => ['pending', 'publishing', 'skipped'].includes(status)).length;
+
+  if (post.status === 'failed') {
+    return { key: 'failed', label: 'Failed', className: 'red', detail: 'Post failed on social media' };
+  }
+
+  if (post.status === 'published') {
+    if (!totalPlatforms || publishedCount === totalPlatforms) {
+      return { key: 'published', label: 'Posted', className: 'green', detail: 'Successfully posted on social media' };
+    }
+    return { key: 'partial', label: 'Incomplete', className: 'yellow', detail: 'Some platforms did not finish' };
+  }
+
+  if (post.status === 'scheduled') {
+    if (scheduledAt && scheduledAt > now) {
+      return { key: 'scheduled', label: 'Scheduled', className: 'blue', detail: 'Scheduled and waiting to publish' };
+    }
+    return { key: 'partial', label: 'Incomplete', className: 'yellow', detail: 'Schedule is overdue or incomplete' };
+  }
+
+  if (scheduledAt) {
+    return { key: 'partial', label: 'Incomplete', className: 'yellow', detail: 'Schedule is incomplete' };
+  }
+
+  return { key: 'draft', label: 'Draft', className: 'yellow', detail: 'Not yet scheduled' };
+}
+
+function getCalendarTimeLabel(post) {
+  const eventDate = getCalendarEventDate(post);
+  return eventDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function formatCalendarMonth(date) {
+  return date.toLocaleString([], { month: 'long', year: 'numeric' });
+}
+
+function dateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function startOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function isSameMonth(dateA, dateB) {
+  return dateA.getFullYear() === dateB.getFullYear() && dateA.getMonth() === dateB.getMonth();
+}
+
+async function loadCalendarPosts() {
+  if (calendarLoading) return;
+  calendarLoading = true;
+  const empty = document.getElementById('calendar-empty');
+  if (empty) {
+    empty.style.display = 'block';
+    empty.textContent = 'Loading calendar…';
+  }
+
+  try {
+    const limit = 100;
+    const posts = [];
+    let page = 1;
+    let total = Infinity;
+
+    while (posts.length < total && page <= 10) {
+      const res = await api('GET', `/api/v1/posts?page=${page}&limit=${limit}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to load content calendar');
+      const batch = data.posts || [];
+      posts.push(...batch);
+      total = Number.isFinite(data.total) ? data.total : posts.length;
+      if (batch.length < limit) break;
+      page += 1;
+    }
+
+    calendarPosts = posts;
+    renderCalendar();
+  } catch (err) {
+    const grid = document.getElementById('calendar-grid');
+    const emptyEl = document.getElementById('calendar-empty');
+    if (grid) grid.innerHTML = '';
+    if (emptyEl) {
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = err.message || 'Unable to load calendar';
+    }
+  } finally {
+    calendarLoading = false;
+  }
+}
+
+function renderCalendar() {
+  const grid = document.getElementById('calendar-grid');
+  const empty = document.getElementById('calendar-empty');
+  const title = document.getElementById('calendar-title');
+  const sub = document.getElementById('calendar-sub');
+  if (!grid || !empty || !title || !sub) return;
+
+  const viewMonth = startOfMonth(calendarMonth);
+  title.textContent = formatCalendarMonth(viewMonth);
+  sub.textContent = 'Scheduled date and time of content';
+
+  const now = new Date();
+  const monthPosts = (calendarPosts || [])
+    .filter(post => {
+      const eventDate = getCalendarEventDate(post);
+      return isSameMonth(eventDate, viewMonth);
+    })
+    .map(post => ({ ...post, _eventDate: getCalendarEventDate(post), _calendarStatus: getCalendarStatus(post) }))
+    .sort((a, b) => a._eventDate - b._eventDate);
+
+  const grouped = monthPosts.reduce((acc, post) => {
+    const key = dateKey(post._eventDate);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(post);
+    return acc;
+  }, {});
+
+  const firstDay = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1).getDay();
+  const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate();
+  const prevMonthDays = firstDay;
+  const totalCells = 42;
+  const cells = [];
+
+  cells.push(...CALENDAR_DAY_LABELS.map(day => `<div class="calendar-dow">${day}</div>`));
+
+  for (let index = 0; index < totalCells; index++) {
+    const dayNumber = index - prevMonthDays + 1;
+    const cellDate = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), dayNumber);
+    const inMonth = dayNumber >= 1 && dayNumber <= daysInMonth;
+    const key = dateKey(cellDate);
+    const items = grouped[key] || [];
+    const isToday = dateKey(cellDate) === dateKey(now);
+    const visibleItems = items.slice(0, 3);
+    const hiddenCount = Math.max(0, items.length - visibleItems.length);
+
+    cells.push(`
+      <div class="calendar-day ${inMonth ? '' : 'other-month'} ${isToday ? 'today' : ''}">
+        <div class="calendar-day-head">
+          <div class="calendar-day-num">${cellDate.getDate()}</div>
+          <div class="calendar-day-count">${items.length ? `${items.length} item${items.length === 1 ? '' : 's'}` : '&nbsp;'}</div>
+        </div>
+        ${visibleItems.map(post => {
+          const status = post._calendarStatus;
+          const title = escHtml((post.title || post.content || 'Scheduled content').slice(0, 60));
+          const eventTime = getCalendarTimeLabel(post);
+          return `
+            <div class="calendar-event ${status.className}" title="${escHtml(status.detail)}">
+              <div class="calendar-event-time">${eventTime} · ${escHtml(status.label)}</div>
+              <div class="calendar-event-title">${title}</div>
+              <div class="calendar-event-meta">${status.detail}</div>
+            </div>
+          `;
+        }).join('')}
+        ${hiddenCount ? `<div class="calendar-event yellow"><div class="calendar-event-meta">+${hiddenCount} more</div></div>` : ''}
+      </div>
+    `);
+  }
+
+  grid.innerHTML = cells.join('');
+  empty.style.display = monthPosts.length ? 'none' : 'block';
+  empty.textContent = monthPosts.length ? '' : 'No scheduled, published, or failed content in this month yet.';
+}
+
 let _draftTimer;
 function autosaveDraft() {
   clearTimeout(_draftTimer);
@@ -1748,6 +1993,7 @@ async function publishAll() {
 
     if (isScheduled) {
       const scheduledLabel = new Date(scheduledAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+      calendarMonth = startOfMonth(new Date(scheduledAt));
       sel.forEach(p=>{
         const f=document.getElementById('sif-'+p.id); if(f){f.style.width='100%';f.style.background='var(--acc3)';}
         document.getElementById('sb-'+p.id).className='badge b-ok';
@@ -1755,6 +2001,8 @@ async function publishAll() {
         document.getElementById('sid-'+p.id).textContent=`Scheduled for ${scheduledLabel}`;
       });
       clearMediaSelection();
+      renderCalendar();
+      loadCalendarPosts().catch(() => renderCalendar());
       toast(`Scheduled to ${sel.length} platform${sel.length===1?'':'s'} for ${scheduledLabel}`,'ok');
     } else {
       sel.forEach(p=>{document.getElementById('sb-'+p.id).className='badge b-pub';document.getElementById('sb-'+p.id).textContent='Uploading';document.getElementById('sid-'+p.id).textContent='Connecting…';const f=document.getElementById('sif-'+p.id);if(f)f.style.width='50%';});
@@ -1770,6 +2018,7 @@ async function publishAll() {
         else{if(f)f.style.background='var(--err)';document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Failed';document.getElementById('sid-'+p.id).textContent=r.error||'Failed';}
       });
       clearMediaSelection();
+      loadCalendarPosts().catch(() => renderCalendar());
       toast(ok===sel.length?`🚀 Published to all ${sel.length} platforms!`:`Published ${ok}/${sel.length}`,(ok>0?'ok':'err'));
     }
   } catch(err) {

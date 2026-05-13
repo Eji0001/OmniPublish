@@ -27,6 +27,30 @@ jest.mock('../middleware/csrf', () => ({
   generateCSRFToken: () => 'test-csrf-token',
 }));
 
+jest.mock('../middleware/auth', () => ({
+  verifyToken: (req, res, next) => {
+    const header = req.headers?.authorization || '';
+    if (!header.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Missing or invalid Authorization header' });
+    }
+    const { supabase } = require('../config/database');
+    supabase.from('revoked_tokens').select('id').eq('jti', 'test-jti').single();
+    req.user = {
+      id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      email: 'test@example.com',
+      role: 'user',
+      plan: 'pro',
+      jti: 'test-jti',
+    };
+    next();
+  },
+  issueTokens: jest.fn(),
+  rotateRefreshToken: jest.fn(),
+  revokeToken: jest.fn(),
+  recordSession: jest.fn(),
+  revokeUserSessions: jest.fn(),
+}));
+
 jest.mock('../services/aiService', () => ({
   aiAdaptContent: jest.fn().mockResolvedValue({ x: 'adapted for x', linkedin: 'adapted for linkedin' }),
   PLATFORM_PROFILES: {},
