@@ -567,10 +567,17 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
 describe('POST /api/v1/auth/logout', () => {
   it('200 — revokes token and clears cookie', async () => {
     const { token } = generateAccessToken(TEST_USER);
+    const revokedSelect = mockChain({ data: null, error: null });
+    const revokedInsert = mockChain({ data: null, error: null });
+    const activeUser = mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null });
 
-    supabase.from
-      .mockReturnValueOnce(mockChain({ data: null, error: null }))  // revoked_tokens check (not revoked)
-      .mockReturnValue(mockChain({ data: null, error: null }));      // insert revoked token
+    let revokedTokensCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return revokedTokensCalls++ === 0 ? revokedSelect : revokedInsert;
+      if (table === 'users') return activeUser;
+      if (table === 'user_sessions') return mockChain({ data: null, error: null });
+      return mockChain({ data: null, error: null });
+    });
 
     const res = await request(app)
       .post('/api/v1/auth/logout')
@@ -592,21 +599,28 @@ describe('DELETE /api/v1/auth/me', () => {
   it('revokes all tracked sessions for the deleted account', async () => {
     const { token, jti } = generateAccessToken(TEST_USER);
     const password = 'ValidPass123!';
+    const activeUserLookup = mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null });
+    const passwordLookup = mockChain({ data: { id: TEST_USER.id, password_hash: HASH, is_active: true }, error: null });
+    const revokedSelect = mockChain({ data: null, error: null });
     const sessionLookup = mockChain(
       { data: null, error: null },
       { data: [{ jti: 'session-a' }, { jti: 'session-b' }], error: null }
     );
     const revokedInsert = mockChain({ data: null, error: null });
     const sessionUpdate = mockChain({ data: null, error: null });
+    const userDeleteUpdate = mockChain({ data: null, error: null });
+    const connectionDeleteUpdate = mockChain({ data: null, error: null });
 
-    supabase.from
-      .mockReturnValueOnce(mockChain({ data: null, error: null }))
-      .mockReturnValueOnce(mockChain({ data: { id: TEST_USER.id, password_hash: HASH }, error: null }))
-      .mockReturnValueOnce(sessionLookup)
-      .mockReturnValueOnce(revokedInsert)
-      .mockReturnValueOnce(sessionUpdate)
-      .mockReturnValueOnce(mockChain({ data: null, error: null }))
-      .mockReturnValueOnce(mockChain({ data: null, error: null }));
+    let revokedTokensCalls = 0;
+    let usersCalls = 0;
+    let userSessionsCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return revokedTokensCalls++ === 0 ? revokedSelect : revokedInsert;
+      if (table === 'users') return usersCalls++ === 0 ? activeUserLookup : (usersCalls === 2 ? passwordLookup : userDeleteUpdate);
+      if (table === 'user_sessions') return userSessionsCalls++ === 0 ? sessionLookup : sessionUpdate;
+      if (table === 'platform_connections') return connectionDeleteUpdate;
+      return mockChain({ data: null, error: null });
+    });
 
     const res = await request(app)
       .delete('/api/v1/auth/me')
@@ -630,9 +644,10 @@ describe('GET /api/v1/auth/me', () => {
     const { token } = generateAccessToken(TEST_USER);
     const profile = { id: TEST_USER.id, email: TEST_USER.email, full_name: 'Test User', role: 'user', plan: 'pro', created_at: new Date().toISOString(), last_login_at: null };
 
+    let usersCalls = 0;
     supabase.from.mockImplementation((table) => {
       if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
-      if (table === 'users') return mockChain({ data: profile, error: null });
+      if (table === 'users') return usersCalls++ === 0 ? mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null }) : mockChain({ data: profile, error: null });
       return mockChain({ data: null, error: null });
     });
 

@@ -19,8 +19,6 @@ const isMissingUserSessionsTableError = (error) => {
     || /relation "?public\.user_sessions"? does not exist/i.test(message);
 };
 
-const shouldEnforceActiveUser = () => process.env.REQUIRE_ACTIVE_USER === 'true';
-
 const verifyToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   if (!authHeader?.startsWith('Bearer '))
@@ -48,15 +46,13 @@ const verifyToken = async (req, res, next) => {
     return res.status(401).json({ error: 'Token has been revoked' });
   }
 
-  if (shouldEnforceActiveUser()) {
-    const { data: user, error } = await supabase.from('users')
-      .select('id, is_active')
-      .eq('id', payload.sub)
-      .single();
-    if (error || !user || user.is_active === false) {
-      logger.warn('Token rejected because user no longer exists', { userId: payload.sub, ip: req.ip });
-      return res.status(401).json({ error: 'Account not found or inactive' });
-    }
+  const { data: user, error } = await supabase.from('users')
+    .select('id, is_active')
+    .eq('id', payload.sub)
+    .single();
+  if (error || !user || user.is_active === false) {
+    logger.warn('Token rejected because user no longer exists', { userId: payload.sub, ip: req.ip });
+    return res.status(401).json({ error: 'Account not found or inactive' });
   }
 
   req.user = { id: payload.sub, email: payload.email, role: payload.role || 'user', plan: payload.plan || 'free', jti: payload.jti };
@@ -178,4 +174,4 @@ const revokeToken = async (jti, userId) => {
   await revokeSession(jti, userId);
 };
 
-module.exports = { verifyToken, requireRole, requirePlan, issueTokens, rotateRefreshToken, revokeToken, recordSession, revokeSession, revokeUserSessions, shouldEnforceActiveUser, isMissingUserSessionsTableError };
+module.exports = { verifyToken, requireRole, requirePlan, issueTokens, rotateRefreshToken, revokeToken, recordSession, revokeSession, revokeUserSessions, isMissingUserSessionsTableError };
