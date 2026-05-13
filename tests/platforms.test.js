@@ -5,7 +5,10 @@ const { mockChain } = require('./helpers/db');
 const { TEST_USER, generateAccessToken } = require('./helpers/auth');
 
 jest.mock('../config/database', () => ({
-  supabase: { from: jest.fn() },
+  supabase: {
+    from: jest.fn(),
+    auth: { admin: { createUser: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) } },
+  },
   supabasePublic: { from: jest.fn() },
   dbHealthCheck: jest.fn().mockResolvedValue(true),
   execute: jest.fn(),
@@ -48,6 +51,10 @@ function mockPlatformTables({ list = null, connection = null, singleConnection =
       return mockChain({ data: null, error: null });
     }
 
+    if (table === 'users') {
+      return mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null });
+    }
+
     if (table === 'platform_connections') {
       if (list) {
         return mockChain({ data: connection, error: null }, { data: list, error: null });
@@ -78,6 +85,49 @@ describe('GET /api/v1/platforms', () => {
     expect(res.status).toBe(200);
     expect(res.body.platforms).toHaveLength(2);
     expect(res.body.platforms.find(p => p.platform === 'linkedin').is_active).toBe(false);
+  });
+});
+
+describe('POST /api/v1/platforms/connect', () => {
+  it('rejects invalid platform ids', async () => {
+    mockPlatformTables();
+
+    const res = await request(app)
+      .post('/api/v1/platforms/connect')
+      .set(authHeader())
+      .send({ platform: "'); alert(1);//", accessToken: 'abc' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe('Validation failed');
+  });
+
+  it('accepts valid platform payloads', async () => {
+    const upsertChain = mockChain({ data: { id: '1', platform: 'x', platform_username: '@x' }, error: null });
+    const usersLookup = mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null });
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      if (table === 'users') return usersLookup;
+      if (table === 'platform_connections') return upsertChain;
+      return mockChain({ data: null, error: null });
+    });
+
+    const res = await request(app)
+      .post('/api/v1/platforms/connect')
+      .set(authHeader())
+      .send({
+        platform: 'x',
+        accessToken: 'token-abc',
+        platformUserId: 'user-1',
+        platformUsername: 'Test User',
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+      });
+
+    expect(res.status).toBe(201);
+    expect(upsertChain.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: TEST_USER.id,
+      platform: 'x',
+    }), expect.objectContaining({ onConflict: 'user_id,platform' }));
   });
 });
 

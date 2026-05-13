@@ -1715,8 +1715,8 @@ function renderSettingsConnections() {
           <div class="settings-connection-meta">${escHtml(conn.platform_username || conn.platform_user_id || 'Connected account')} · ${stateText}</div>
         </div>
         <div class="settings-connection-actions">
-          <button class="settings-connection-btn verify" type="button" onclick="verifyPlatformConnection('${conn.platform}')">Verify</button>
-          <button class="settings-connection-btn toggle ${active ? 'off' : 'on'}" type="button" onclick="togglePlatformConnection('${conn.platform}')">Turn ${active ? 'Off' : 'On'}</button>
+          <button class="settings-connection-btn verify" type="button" onclick="verifyPlatformConnection(${escJsArg(conn.platform)})">Verify</button>
+          <button class="settings-connection-btn toggle ${active ? 'off' : 'on'}" type="button" onclick="togglePlatformConnection(${escJsArg(conn.platform)})">Turn ${active ? 'Off' : 'On'}</button>
         </div>
       </div>
     `;
@@ -1782,6 +1782,7 @@ function toast(msg, type) {
   clearTimeout(el._t);el._t=setTimeout(()=>el.style.display='none',3500);
 }
 function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escJsArg(s) { return escHtml(JSON.stringify(String(s))); }
 function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
 
 function enterOnboarding(data, message = 'Account created. Welcome!') {

@@ -107,6 +107,14 @@ const schemas = {
   oauthExchange: z.object({
     code: z.string().min(20).max(2048),
   }),
+  platformConnection: z.object({
+    platform: z.enum(PLATFORM_IDS),
+    accessToken: z.string().min(1).max(8192),
+    refreshToken: z.string().min(1).max(8192).optional(),
+    platformUserId: z.string().min(1).max(255).optional(),
+    platformUsername: z.string().min(1).max(255).optional(),
+    expiresAt: z.string().datetime().optional(),
+  }).strict(),
   userProfile: z.object({
     userType: z.enum(['founder', 'creator', 'agency', 'enterprise', 'small_business', 'personal']).optional(),
     onboardingCompleted: z.boolean().optional(),

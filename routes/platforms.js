@@ -7,6 +7,7 @@
 const express         = require('express');
 const { supabase }    = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
+const { validateBody } = require('../middleware/sanitizer');
 const { encrypt }     = require('../utils/encryption');
 const { logger }      = require('../utils/logger');
 
@@ -25,9 +26,8 @@ router.get('/', async (req, res) => {
 });
 
 /* ── POST /platforms/connect — store OAuth tokens ── */
-router.post('/connect', async (req, res) => {
+router.post('/connect', validateBody('platformConnection'), async (req, res) => {
   const { platform, accessToken, refreshToken, platformUserId, platformUsername, expiresAt } = req.body;
-  if (!platform || !accessToken) return res.status(422).json({ error: 'platform and accessToken required' });
 
   const { data, error } = await supabase.from('platform_connections').upsert({
     user_id:           req.user.id,
