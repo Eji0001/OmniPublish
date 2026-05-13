@@ -1825,13 +1825,13 @@ async function doMagicLink() {
 
 async function verifyMagicToken(token) {
   try {
+    history.replaceState(null, '', '/');
     const res  = await fetch(base() + '/api/v1/auth/magic-link/verify', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       credentials: 'include', body: JSON.stringify({ token }),
     });
     const data = await res.json();
     if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
-    history.replaceState(null, '', '/');
     if (!localStorage.getItem('omni_onboarding_done')) {
       enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
     } else {
