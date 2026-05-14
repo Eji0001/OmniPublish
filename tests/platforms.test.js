@@ -3,6 +3,7 @@
 const request = require('supertest');
 const { mockChain } = require('./helpers/db');
 const { TEST_USER, generateAccessToken } = require('./helpers/auth');
+const { generateOAuthState } = require('../middleware/oauthStateVerification');
 
 jest.mock('../config/database', () => ({
   supabase: {
@@ -68,6 +69,56 @@ function mockPlatformTables({ list = null, connection = null, singleConnection =
 }
 
 beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  global.fetch = jest.fn();
+});
+
+describe('YouTube OAuth flow', () => {
+  it('returns a Google auth URL with consent and PKCE', async () => {
+    mockPlatformTables();
+
+    const res = await request(app)
+      .get('/api/v1/platforms/youtube/auth?returnTo=' + encodeURIComponent('http://localhost:3000/#dashboard'))
+      .set(authHeader());
+
+    expect(res.status).toBe(200);
+    expect(res.body.url).toContain('https://accounts.google.com/o/oauth2/v2/auth');
+    expect(res.body.url).toContain('access_type=offline');
+    expect(res.body.url).toContain('prompt=consent');
+    expect(res.body.url).toContain('code_challenge=');
+    expect(res.headers['set-cookie']?.join(';')).toContain('oauth_pkce_youtube=');
+  });
+
+  it('stores the YouTube OAuth connection on callback', async () => {
+    const upsertChain = mockChain({ data: null, error: null }, { data: null, error: null });
+    const state = (await generateOAuthState('youtube', TEST_USER.id, 'http://localhost:3000/#dashboard')).state;
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      if (table === 'users') return mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null });
+      if (table === 'platform_connections') return upsertChain;
+      return mockChain({ data: null, error: null });
+    });
+
+    global.fetch
+      .mockResolvedValueOnce({ json: async () => ({ access_token: 'yt-access', refresh_token: 'yt-refresh', expires_in: 3600 }) })
+      .mockResolvedValueOnce({ json: async () => ({ items: [{ id: 'channel-1', snippet: { title: 'YT Channel' } }] }) });
+
+    const res = await request(app)
+      .get('/api/v1/platforms/youtube/callback?code=code-123&state=' + encodeURIComponent(state));
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toContain('platform_success=youtube');
+    expect(res.headers.location).toContain('#dashboard');
+    expect(upsertChain.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: TEST_USER.id,
+      platform: 'youtube',
+      platform_user_id: 'channel-1',
+      platform_username: 'YT Channel',
+      refresh_token_enc: expect.any(String),
+    }), expect.objectContaining({ onConflict: 'user_id,platform' }));
+  });
+});
 
 describe('GET /api/v1/platforms', () => {
   it('returns all connections including inactive ones', async () => {

@@ -1,6 +1,7 @@
 'use strict';
 
 const mockDecrypt = jest.fn(() => 'access-token');
+const mockEncrypt = jest.fn((value) => `enc:${value}`);
 const mockPlatformBreakerExecute = jest.fn(async (fn) => fn());
 
 jest.mock('../middleware/circuitBreaker', () => ({
@@ -10,6 +11,7 @@ jest.mock('../middleware/circuitBreaker', () => ({
 
 jest.mock('../utils/encryption', () => ({
   decrypt: mockDecrypt,
+  encrypt: mockEncrypt,
 }));
 
 jest.mock('../utils/logger', () => ({
@@ -97,5 +99,37 @@ describe('publishToPlatform', () => {
     })).rejects.toThrow('Circuit breaker platform-apis is OPEN');
 
     expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('refreshes expired YouTube tokens before publishing', async () => {
+    global.fetch
+      .mockResolvedValueOnce({ json: async () => ({ access_token: 'fresh-access', refresh_token: 'fresh-refresh', expires_in: 3600 }) })
+      .mockResolvedValueOnce({ json: async () => ({ id: 'video-123' }) });
+
+    const persistConnectionTokens = jest.fn().mockResolvedValue(undefined);
+
+    const result = await publishToPlatform({
+      platform: 'youtube',
+      content: 'Hello video',
+      post: { title: 'Weekly video' },
+      conn: {
+        access_token_enc: 'enc-access',
+        refresh_token_enc: 'enc-refresh',
+        token_expires_at: new Date(Date.now() - 60 * 1000).toISOString(),
+        platform_user_id: 'channel-1',
+      },
+      persistConnectionTokens,
+    });
+
+    expect(global.fetch).toHaveBeenNthCalledWith(1, 'https://oauth2.googleapis.com/token', expect.objectContaining({ method: 'POST' }));
+    expect(persistConnectionTokens).toHaveBeenCalledWith(expect.objectContaining({
+      access_token_enc: 'enc:fresh-access',
+      refresh_token_enc: 'enc:fresh-refresh',
+      token_expires_at: expect.any(String),
+    }));
+    expect(result).toEqual({
+      postId: 'video-123',
+      url: 'https://www.youtube.com/watch?v=video-123',
+    });
   });
 });

@@ -114,19 +114,20 @@ const processScheduledPosts = async () => {
     try {
       const { data: validConnections } = await supabase
         .from('platform_connections')
-        .select('platform, access_token_enc, platform_user_id, token_expires_at')
+        .select('id, platform, access_token_enc, refresh_token_enc, platform_user_id, token_expires_at')
         .eq('user_id', post.user_id)
         .in('platform', platforms)
         .eq('is_active', true)
-        .or(`token_expires_at.is.null,token_expires_at.gt.${nowIso}`);
+        .or(`token_expires_at.is.null,token_expires_at.gt.${nowIso},refresh_token_enc.not.is.null`);
 
       const { data: expiredConnections } = await supabase
         .from('platform_connections')
-        .select('platform, token_expires_at')
+        .select('platform, token_expires_at, refresh_token_enc')
         .eq('user_id', post.user_id)
         .in('platform', platforms)
         .eq('is_active', true)
-        .lte('token_expires_at', nowIso);
+        .lte('token_expires_at', nowIso)
+        .is('refresh_token_enc', null);
 
       const expiredPlatforms = new Set((expiredConnections || []).map(c => c.platform));
       if (expiredPlatforms.size) {
@@ -153,7 +154,19 @@ const processScheduledPosts = async () => {
         publishPlatforms.map(pl => {
           const conn = connMap[pl];
           if (!conn) return Promise.reject(Object.assign(new Error(`${pl} not connected`), { platform: pl }));
-          return publishToPlatform({ platform: pl, content: post.content, post: buildPlatformPostPayload(post, pl), conn });
+          return publishToPlatform({
+            platform: pl,
+            content: post.content,
+            post: buildPlatformPostPayload(post, pl),
+            conn,
+            persistConnectionTokens: async (updates) => {
+              await supabase.from('platform_connections')
+                .update(updates)
+                .eq('id', conn.id)
+                .eq('user_id', post.user_id)
+                .eq('platform', pl);
+            },
+          });
         })
       );
 

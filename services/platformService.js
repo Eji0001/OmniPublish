@@ -6,7 +6,7 @@
 
 'use strict';
 
-const { decrypt }  = require('../utils/encryption');
+const { decrypt, encrypt }  = require('../utils/encryption');
 const { platformApisBreaker } = require('../middleware/circuitBreaker');
 
 const platformRequest = (url, init, timeoutMs = 15000) => platformApisBreaker.execute(async () => {
@@ -20,6 +20,118 @@ const platformRequest = (url, init, timeoutMs = 15000) => platformApisBreaker.ex
   }
 });
 
+const isExpired = (tokenExpiresAt) => tokenExpiresAt && new Date(tokenExpiresAt) < new Date();
+
+const OAUTH_REFRESH_PROVIDERS = {
+  youtube: {
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  },
+  x: {
+    tokenUrl: 'https://api.twitter.com/2/oauth2/token',
+    clientId: process.env.X_CLIENT_ID || process.env.TWITTER_CLIENT_ID,
+    clientSecret: process.env.X_CLIENT_SECRET || process.env.TWITTER_CLIENT_SECRET,
+  },
+  linkedin: {
+    tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
+    clientId: process.env.LINKEDIN_CLIENT_ID,
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+  },
+  reddit: {
+    tokenUrl: 'https://www.reddit.com/api/v1/access_token',
+    clientId: process.env.REDDIT_CLIENT_ID,
+    clientSecret: process.env.REDDIT_CLIENT_SECRET,
+    useBasicAuthForToken: true,
+  },
+  tiktok: {
+    tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
+    clientId: process.env.TIKTOK_CLIENT_KEY,
+    clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+  },
+  pinterest: {
+    tokenUrl: 'https://api.pinterest.com/v5/oauth/token',
+    clientId: process.env.PINTEREST_CLIENT_ID,
+    clientSecret: process.env.PINTEREST_CLIENT_SECRET,
+    useBasicAuthForToken: true,
+  },
+  twitch: {
+    tokenUrl: 'https://id.twitch.tv/oauth2/token',
+    clientId: process.env.TWITCH_CLIENT_ID,
+    clientSecret: process.env.TWITCH_CLIENT_SECRET,
+  },
+};
+
+const refreshAccessToken = async (platform, conn) => {
+  const provider = OAUTH_REFRESH_PROVIDERS[platform];
+  if (!provider || !provider.clientId || !provider.clientSecret || !conn.refresh_token_enc) return null;
+
+  const refreshToken = decrypt(conn.refresh_token_enc);
+  const tokenParams = new URLSearchParams({
+    client_id: provider.clientId,
+    client_secret: provider.clientSecret,
+    refresh_token: refreshToken,
+    grant_type: 'refresh_token',
+  });
+
+  const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  if (provider.useBasicAuthForToken) {
+    headers.Authorization = 'Basic ' + Buffer.from(`${provider.clientId}:${provider.clientSecret}`).toString('base64');
+    tokenParams.delete('client_id');
+    tokenParams.delete('client_secret');
+  }
+
+  const res = await platformRequest(provider.tokenUrl, {
+    method: 'POST',
+    headers,
+    body: tokenParams,
+  });
+
+  const data = await res.json();
+  if (data.error) {
+    throw Object.assign(new Error(data.error_description || data.error), { platform, status: res.status });
+  }
+
+  if (!data.access_token) {
+    throw Object.assign(new Error(`${platform} token refresh failed`), { platform, status: res.status });
+  }
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token || refreshToken,
+    expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000).toISOString() : null,
+  };
+};
+
+const resolveAccessToken = async ({ platform, conn, persistConnectionTokens }) => {
+  const accessToken = decrypt(conn.access_token_enc);
+  if (!isExpired(conn.token_expires_at)) return accessToken;
+
+  const refreshed = await refreshAccessToken(platform, conn);
+  if (!refreshed) {
+    throw Object.assign(new Error(`Platform token expired. Reconnect ${platform} to continue publishing.`), { platform, status: 401 });
+  }
+
+  if (typeof persistConnectionTokens === 'function') {
+    await persistConnectionTokens(buildTokenUpdate(refreshed, conn));
+  }
+
+  return refreshed.accessToken;
+};
+
+const buildTokenUpdate = (refreshed, conn) => {
+  const updates = {
+    access_token_enc: encrypt(refreshed.accessToken),
+    token_expires_at: refreshed.expiresAt,
+  };
+
+  if (refreshed.refreshToken && (!conn.refresh_token_enc || refreshed.refreshToken !== decrypt(conn.refresh_token_enc))) {
+    updates.refresh_token_enc = encrypt(refreshed.refreshToken);
+  }
+
+  return updates;
+};
+
 const requireMediaUrl = (post, platform) => {
   if (!post.media_url) {
     throw Object.assign(new Error(`${platform} publish requires media attached to the post`), { platform });
@@ -32,8 +144,8 @@ const requireMediaUrl = (post, platform) => {
  * @param {Object} params - { platform, content, post, conn }
  * @returns {Object} { postId, url }
  */
-const publishToPlatform = async ({ platform, content, post, conn }) => {
-  const accessToken = decrypt(conn.access_token_enc);
+const publishToPlatform = async ({ platform, content, post, conn, persistConnectionTokens }) => {
+  const accessToken = await resolveAccessToken({ platform, conn, persistConnectionTokens });
 
   const handlers = {
 

@@ -38,7 +38,7 @@ router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, re
 
   // Fetch connected platform tokens
   const { data: connections } = await supabase.from('platform_connections')
-    .select('platform, access_token_enc, platform_user_id')
+    .select('id, platform, access_token_enc, refresh_token_enc, platform_user_id, token_expires_at')
     .eq('user_id', req.user.id).in('platform', platforms).eq('is_active', true);
 
   const connectedMap = Object.fromEntries((connections || []).map(c => [c.platform, c]));
@@ -54,7 +54,18 @@ router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, re
 
       const platformPost = post.post_platforms?.find(p => p.platform === platform);
       const content      = platformPost?.adapted_content || post.content;
-      const result       = await publishToPlatform({ platform, content, post: buildPlatformPostPayload(post, platform), conn });
+      const result       = await publishToPlatform({
+        platform,
+        content,
+        post: buildPlatformPostPayload(post, platform),
+        conn,
+        persistConnectionTokens: async (updates) => {
+          await supabase.from('platform_connections')
+            .update(updates)
+            .eq('id', conn.id)
+            .eq('user_id', req.user.id);
+        },
+      });
 
       await supabase.from('post_platforms').update({
         status: 'published', platform_post_id: result.postId,

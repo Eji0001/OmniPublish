@@ -11,4 +11,6 @@ process.env.SUPABASE_URL        = 'http://localhost:54321';
 process.env.SUPABASE_ANON_KEY   = 'test-anon-key';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-key';
 process.env.ALLOWED_ORIGINS     = 'http://localhost:3000';
+process.env.GOOGLE_CLIENT_ID    = 'test-google-client-id';
+process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
 process.env.LOG_LEVEL           = 'silent';

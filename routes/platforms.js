@@ -4,6 +4,7 @@
 
 'use strict';
 
+const crypto         = require('crypto');
 const express         = require('express');
 const { supabase }    = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
@@ -14,63 +15,240 @@ const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthSta
 
 const router = express.Router();
 
-const isExpired = (tokenExpiresAt) => tokenExpiresAt && new Date(tokenExpiresAt) < new Date();
+const isProd = process.env.NODE_ENV === 'production';
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 
-/* ── GET /youtube/callback — Handle OAuth callback ── */
-router.get('/youtube/callback', async (req, res) => {
+const isExpired = (tokenExpiresAt) => tokenExpiresAt && new Date(tokenExpiresAt) < new Date();
+const base64Url = (value) => value.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+
+const getSafeReturnTo = (candidate) => {
+  const fallback = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:4000';
+
   try {
-    const { userId, returnTo } = await verifyOAuthState(req.query.state, 'youtube');
-    
+    const url = new URL(candidate || fallback);
+    if (!ALLOWED_ORIGINS.length || ALLOWED_ORIGINS.includes(url.origin)) return url.toString();
+  } catch {
+    // fall through to the safe fallback
+  }
+
+  return fallback;
+};
+
+const generatePkcePair = () => {
+  const verifier = base64Url(crypto.randomBytes(32));
+  const challenge = base64Url(crypto.createHash('sha256').update(verifier).digest());
+  return { verifier, challenge };
+};
+
+const OAUTH_PROVIDERS = {
+  youtube: {
+    authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    profileUrl: 'https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true',
+    scopes: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly',
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    pkce: true,
+    extractProfile: (data) => ({
+      id: data.items?.[0]?.id || 'unknown',
+      username: data.items?.[0]?.snippet?.title || 'YouTube Channel'
+    })
+  },
+  x: {
+    authUrl: 'https://twitter.com/i/oauth2/authorize',
+    tokenUrl: 'https://api.twitter.com/2/oauth2/token',
+    profileUrl: 'https://api.twitter.com/2/users/me',
+    scopes: 'tweet.read tweet.write users.read offline.access',
+    clientId: process.env.X_CLIENT_ID || process.env.TWITTER_CLIENT_ID,
+    clientSecret: process.env.X_CLIENT_SECRET || process.env.TWITTER_CLIENT_SECRET,
+    extractProfile: (data) => ({
+      id: data.data?.id || 'unknown',
+      username: data.data?.username || 'X Account'
+    })
+  },
+  linkedin: {
+    authUrl: 'https://www.linkedin.com/oauth/v2/authorization',
+    tokenUrl: 'https://www.linkedin.com/oauth/v2/accessToken',
+    profileUrl: 'https://api.linkedin.com/v2/userinfo',
+    scopes: 'w_member_social profile openid email',
+    clientId: process.env.LINKEDIN_CLIENT_ID,
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+    extractProfile: (data) => ({
+      id: data.sub || 'unknown',
+      username: data.name || 'LinkedIn User'
+    })
+  },
+  facebook: {
+    authUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
+    tokenUrl: 'https://graph.facebook.com/v19.0/oauth/access_token',
+    profileUrl: 'https://graph.facebook.com/me?fields=id,name',
+    scopes: 'pages_show_list,pages_read_engagement,pages_manage_posts,publish_video',
+    clientId: process.env.FACEBOOK_APP_ID,
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    extractProfile: (data) => ({
+      id: data.id || 'unknown',
+      username: data.name || 'Facebook User'
+    })
+  },
+  instagram: {
+    authUrl: 'https://api.instagram.com/oauth/authorize',
+    tokenUrl: 'https://api.instagram.com/oauth/access_token',
+    profileUrl: 'https://graph.instagram.com/me?fields=id,username',
+    scopes: 'user_profile,user_media',
+    clientId: process.env.INSTAGRAM_CLIENT_ID,
+    clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
+    extractProfile: (data) => ({
+      id: data.id || 'unknown',
+      username: data.username || 'Instagram User'
+    })
+  },
+  reddit: {
+    authUrl: 'https://www.reddit.com/api/v1/authorize',
+    tokenUrl: 'https://www.reddit.com/api/v1/access_token',
+    profileUrl: 'https://oauth.reddit.com/api/v1/me',
+    scopes: 'identity submit',
+    clientId: process.env.REDDIT_CLIENT_ID,
+    clientSecret: process.env.REDDIT_CLIENT_SECRET,
+    extractProfile: (data) => ({
+      id: data.id || 'unknown',
+      username: data.name || 'Reddit User'
+    }),
+    useBasicAuthForToken: true
+  },
+  tiktok: {
+    authUrl: 'https://www.tiktok.com/v2/auth/authorize/',
+    tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
+    profileUrl: 'https://open.tiktokapis.com/v2/user/info/',
+    scopes: 'user.info.basic,video.upload',
+    clientId: process.env.TIKTOK_CLIENT_KEY,
+    clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+    extractProfile: (data) => ({
+      id: data.data?.user?.union_id || 'unknown',
+      username: data.data?.user?.display_name || 'TikTok User'
+    })
+  },
+  pinterest: {
+    authUrl: 'https://www.pinterest.com/oauth/',
+    tokenUrl: 'https://api.pinterest.com/v5/oauth/token',
+    profileUrl: 'https://api.pinterest.com/v5/user_account',
+    scopes: 'user_accounts:read,pins:write,boards:read',
+    clientId: process.env.PINTEREST_CLIENT_ID,
+    clientSecret: process.env.PINTEREST_CLIENT_SECRET,
+    extractProfile: (data) => ({
+      id: data.username || 'unknown',
+      username: data.username || 'Pinterest User'
+    }),
+    useBasicAuthForToken: true
+  },
+  twitch: {
+    authUrl: 'https://id.twitch.tv/oauth2/authorize',
+    tokenUrl: 'https://id.twitch.tv/oauth2/token',
+    profileUrl: 'https://api.twitch.tv/helix/users',
+    scopes: 'user:read:email user:edit',
+    clientId: process.env.TWITCH_CLIENT_ID,
+    clientSecret: process.env.TWITCH_CLIENT_SECRET,
+    extractProfile: (data) => ({
+      id: data.data?.[0]?.id || 'unknown',
+      username: data.data?.[0]?.display_name || 'Twitch User'
+    })
+  }
+};
+
+/* ── GET /:platform/callback — Handle OAuth callback ── */
+router.get('/:platform/callback', async (req, res) => {
+  const { platform } = req.params;
+  const provider = OAUTH_PROVIDERS[platform];
+
+  if (!provider) {
+    return res.status(400).send('Unsupported platform');
+  }
+
+  try {
+    const { userId, returnTo } = await verifyOAuthState(req.query.state, platform);
+
     if (req.query.error) {
-      logger.error('YouTube OAuth error from Google', { error: req.query.error });
-      return res.redirect(`${returnTo}?platform_error=youtube_access_denied#onboarding`);
+      logger.error(`${platform} OAuth error`, { error: req.query.error });
+      const errorUrl = new URL(returnTo || getSafeReturnTo());
+      errorUrl.searchParams.set('platform_error', `${platform}_access_denied`);
+      return res.redirect(errorUrl.toString());
+    }
+
+    const tokenParams = new URLSearchParams({
+      client_id: provider.clientId,
+      client_secret: provider.clientSecret,
+      code: req.query.code,
+      redirect_uri: `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/${platform}/callback`,
+      grant_type: 'authorization_code'
+    });
+
+    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (provider.useBasicAuthForToken) {
+      headers['Authorization'] = 'Basic ' + Buffer.from(`${provider.clientId}:${provider.clientSecret}`).toString('base64');
+      tokenParams.delete('client_id');
+      tokenParams.delete('client_secret');
+    }
+
+    const pkceVerifier = req.cookies?.[`oauth_pkce_${platform}`];
+    if (pkceVerifier) {
+      tokenParams.append('code_verifier', pkceVerifier);
+      res.clearCookie(`oauth_pkce_${platform}`, { path: `/api/v1/platforms/${platform}` });
     }
 
     // Exchange code for tokens
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+    const tokenRes = await fetch(provider.tokenUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        code: req.query.code,
-        redirect_uri: `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/youtube/callback`,
-        grant_type: 'authorization_code'
-      })
+      headers,
+      body: tokenParams
     });
-    
+
     const tokenData = await tokenRes.json();
     if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
 
-    // Get YouTube Channel Info
-    const channelRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
-      headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
-    });
-    const channelData = await channelRes.json();
-    if (channelData.error) throw new Error(channelData.error.message);
+    const accessToken = tokenData.access_token;
 
-    const channelId = channelData.items?.[0]?.id || 'unknown';
-    const channelTitle = channelData.items?.[0]?.snippet?.title || 'YouTube Channel';
+    // Get Channel Info
+    const profileHeaders = { 'Authorization': `Bearer ${accessToken}` };
+    if (platform === 'twitch') {
+      profileHeaders['Client-Id'] = provider.clientId;
+    }
+
+    const channelRes = await fetch(provider.profileUrl, { headers: profileHeaders });
+    const channelData = await channelRes.json();
+    if (channelData.error) throw new Error(channelData.error.message || JSON.stringify(channelData.error));
+
+    const profile = provider.extractProfile(channelData);
     const expiresAt = tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null;
 
     // Upsert platform connection
-    await supabase.from('platform_connections').upsert({
+    const connection = {
       user_id:           userId,
-      platform:          'youtube',
-      platform_user_id:  channelId,
-      platform_username: channelTitle,
-      access_token_enc:  encrypt(tokenData.access_token),
-      refresh_token_enc: tokenData.refresh_token ? encrypt(tokenData.refresh_token) : null,
+      platform:          platform,
+      platform_user_id:  profile.id,
+      platform_username: profile.username,
+      access_token_enc:  encrypt(accessToken),
       token_expires_at:  expiresAt,
       is_active:         true,
       connected_at:      new Date(),
-    }, { onConflict: 'user_id,platform' });
+    };
 
-    logger.info('YouTube connected successfully via OAuth', { userId });
-    res.redirect(`${returnTo}?platform_success=youtube#onboarding`);
+    if (tokenData.refresh_token) {
+      connection.refresh_token_enc = encrypt(tokenData.refresh_token);
+    }
+
+    await supabase.from('platform_connections').upsert(connection, { onConflict: 'user_id,platform' });
+
+    logger.info(`${platform} connected successfully via OAuth`, { userId });
+    const successUrl = new URL(returnTo || getSafeReturnTo());
+    successUrl.searchParams.set('platform_success', platform);
+    res.redirect(successUrl.toString());
   } catch (err) {
-    logger.error('YouTube callback error', { err: err.message });
-    res.redirect(`/?platform_error=youtube_callback_failed#onboarding`);
+    logger.error(`${platform} callback error`, { err: err.message });
+    const errorUrl = new URL(getSafeReturnTo());
+    errorUrl.searchParams.set('platform_error', `${platform}_callback_failed`);
+    res.redirect(errorUrl.toString());
   }
 });
 
@@ -86,24 +264,52 @@ router.get('/', async (req, res) => {
   res.json({ platforms: data });
 });
 
-/* ── GET /platforms/youtube/auth — Initiate OAuth ── */
-router.get('/youtube/auth', async (req, res) => {
+/* ── GET /platforms/:platform/auth — Initiate OAuth ── */
+router.get('/:platform/auth', async (req, res) => {
+  const { platform } = req.params;
+  const provider = OAUTH_PROVIDERS[platform];
+
+  if (!provider) {
+    return res.status(400).json({ error: 'OAuth not supported or misconfigured for this platform.' });
+  }
+
+  if (!provider.clientId || !provider.clientSecret) {
+    return res.status(500).json({ error: `Missing credentials for ${platform}. Please check .env.` });
+  }
+
   try {
-    const returnTo = req.query.returnTo || (process.env.APP_URL || 'http://localhost:4000');
-    const { state } = await generateOAuthState('youtube', req.user.id, returnTo);
+    const returnTo = getSafeReturnTo(req.query.returnTo);
+    const { state } = await generateOAuthState(platform, req.user.id, returnTo);
     
-    const oauthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-    oauthUrl.searchParams.append('client_id', process.env.GOOGLE_CLIENT_ID);
-    oauthUrl.searchParams.append('redirect_uri', `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/youtube/callback`);
+    const oauthUrl = new URL(provider.authUrl);
+    oauthUrl.searchParams.append('client_id', provider.clientId);
+    oauthUrl.searchParams.append('redirect_uri', `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/${platform}/callback`);
     oauthUrl.searchParams.append('response_type', 'code');
-    oauthUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
-    oauthUrl.searchParams.append('access_type', 'offline');
-    oauthUrl.searchParams.append('prompt', 'consent');
+    oauthUrl.searchParams.append('scope', provider.scopes);
     oauthUrl.searchParams.append('state', state);
+
+    if (platform === 'youtube') {
+      oauthUrl.searchParams.append('access_type', 'offline');
+      oauthUrl.searchParams.append('prompt', 'consent');
+      oauthUrl.searchParams.append('include_granted_scopes', 'true');
+    }
+
+    if (provider.pkce) {
+      const { verifier, challenge } = generatePkcePair();
+      oauthUrl.searchParams.append('code_challenge', challenge);
+      oauthUrl.searchParams.append('code_challenge_method', 'S256');
+      res.cookie(`oauth_pkce_${platform}`, verifier, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        maxAge: 15 * 60 * 1000,
+        path: `/api/v1/platforms/${platform}`,
+      });
+    }
 
     res.json({ url: oauthUrl.toString() });
   } catch (err) {
-    logger.error('Failed to generate YouTube auth URL', { err: err.message });
+    logger.error(`Failed to generate ${platform} auth URL`, { err: err.message });
     res.status(500).json({ error: 'Failed to generate auth URL' });
   }
 });

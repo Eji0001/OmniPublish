@@ -299,9 +299,11 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .settings-connection-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .settings-connection-btn{padding:8px 12px;border-radius:9px;border:1px solid var(--bd2);background:var(--s3);color:var(--tx2);font-size:12px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s}
 .settings-connection-btn:hover{border-color:var(--ai-border);color:var(--tx)}
+.settings-connection-btn.connect{background:rgba(61,124,255,.12);border-color:rgba(61,124,255,.24);color:#6da0ff}
 .settings-connection-btn.verify{background:rgba(0,184,148,.12);border-color:rgba(0,184,148,.24);color:#00c4a0}
 .settings-connection-btn.toggle.on{background:rgba(61,124,255,.12);border-color:rgba(61,124,255,.24);color:#6da0ff}
 .settings-connection-btn.toggle.off{background:rgba(255,99,132,.12);border-color:rgba(255,99,132,.24);color:#ff8ca4}
+.settings-connection-btn.disconnect{background:rgba(255,99,132,.12);border-color:rgba(255,99,132,.24);color:#ff8ca4}
 .settings-empty,.settings-status{font-size:12px;color:var(--tx3);line-height:1.45}
 .settings-status{min-height:18px}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
@@ -1503,6 +1505,7 @@ function initDashboard() {
   updateAll();
   updatePreview();
   updateCompatibility();
+  loadPlatformConnections().catch(() => renderSettingsConnections());
   const now = new Date();
   const sd = document.getElementById('s-date');
   const st = document.getElementById('s-time');
@@ -2126,29 +2129,38 @@ function renderSettingsConnections() {
   const empty = document.getElementById('settings-empty');
   if (!wrap || !empty) return;
 
-  const conns = Object.values(_platformConnections || {})
-    .slice()
-    .sort((a, b) => (OB_PLATFORMS.find(p => p.id === a.platform)?.name || a.platform).localeCompare(OB_PLATFORMS.find(p => p.id === b.platform)?.name || b.platform));
+  const entries = OB_PLATFORMS.map(plat => {
+    const conn = _platformConnections[plat.id];
+    const active = conn?.is_active !== false;
+    const verified = conn?.token_expires_at ? new Date(conn.token_expires_at) > new Date() : true;
+    const stateText = conn ? (active ? (verified ? 'Active' : 'Expired') : 'Turned off') : 'Not connected';
+    const connectLabel = conn ? 'Reconnect' : 'Connect';
+    const connectAction = OAUTH_PLATFORM_IDS.has(plat.id)
+      ? `connectPlatformFromSettings(${escJsArg(plat.id)})`
+      : `openPlatModal(${escJsArg(plat.id)})`;
 
-  empty.style.display = conns.length ? 'none' : 'block';
-  wrap.innerHTML = conns.map(conn => {
-    const plat = OB_PLATFORMS.find(p => p.id === conn.platform);
-    const active = conn.is_active !== false;
-    const verified = conn.token_expires_at ? new Date(conn.token_expires_at) > new Date() : true;
-    const stateText = active ? (verified ? 'Active' : 'Expired') : 'Turned off';
     return `
       <div class="settings-connection">
         <div class="settings-connection-main">
-          <div class="settings-connection-title">${escHtml(plat?.name || conn.platform)}</div>
-          <div class="settings-connection-meta">${escHtml(conn.platform_username || conn.platform_user_id || 'Connected account')} · ${stateText}</div>
+          <div class="settings-connection-title">${escHtml(plat.name)}</div>
+          <div class="settings-connection-meta">${escHtml(conn?.platform_username || conn?.platform_user_id || 'Not connected')} · ${stateText}</div>
         </div>
         <div class="settings-connection-actions">
-          <button class="settings-connection-btn verify" type="button" onclick="verifyPlatformConnection(${escJsArg(conn.platform)})">Verify</button>
+          <button class="settings-connection-btn connect" type="button" onclick="${connectAction}">${connectLabel}</button>
+          ${conn ? `<button class="settings-connection-btn verify" type="button" onclick="verifyPlatformConnection(${escJsArg(conn.platform)})">Verify</button>
           <button class="settings-connection-btn toggle ${active ? 'off' : 'on'}" type="button" onclick="togglePlatformConnection(${escJsArg(conn.platform)})">Turn ${active ? 'Off' : 'On'}</button>
+          <button class="settings-connection-btn disconnect" type="button" onclick="disconnectPlatformById(${escJsArg(conn.platform)})">Disconnect</button>` : ''}
         </div>
       </div>
     `;
-  }).join('');
+  });
+
+  const connectionCount = Object.keys(_platformConnections || {}).length;
+  empty.style.display = connectionCount ? 'none' : 'block';
+  empty.textContent = connectionCount
+    ? 'Use Connect to add or reconnect platforms.'
+    : 'No connected platforms yet. Use Connect on any platform to get started.';
+  wrap.innerHTML = entries.join('');
 }
 
 async function verifyPlatformConnection(platId) {
@@ -2293,11 +2305,44 @@ const OB_PLATFORMS = [
   { id: 'twitch',    name: 'Twitch',      icon: '🎮', desc: 'Live streaming, gaming, and real-time community',      reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
 ];
 
+const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch']);
+
 let _platformConnections = {};
 let _currentPlatId = null;
 let _connectingPlatform = false;
 let _onboardingStep = 1;
 let _selectedPersona = localStorage.getItem('omni_user_role') || '';
+
+function getOAuthReturnTo(page) {
+  return `${window.location.origin}/#${page}`;
+}
+
+async function startPlatformOAuth(platId, page = 'dashboard') {
+  const res = await api('GET', `/api/v1/platforms/${platId}/auth?returnTo=${encodeURIComponent(getOAuthReturnTo(page))}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || `Failed to start ${platId} connection`);
+  if (data.url) {
+    window.location.href = data.url;
+    return;
+  }
+  throw new Error(`Missing OAuth URL for ${platId}`);
+}
+
+function consumeOAuthResult() {
+  const url = new URL(window.location.href);
+  const success = url.searchParams.get('platform_success');
+  const error = url.searchParams.get('platform_error');
+  if (!success && !error) return;
+
+  const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || ''}`;
+  history.replaceState(null, '', cleanUrl);
+
+  const platformName = (OB_PLATFORMS.find(p => p.id === success || p.id === error?.split('_')[0])?.name) || success || error || 'Platform';
+  setTimeout(() => {
+    if (success) toast(`${platformName} connected.`, 'ok');
+    if (error) toast(`${platformName} connection failed.`, 'err');
+  }, 400);
+}
 
 function initOnboarding() {
   const u = auth.user;
@@ -2390,7 +2435,7 @@ function syncPlatformCard(platId) {
   const conn = _platformConnections[platId];
   const connected = !!conn;
   const active = connected && conn.is_active !== false;
-  btn.textContent = connected ? (active ? '✓ Connected' : 'Turn On') : 'Add';
+  btn.textContent = connected ? (active ? '✓ Connected' : 'Turn On') : (OAUTH_PLATFORM_IDS.has(platId) ? 'Connect' : 'Add');
   btn.classList.toggle('connected', active);
   btn.classList.toggle('inactive', connected && !active);
   btn.title = connected ? (active ? 'Click to manage connection' : 'Connection is off. Click to turn on') : 'Click to connect';
@@ -2446,20 +2491,23 @@ async function loadPlatformConnections() {
   renderSettingsConnections();
 }
 
+function connectPlatformFromSettings(platId) {
+  if (OAUTH_PLATFORM_IDS.has(platId)) {
+    startPlatformOAuth(platId, 'dashboard').catch(err => toast(err.message || 'Connection failed.', 'err'));
+    return;
+  }
+
+  openPlatModal(platId);
+}
+
 function openPlatModal(platId) {
   const p = OB_PLATFORMS.find(x => x.id === platId);
   if (!p) return;
   _currentPlatId = platId;
 
-  // If the platform is YouTube, redirect to OAuth flow instead of showing manual token modal
-  if (platId === 'youtube') {
-    api('GET', '/api/v1/platforms/youtube/auth?returnTo=' + encodeURIComponent(window.location.origin))
-      .then(res => res.json())
-      .then(data => {
-        if (data.url) window.location.href = data.url;
-        else showToast('Failed to start YouTube connection', 'err');
-      })
-      .catch(err => showToast('Error connecting to YouTube', 'err'));
+  if (OAUTH_PLATFORM_IDS.has(platId)) {
+    startPlatformOAuth(platId, 'onboarding')
+      .catch(err => toast(err.message || `Error connecting to ${p.name}`, 'err'));
     return;
   }
 
@@ -2540,6 +2588,37 @@ async function connectPlatform() {
   }
 }
 
+async function disconnectPlatformById(platId) {
+  const conn = _platformConnections[platId];
+  const p = OB_PLATFORMS.find(x => x.id === platId);
+  const statusEl = document.getElementById('settings-status');
+  if (!conn?.id) {
+    if (statusEl) statusEl.textContent = 'No saved connection found.';
+    toast('No saved connection found.', 'err');
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = 'Disconnecting…';
+  try {
+    const res = await api('DELETE', `/api/v1/platforms/${conn.id}`);
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to disconnect platform');
+    }
+
+    delete _platformConnections[platId];
+    syncPlatformCard(platId);
+    renderSettingsConnections();
+    renderOnboardingIntro();
+    renderOnboardingSummary();
+    if (statusEl) statusEl.textContent = `${p?.name || platId} disconnected.`;
+    toast(`${p?.name || platId} disconnected.`, 'ok');
+  } catch (err) {
+    if (statusEl) statusEl.textContent = err.message || 'Disconnect failed.';
+    toast(`Disconnect failed: ${err.message}`, 'err');
+  }
+}
+
 async function disconnectPlatform() {
   if (!_currentPlatId) return;
   const conn = _platformConnections[_currentPlatId];
@@ -2590,6 +2669,7 @@ async function finishOnboarding() {
    INIT
 ══════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
+  consumeOAuthResult();
   // Bind button event handlers
   const bind = (id, fn) => document.getElementById(id)?.addEventListener('click', fn);
   const bindLink = (id, fn) => document.getElementById(id)?.addEventListener('click', e => { e.preventDefault(); fn(e); });
@@ -2718,8 +2798,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await bootstrapAuthState();
 
+  const hashPage = (window.location.hash || '').replace('#', '');
+
   if (auth.token && auth.user) {
-    if (localStorage.getItem('omni_onboarding_done')) {
+    if (hashPage === 'onboarding') {
+      showPage('onboarding');
+    } else if (hashPage === 'dashboard') {
+      showPage('dashboard');
+    } else if (localStorage.getItem('omni_onboarding_done')) {
       showPage('dashboard');
     } else {
       showPage('onboarding');
