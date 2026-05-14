@@ -29,6 +29,28 @@ const supabase = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_SERVI
   global: { headers: { 'x-application-name': 'omnipublish-api-service' } },
 });
 
+const CORE_RELATIONS = [
+  'users',
+  'password_resets',
+  'revoked_tokens',
+  'platform_connections',
+  'posts',
+  'post_platforms',
+  'media_files',
+  'audit_logs',
+];
+
+const SUPPORT_RELATIONS = [
+  'idempotency_tokens',
+  'oauth_states',
+  'api_requests',
+  'retry_queue',
+  'user_sessions',
+  'post_publish_summary',
+];
+
+const REQUIRED_RELATIONS = [...CORE_RELATIONS, ...SUPPORT_RELATIONS];
+
 /**
  * execute — wraps a Supabase query with error handling and logging.
  */
@@ -66,12 +88,37 @@ const executeWithRetry = async (queryFn, context, maxRetries = 3) => {
   throw lastError;
 };
 
-/** Health check — verifies Supabase is reachable */
-const dbHealthCheck = async () => {
+const probeRelation = async (relation) => {
   try {
-    const { error } = await supabase.from('users').select('count').limit(1).single();
-    return !error || error.code === 'PGRST116';
-  } catch { return false; }
+    const { error } = await supabase.from(relation).select('id').limit(1);
+    return { relation, ok: !error, error: error || null };
+  } catch (err) {
+    return { relation, ok: false, error: err };
+  }
 };
 
-module.exports = { supabase, supabasePublic, execute, executeWithRetry, dbHealthCheck };
+/** Health check — verifies Supabase is reachable and MVP relations exist */
+const dbSchemaHealthCheck = async () => {
+  const checks = await Promise.all(REQUIRED_RELATIONS.map(probeRelation));
+  const missingRelations = checks.filter(result => !result.ok).map(result => result.relation);
+  const missingCoreRelations = checks.filter(result => CORE_RELATIONS.includes(result.relation) && !result.ok).map(result => result.relation);
+  const missingSupportRelations = checks.filter(result => SUPPORT_RELATIONS.includes(result.relation) && !result.ok).map(result => result.relation);
+  return {
+    ok: missingCoreRelations.length === 0,
+    missingRelations,
+    missingCoreRelations,
+    missingSupportRelations,
+    checks,
+  };
+};
+
+const dbHealthCheck = async () => {
+  try {
+    const schema = await dbSchemaHealthCheck();
+    return schema.ok;
+  } catch {
+    return false;
+  }
+};
+
+module.exports = { supabase, supabasePublic, execute, executeWithRetry, dbHealthCheck, dbSchemaHealthCheck, REQUIRED_RELATIONS, CORE_RELATIONS, SUPPORT_RELATIONS };

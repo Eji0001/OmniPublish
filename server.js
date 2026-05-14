@@ -22,7 +22,7 @@ const passport    = require('passport');
 
 const cookieParser                 = require('cookie-parser');
 const { logger, httpLogStream }    = require('./utils/logger');
-const { dbHealthCheck }            = require('./config/database');
+const { dbSchemaHealthCheck } = require('./config/database');
 const { globalRateLimiter }        = require('./middleware/rateLimit');
 const { errorHandler }             = require('./middleware/errorHandler');
 const { requestSanitizer }         = require('./middleware/sanitizer');
@@ -333,11 +333,14 @@ if (require.main === module) {
       env:  process.env.NODE_ENV || 'development',
       pid:  process.pid,
     });
-    const isDbConnected = await dbHealthCheck();
-    if (isDbConnected) {
-      logger.info('Database connected successfully');
+    const schema = await dbSchemaHealthCheck();
+    if (schema.ok) {
+      logger.info('Database ready for MVP', { relations: schema.checks.length });
+      if (schema.missingSupportRelations.length) {
+        logger.warn('Optional database relations missing', { missingSupportRelations: schema.missingSupportRelations });
+      }
     } else {
-      logger.error('Failed to connect to the database. Check Supabase credentials.');
+      logger.error('Database readiness check failed', { missingRelations: schema.missingRelations });
     }
   });
 
