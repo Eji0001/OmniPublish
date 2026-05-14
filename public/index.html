@@ -1092,7 +1092,7 @@ const auth = {
   },
   clear() {
     accessToken = null;
-    ['omni_token','omni_user','omni_draft','omni_draft_ts'].forEach(k => localStorage.removeItem(k));
+    ['omni_token','omni_user','omni_draft','omni_draft_ts','omni_draft_id'].forEach(k => localStorage.removeItem(k));
   },
   async refresh() {
     const rr = await fetch(base() + '/api/v1/auth/refresh', {
@@ -1484,9 +1484,11 @@ const TEMPLATES = {
 let selected = new Set();
 let adapted  = {};
 let selectedMediaFiles = [];
+let selectedMediaIds = [];
 let publishing = false;
 let currentFormat = 'post';
 let currentRatio  = '16:9';
+let currentDraftId = localStorage.getItem('omni_draft_id') || '';
 let calendarMonth = new Date();
 let calendarPosts = [];
 let calendarLoading = false;
@@ -1515,6 +1517,7 @@ function initDashboard() {
     onContentChange();
   }
   updatePublishButton();
+  if (!draft) loadBackendDraft().catch(() => {});
   loadCalendarPosts().catch(() => renderCalendar());
 }
 
@@ -1682,8 +1685,79 @@ function addMedia() { document.getElementById('media-input').click(); }
 function handleDrop(e) { e.preventDefault(); document.getElementById('media-zone').classList.remove('drag'); handleFiles(e.dataTransfer.files); }
 function addHashtags() { const ta=document.getElementById('content');ta.value+=(ta.value.length?'\n\n':'')+'#trending #viral #content #socialmedia';onContentChange(); }
 function addEmoji() { const em=['🚀','💡','🔥','✨','💪','🎯','📈','🌟','💫','🎉','⚡','🎬','🏆'];document.getElementById('content').value+=' '+em[Math.floor(Math.random()*em.length)];onContentChange(); }
-function clearContent() { document.getElementById('content').value='';onContentChange(); }
+function clearContent() { document.getElementById('content').value='';deleteBackendDraft().catch(() => {});onContentChange(); }
 function useTemplate(key) { document.getElementById('content').value=TEMPLATES[key]||'';if(key==='shorts'){document.querySelector('[data-fmt="short"]')?.click();}onContentChange();toast('Template loaded!','ok'); }
+
+async function loadBackendDraft() {
+  if (!auth.token) return;
+  const res = await api('GET', '/api/v1/posts?status=draft&limit=1');
+  const data = await res.json();
+  if (!res.ok) return;
+  const draft = data.posts?.[0];
+  if (!draft?.content) return;
+
+  currentDraftId = draft.id || '';
+  if (currentDraftId) localStorage.setItem('omni_draft_id', currentDraftId);
+
+  document.getElementById('content').value = draft.content || '';
+  if (draft.format) document.querySelector(`[data-fmt="${draft.format}"]`)?.click();
+  if (draft.aspect_ratio) document.querySelector(`[data-ratio="${draft.aspect_ratio}"]`)?.click();
+
+  selected.clear();
+  (draft.post_platforms || []).forEach(p => selected.add(p.platform));
+  selectedMediaIds = (draft.media_files || []).map(m => m.id).filter(Boolean);
+  document.querySelectorAll('.plat-card').forEach(card => {
+    card.classList.toggle('sel', selected.has(card.dataset.platformId));
+  });
+
+  if (draft.scheduled_at) {
+    const scheduled = new Date(draft.scheduled_at);
+    const sd = document.getElementById('s-date');
+    const st = document.getElementById('s-time');
+    if (sd) sd.value = scheduled.toISOString().split('T')[0];
+    if (st) st.value = `${String(scheduled.getHours()).padStart(2,'0')}:${String(scheduled.getMinutes()).padStart(2,'0')}`;
+  }
+
+  onContentChange();
+  updateAll();
+  toast('Backend draft restored.', 'ok');
+}
+
+function getOptionalScheduledAt() {
+  const scheduledTab = document.getElementById('tab-sched');
+  if (!scheduledTab?.classList.contains('active')) return null;
+  const date = document.getElementById('s-date')?.value;
+  const time = document.getElementById('s-time')?.value;
+  if (!date || !time) return null;
+  const scheduledAt = new Date(`${date}T${time}`);
+  return Number.isNaN(scheduledAt.getTime()) ? null : scheduledAt.toISOString();
+}
+
+async function saveDraftToBackend() {
+  const txt = document.getElementById('content')?.value?.trim() || '';
+  if (!txt) return;
+  const body = {
+    draftId: currentDraftId || undefined,
+    content: txt,
+    format: currentFormat,
+    aspectRatio: currentRatio,
+    platforms: getSelected().map(p => p.id),
+    mediaIds: selectedMediaIds,
+    scheduledAt: getOptionalScheduledAt(),
+  };
+  const res = await api('POST', '/api/v1/posts/draft', body);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to save draft');
+  currentDraftId = data.post?.id || currentDraftId;
+  if (currentDraftId) localStorage.setItem('omni_draft_id', currentDraftId);
+}
+
+async function deleteBackendDraft() {
+  if (!currentDraftId) return;
+  await api('DELETE', `/api/v1/posts/draft/${currentDraftId}`).catch(() => {});
+  currentDraftId = '';
+  localStorage.removeItem('omni_draft_id');
+}
 
 function getScheduledAt() {
   const scheduledTab = document.getElementById('tab-sched');
@@ -1724,6 +1798,7 @@ async function cleanupUploadedMedia(mediaIds) {
 
 function clearMediaSelection() {
   selectedMediaFiles = [];
+  selectedMediaIds = [];
   const input = document.getElementById('media-input');
   if (input) input.value = '';
   const prev = document.getElementById('media-previews');
@@ -1924,9 +1999,10 @@ function autosaveDraft() {
     const txt=document.getElementById('content').value;
     if(txt.trim()){localStorage.setItem('omni_draft',txt);localStorage.setItem('omni_draft_ts',Date.now());
     const bar=document.getElementById('draft-bar');bar.style.display='flex';document.getElementById('draft-bar-txt').textContent='Draft auto-saved — '+new Date().toLocaleTimeString();}
+    if (txt.trim()) saveDraftToBackend().catch(() => {});
   },1500);
 }
-function clearDraft() { localStorage.removeItem('omni_draft');localStorage.removeItem('omni_draft_ts');document.getElementById('content').value='';document.getElementById('draft-bar').style.display='none';onContentChange();toast('Draft discarded','ok'); }
+async function clearDraft() { localStorage.removeItem('omni_draft');localStorage.removeItem('omni_draft_ts');document.getElementById('content').value='';document.getElementById('draft-bar').style.display='none';clearMediaSelection();await deleteBackendDraft();onContentChange();toast('Draft discarded','ok'); }
 
 async function runAIAdapt() {
   const txt = document.getElementById('content').value.trim();
@@ -1983,7 +2059,7 @@ async function publishAll() {
   let createdPost = null;
   try {
     const pids=sel.map(p=>p.id);
-    uploadedMediaIds = await uploadSelectedMedia();
+    uploadedMediaIds = [...selectedMediaIds, ...(await uploadSelectedMedia())];
     sel.forEach(p=>{document.getElementById('sid-'+p.id).textContent=isScheduled?'Saving scheduled post…':'Creating post…';});
     const createRes = await api('POST', '/api/v1/posts', { content: txt, platforms: pids, format: currentFormat, aspectRatio: currentRatio, ...(scheduledAt ? { scheduledAt } : {}), ...(uploadedMediaIds.length ? { mediaIds: uploadedMediaIds } : {}) });
     const createData = await createRes.json();
@@ -2001,6 +2077,7 @@ async function publishAll() {
         document.getElementById('sid-'+p.id).textContent=`Scheduled for ${scheduledLabel}`;
       });
       clearMediaSelection();
+      await deleteBackendDraft();
       renderCalendar();
       loadCalendarPosts().catch(() => renderCalendar());
       toast(`Scheduled to ${sel.length} platform${sel.length===1?'':'s'} for ${scheduledLabel}`,'ok');
@@ -2018,6 +2095,7 @@ async function publishAll() {
         else{if(f)f.style.background='var(--err)';document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Failed';document.getElementById('sid-'+p.id).textContent=r.error||'Failed';}
       });
       clearMediaSelection();
+      await deleteBackendDraft();
       loadCalendarPosts().catch(() => renderCalendar());
       toast(ok===sel.length?`🚀 Published to all ${sel.length} platforms!`:`Published ${ok}/${sel.length}`,(ok>0?'ok':'err'));
     }

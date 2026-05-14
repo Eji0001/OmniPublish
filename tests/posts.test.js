@@ -75,7 +75,10 @@ function authHeader() {
   return { Authorization: `Bearer ${token}` };
 }
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  supabase.from.mockReset();
+});
 
 // ── GET /api/v1/posts ──────────────────────────────────────
 
@@ -223,6 +226,54 @@ describe('POST /api/v1/posts', () => {
   });
 });
 
+describe('POST /api/v1/posts/draft', () => {
+  it('creates and syncs a draft in the backend', async () => {
+    const draft = { ...MOCK_POST, id: 'dddddddd-dddd-dddd-dddd-dddddddddddd' };
+    const revoke = mockChain({ data: null, error: null });
+    const insertDraft = mockChain({ data: draft, error: null });
+    const clearPlatforms = mockChain({ data: null, error: null }, { data: null, error: null });
+    const insertPlatforms = mockChain({ data: null, error: null }, { data: null, error: null });
+
+    supabase.from
+      .mockReturnValueOnce(revoke)
+      .mockReturnValueOnce(insertDraft)
+      .mockReturnValueOnce(clearPlatforms)
+      .mockReturnValueOnce(insertPlatforms);
+
+    const res = await request(app)
+      .post('/api/v1/posts/draft')
+      .set(authHeader())
+      .send({ content: 'Draft content', platforms: ['x', 'linkedin'], format: 'post', aspectRatio: '16:9' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.post.status).toBe('draft');
+    expect(insertPlatforms.insert).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ post_id: draft.id, platform: 'x' }),
+      expect.objectContaining({ post_id: draft.id, platform: 'linkedin' }),
+    ]));
+  });
+
+  it('updates an existing draft and clears its platform sync when empty', async () => {
+    const updatedDraft = { ...MOCK_POST, title: 'Updated draft' };
+    const revoke = mockChain({ data: null, error: null });
+    const updateDraft = mockChain({ data: updatedDraft, error: null });
+    const clearPlatforms = mockChain({ data: null, error: null }, { data: null, error: null });
+
+    supabase.from
+      .mockReturnValueOnce(revoke)
+      .mockReturnValueOnce(updateDraft)
+      .mockReturnValueOnce(clearPlatforms);
+
+    const res = await request(app)
+      .post('/api/v1/posts/draft')
+      .set(authHeader())
+      .send({ draftId: POST_ID, content: 'Updated draft' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.post.title).toBe('Updated draft');
+  });
+});
+
 // ── PATCH /api/v1/posts/:id ────────────────────────────────
 
 describe('PATCH /api/v1/posts/:id', () => {
@@ -294,6 +345,35 @@ describe('DELETE /api/v1/posts/:id', () => {
     expect(res.status).toBe(204);
     expect(supabase.storage.from).toHaveBeenCalledWith('media');
     expect(remove).toHaveBeenCalledWith(['posts/p1.webp']);
+  });
+});
+
+describe('DELETE /api/v1/posts/draft/:id', () => {
+  it('deletes a draft owned by the user', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))  // revoked_tokens
+      .mockReturnValueOnce(mockChain({ data: { id: POST_ID, user_id: TEST_USER.id }, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: null, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: null, error: null }))
+      .mockReturnValueOnce(mockChain({ data: null, error: null }, { data: null, error: null }));
+
+    const res = await request(app)
+      .delete(`/api/v1/posts/draft/${POST_ID}`)
+      .set(authHeader());
+
+    expect(res.status).toBe(204);
+  });
+
+  it('404 — rejects deleting another user\'s draft', async () => {
+    supabase.from
+      .mockReturnValueOnce(mockChain({ data: null, error: null }))  // revoked_tokens
+      .mockReturnValueOnce(mockChain({ data: null, error: { message: 'not found' } }));
+
+    const res = await request(app)
+      .delete(`/api/v1/posts/draft/${POST_ID}`)
+      .set(authHeader());
+
+    expect(res.status).toBe(404);
   });
 });
 

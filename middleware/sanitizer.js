@@ -62,6 +62,16 @@ const schemas = {
     platforms:   z.array(z.enum(PLATFORM_IDS)).min(1).max(14),
     mediaIds:    z.array(z.string().uuid()).max(10).optional(),
   }),
+  saveDraft: z.object({
+    draftId:     z.string().uuid().optional(),
+    content:     z.string().min(1).max(63206),
+    title:       z.string().max(500).optional(),
+    format:      z.enum(['post', 'video', 'short', 'story', 'article']).default('post'),
+    aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:5', '2:3']).default('16:9'),
+    scheduledAt: z.string().datetime().nullable().optional(),
+    platforms:   z.array(z.enum(PLATFORM_IDS)).max(14).optional(),
+    mediaIds:    z.array(z.string().uuid()).max(10).optional(),
+  }).strict(),
   adaptContent: z.object({
     content:   z.string().min(1).max(63206),
     platforms: z.array(z.enum(PLATFORM_IDS)).min(1).max(14),

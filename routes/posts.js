@@ -16,6 +16,23 @@ const { logger }         = require('../utils/logger');
 const router = express.Router();
 router.use(verifyToken);
 
+const syncDraftPlatforms = async (draftId, platforms) => {
+  await supabase.from('post_platforms').delete().eq('post_id', draftId);
+  if (platforms?.length) {
+    const { error } = await supabase.from('post_platforms')
+      .insert(platforms.map(p => ({ post_id: draftId, platform: p, status: 'pending' })));
+    if (error) throw error;
+  }
+};
+
+const syncDraftMedia = async (draftId, userId, mediaIds) => {
+  await supabase.from('media_files').update({ post_id: null }).eq('post_id', draftId).eq('user_id', userId);
+  if (mediaIds?.length) {
+    const { error } = await supabase.from('media_files').update({ post_id: draftId }).in('id', mediaIds).eq('user_id', userId);
+    if (error) throw error;
+  }
+};
+
 /* ── GET /posts ── */
 router.get('/', async (req, res) => {
   const { status, format } = req.query;
@@ -24,7 +41,7 @@ router.get('/', async (req, res) => {
 
   const offset = (page - 1) * limit;
   let query = supabase.from('posts')
-    .select('id,title,content,format,aspect_ratio,status,scheduled_at,published_at,created_at,post_platforms(platform,status,platform_post_url,published_at)', { count: 'exact' })
+    .select('id,title,content,format,aspect_ratio,status,scheduled_at,published_at,created_at,post_platforms(platform,status,platform_post_url,published_at),media_files(id,storage_path,cdn_url,mime_type,original_name)', { count: 'exact' })
     .eq('user_id', req.user.id).order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (status) query = query.eq('status', status);
@@ -58,6 +75,70 @@ router.post('/adapt', aiRateLimiter, validateBody('adaptContent'), async (req, r
   const { content, platforms, format, ratio } = req.body;
   const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
   res.json({ adapted });
+});
+
+/* ── POST /posts/draft ── */
+router.post('/draft', validateBody('saveDraft'), async (req, res) => {
+  const { draftId, content, title, format, aspectRatio, scheduledAt, platforms, mediaIds } = req.body;
+  const draftPayload = {
+    title: title || null,
+    content,
+    format: format || 'post',
+    aspect_ratio: aspectRatio || '16:9',
+    status: 'draft',
+    scheduled_at: scheduledAt || null,
+  };
+
+  let post;
+  if (draftId) {
+    const { data, error } = await supabase.from('posts')
+      .update({ ...draftPayload, updated_at: new Date() })
+      .eq('id', draftId)
+      .eq('user_id', req.user.id)
+      .select()
+      .single();
+    if (error || !data) return res.status(404).json({ error: 'Draft not found' });
+    post = data;
+  } else {
+    const { data, error } = await supabase.from('posts')
+      .insert({ user_id: req.user.id, ...draftPayload })
+      .select()
+      .single();
+    if (error || !data) {
+      logger.error('Draft save error', { err: error?.message });
+      return res.status(500).json({ error: 'Failed to save draft' });
+    }
+    post = data;
+  }
+
+  try {
+    if (platforms !== undefined) await syncDraftPlatforms(post.id, platforms);
+    if (mediaIds !== undefined) await syncDraftMedia(post.id, req.user.id, mediaIds);
+  } catch (error) {
+    logger.error('Draft association update failed', { draftId: post.id, err: error.message });
+    return res.status(500).json({ error: 'Failed to sync draft associations' });
+  }
+
+  res.status(draftId ? 200 : 201).json({ post });
+});
+
+/* ── DELETE /posts/draft/:id ── */
+router.delete('/draft/:id', async (req, res) => {
+  const { data: post, error: lookupError } = await supabase.from('posts')
+    .select('id, user_id')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .eq('status', 'draft')
+    .single();
+
+  if (lookupError || !post) return res.status(404).json({ error: 'Draft not found' });
+
+  await supabase.from('post_platforms').delete().eq('post_id', post.id);
+  await supabase.from('media_files').update({ post_id: null }).eq('post_id', post.id).eq('user_id', req.user.id);
+
+  const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('user_id', req.user.id);
+  if (error) return res.status(500).json({ error: 'Failed to delete draft' });
+  res.status(204).send();
 });
 
 /* ── GET /posts/:id ── */
