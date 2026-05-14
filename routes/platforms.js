@@ -10,11 +10,72 @@ const { verifyToken } = require('../middleware/auth');
 const { validateBody } = require('../middleware/sanitizer');
 const { encrypt }     = require('../utils/encryption');
 const { logger }      = require('../utils/logger');
+const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
 
 const router = express.Router();
-router.use(verifyToken);
 
 const isExpired = (tokenExpiresAt) => tokenExpiresAt && new Date(tokenExpiresAt) < new Date();
+
+/* ── GET /youtube/callback — Handle OAuth callback ── */
+router.get('/youtube/callback', async (req, res) => {
+  try {
+    const { userId, returnTo } = await verifyOAuthState(req.query.state, 'youtube');
+    
+    if (req.query.error) {
+      logger.error('YouTube OAuth error from Google', { error: req.query.error });
+      return res.redirect(`${returnTo}?platform_error=youtube_access_denied#onboarding`);
+    }
+
+    // Exchange code for tokens
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        code: req.query.code,
+        redirect_uri: `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/youtube/callback`,
+        grant_type: 'authorization_code'
+      })
+    });
+    
+    const tokenData = await tokenRes.json();
+    if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
+
+    // Get YouTube Channel Info
+    const channelRes = await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', {
+      headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+    });
+    const channelData = await channelRes.json();
+    if (channelData.error) throw new Error(channelData.error.message);
+
+    const channelId = channelData.items?.[0]?.id || 'unknown';
+    const channelTitle = channelData.items?.[0]?.snippet?.title || 'YouTube Channel';
+    const expiresAt = tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null;
+
+    // Upsert platform connection
+    await supabase.from('platform_connections').upsert({
+      user_id:           userId,
+      platform:          'youtube',
+      platform_user_id:  channelId,
+      platform_username: channelTitle,
+      access_token_enc:  encrypt(tokenData.access_token),
+      refresh_token_enc: tokenData.refresh_token ? encrypt(tokenData.refresh_token) : null,
+      token_expires_at:  expiresAt,
+      is_active:         true,
+      connected_at:      new Date(),
+    }, { onConflict: 'user_id,platform' });
+
+    logger.info('YouTube connected successfully via OAuth', { userId });
+    res.redirect(`${returnTo}?platform_success=youtube#onboarding`);
+  } catch (err) {
+    logger.error('YouTube callback error', { err: err.message });
+    res.redirect(`/?platform_error=youtube_callback_failed#onboarding`);
+  }
+});
+
+// Authenticated routes below
+router.use(verifyToken);
 
 /* ── GET /platforms — list connected platforms ── */
 router.get('/', async (req, res) => {
@@ -23,6 +84,28 @@ router.get('/', async (req, res) => {
     .eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: 'Failed to fetch platforms' });
   res.json({ platforms: data });
+});
+
+/* ── GET /platforms/youtube/auth — Initiate OAuth ── */
+router.get('/youtube/auth', async (req, res) => {
+  try {
+    const returnTo = req.query.returnTo || (process.env.APP_URL || 'http://localhost:4000');
+    const { state } = await generateOAuthState('youtube', req.user.id, returnTo);
+    
+    const oauthUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+    oauthUrl.searchParams.append('client_id', process.env.GOOGLE_CLIENT_ID);
+    oauthUrl.searchParams.append('redirect_uri', `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/youtube/callback`);
+    oauthUrl.searchParams.append('response_type', 'code');
+    oauthUrl.searchParams.append('scope', 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/youtube.readonly');
+    oauthUrl.searchParams.append('access_type', 'offline');
+    oauthUrl.searchParams.append('prompt', 'consent');
+    oauthUrl.searchParams.append('state', state);
+
+    res.json({ url: oauthUrl.toString() });
+  } catch (err) {
+    logger.error('Failed to generate YouTube auth URL', { err: err.message });
+    res.status(500).json({ error: 'Failed to generate auth URL' });
+  }
 });
 
 /* ── POST /platforms/connect — store OAuth tokens ── */

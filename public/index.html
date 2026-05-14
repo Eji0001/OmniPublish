@@ -2450,6 +2450,19 @@ function openPlatModal(platId) {
   const p = OB_PLATFORMS.find(x => x.id === platId);
   if (!p) return;
   _currentPlatId = platId;
+
+  // If the platform is YouTube, redirect to OAuth flow instead of showing manual token modal
+  if (platId === 'youtube') {
+    api('GET', '/api/v1/platforms/youtube/auth?returnTo=' + encodeURIComponent(window.location.origin))
+      .then(res => res.json())
+      .then(data => {
+        if (data.url) window.location.href = data.url;
+        else showToast('Failed to start YouTube connection', 'err');
+      })
+      .catch(err => showToast('Error connecting to YouTube', 'err'));
+    return;
+  }
+
   document.getElementById('pm-icon').textContent = p.icon;
   document.getElementById('pm-title').textContent = 'Connect ' + p.name;
   document.getElementById('pm-reqs').innerHTML = p.reqs.map(r => `<li class="pm-req">${escHtml(r)}</li>`).join('');
