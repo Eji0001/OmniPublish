@@ -1,1 +1,74 @@
--- ============================================================\n-- OmniPublish — Migration 003: Add Medium-Priority Features\n-- Engine : PostgreSQL 15+ (Supabase)\n-- Features: Retry queue, GDPR, graceful shutdown support\n-- ============================================================\n\n-- Retry queue for failed scheduled operations\nCREATE TABLE IF NOT EXISTS retry_queue (\n  id              UUID        DEFAULT gen_random_uuid() PRIMARY KEY,\n  operation_type  VARCHAR(50) NOT NULL,\n  payload         JSONB       NOT NULL,\n  attempt         INT         DEFAULT 0 NOT NULL,\n  max_retries     INT         DEFAULT 5 NOT NULL,\n  status          VARCHAR(20) DEFAULT 'pending' NOT NULL,  -- pending, completed, failed\n  last_error      TEXT,\n  failure_reason  TEXT,\n  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL,\n  next_retry_at   TIMESTAMPTZ NOT NULL,\n  completed_at    TIMESTAMPTZ,\n  failed_at       TIMESTAMPTZ\n);\n\nCREATE INDEX IF NOT EXISTS idx_retry_queue_status ON retry_queue (status, next_retry_at);\nCREATE INDEX IF NOT EXISTS idx_retry_queue_created ON retry_queue (created_at DESC);\n\n-- Extended users table for GDPR\nALTER TABLE users ADD COLUMN IF NOT EXISTS deletion_requested_at TIMESTAMPTZ;\nALTER TABLE users ADD COLUMN IF NOT EXISTS deletion_scheduled_for TIMESTAMPTZ;\nCREATE INDEX IF NOT EXISTS idx_users_deletion ON users (deletion_scheduled_for) WHERE deletion_scheduled_for IS NOT NULL;\n\n-- Audit logs for activity tracking\nCREATE TABLE IF NOT EXISTS audit_logs (\n  id              UUID        DEFAULT gen_random_uuid() PRIMARY KEY,\n  user_id         UUID REFERENCES users(id) ON DELETE SET NULL,\n  action          VARCHAR(50) NOT NULL,\n  resource_type   VARCHAR(50),\n  resource_id     VARCHAR(255),\n  changes         JSONB,\n  ip_address      INET,\n  user_agent      TEXT,\n  status          INT,\n  error_message   TEXT,\n  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL\n);\n\nCREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs (user_id, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs (resource_type, resource_id);\n\n-- API request metrics for monitoring\nCREATE TABLE IF NOT EXISTS api_request_metrics (\n  id              UUID        DEFAULT gen_random_uuid() PRIMARY KEY,\n  user_id         UUID REFERENCES users(id) ON DELETE SET NULL,\n  method          VARCHAR(10) NOT NULL,\n  path            VARCHAR(255) NOT NULL,\n  status_code     INT         NOT NULL,\n  response_ms     INT,\n  request_size    INT,\n  response_size   INT,\n  error_code      VARCHAR(20),\n  ip_address      INET,\n  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL\n);\n\nCREATE INDEX IF NOT EXISTS idx_api_metrics_user ON api_request_metrics (user_id, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_api_metrics_path ON api_request_metrics (path, status_code, created_at DESC);\nCREATE INDEX IF NOT EXISTS idx_api_metrics_time ON api_request_metrics (created_at DESC);\n\n-- Schedule automatic cleanup\n-- DELETE FROM idempotency_tokens WHERE expires_at < NOW() - INTERVAL '1 day';\n-- DELETE FROM oauth_states WHERE expires_at < NOW();\n-- DELETE FROM api_request_metrics WHERE created_at < NOW() - INTERVAL '30 days';\n-- DELETE FROM retry_queue WHERE status = 'completed' AND completed_at < NOW() - INTERVAL '7 days';\n-- DELETE FROM retry_queue WHERE status = 'failed' AND failed_at < NOW() - INTERVAL '30 days';\n
+﻿-- ============================================================
+-- OmniPublish — Migration 003: Add Medium-Priority Features
+-- Engine : PostgreSQL 15+ (Supabase)
+-- Features: Retry queue, GDPR, graceful shutdown support
+-- ============================================================
+
+-- Retry queue for failed scheduled operations
+CREATE TABLE IF NOT EXISTS retry_queue (
+  id              UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  operation_type  VARCHAR(50) NOT NULL,
+  payload         JSONB       NOT NULL,
+  attempt         INT         DEFAULT 0 NOT NULL,
+  max_retries     INT         DEFAULT 5 NOT NULL,
+  status          VARCHAR(20) DEFAULT 'pending' NOT NULL,  -- pending, completed, failed
+  last_error      TEXT,
+  failure_reason  TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  next_retry_at   TIMESTAMPTZ NOT NULL,
+  completed_at    TIMESTAMPTZ,
+  failed_at       TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_retry_queue_status ON retry_queue (status, next_retry_at);
+CREATE INDEX IF NOT EXISTS idx_retry_queue_created ON retry_queue (created_at DESC);
+
+-- Extended users table for GDPR
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deletion_requested_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deletion_scheduled_for TIMESTAMPTZ;
+CREATE INDEX IF NOT EXISTS idx_users_deletion ON users (deletion_scheduled_for) WHERE deletion_scheduled_for IS NOT NULL;
+
+-- Audit logs for activity tracking
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id              UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
+  action          VARCHAR(50) NOT NULL,
+  resource_type   VARCHAR(50),
+  resource_id     VARCHAR(255),
+  changes         JSONB,
+  ip_address      INET,
+  user_agent      TEXT,
+  status          INT,
+  error_message   TEXT,
+  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs (action, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs (resource_type, resource_id);
+
+-- API request metrics for monitoring
+CREATE TABLE IF NOT EXISTS api_request_metrics (
+  id              UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id         UUID REFERENCES users(id) ON DELETE SET NULL,
+  method          VARCHAR(10) NOT NULL,
+  path            VARCHAR(255) NOT NULL,
+  status_code     INT         NOT NULL,
+  response_ms     INT,
+  request_size    INT,
+  response_size   INT,
+  error_code      VARCHAR(20),
+  ip_address      INET,
+  created_at      TIMESTAMPTZ DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_api_metrics_user ON api_request_metrics (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_path ON api_request_metrics (path, status_code, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_api_metrics_time ON api_request_metrics (created_at DESC);
+
+-- Schedule automatic cleanup
+-- DELETE FROM idempotency_tokens WHERE expires_at < NOW() - INTERVAL '1 day';
+-- DELETE FROM oauth_states WHERE expires_at < NOW();
+-- DELETE FROM api_request_metrics WHERE created_at < NOW() - INTERVAL '30 days';
+-- DELETE FROM retry_queue WHERE status = 'completed' AND completed_at < NOW() - INTERVAL '7 days';
+-- DELETE FROM retry_queue WHERE status = 'failed' AND failed_at < NOW() - INTERVAL '30 days';

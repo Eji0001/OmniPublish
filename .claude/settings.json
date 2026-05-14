@@ -10,7 +10,14 @@
       "Bash(git -C \"d:\\\\OmniPublish\" check-ignore server.err)",
       "Bash(git -C \"d:\\\\OmniPublish\" check-ignore \".claude/settings.json\")",
       "Bash(git -C \"d:\\\\OmniPublish\" add .claude/settings.local.json .claude/settings.json .gitignore)",
-      "Bash(git -C 'd:\\\\OmniPublish' commit -m ' *)"
+      "Bash(git -C 'd:\\\\OmniPublish' commit -m ' *)",
+      "Bash(Get-ChildItem -Path \"D:\\\\OmniPublish\" -Directory)",
+      "Bash(Select-Object Name)",
+      "mcp__supabase__get_advisors",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__list_migrations",
+      "mcp__claude_ai_Supabase__get_advisors",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
