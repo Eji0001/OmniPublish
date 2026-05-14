@@ -2289,20 +2289,20 @@ async function verifyMagicToken(token) {
    ONBOARDING
 ══════════════════════════════════════ */
 const OB_PLATFORMS = [
-  { id: 'facebook',  name: 'Facebook',    icon: '📘', desc: 'Community engagement and group-driven content',         reqs: ['Use a Facebook/Meta access token', 'Page access or profile access is required'] },
-  { id: 'instagram', name: 'Instagram',   icon: '📷', desc: 'Visual storytelling and Reels-first growth',            reqs: ['Use an Instagram Graph API token', 'Business or Creator account required'] },
-  { id: 'x',         name: 'X (Twitter)', icon: '𝕏',  desc: 'Real-time conversations and trending topics',          reqs: ['Use an X API bearer token', 'Account must be in good standing'] },
-  { id: 'tiktok',    name: 'TikTok',      icon: '🎵', desc: 'Short-form video with viral discovery potential',       reqs: ['Use a TikTok API access token', 'Business or Creator account required'] },
-  { id: 'linkedin',  name: 'LinkedIn',    icon: '💼', desc: 'Professional networking and B2B thought leadership',    reqs: ['Use a LinkedIn OAuth access token', 'Personal or company profile required'] },
-  { id: 'youtube',   name: 'YouTube',     icon: '▶️', desc: 'Long-form video and monetized creator content',         reqs: ['Use a Google OAuth access token', 'Channel must be verified'] },
-  { id: 'reddit',    name: 'Reddit',      icon: '👽', desc: 'Community discussions and niche audience reach',        reqs: ['Use a Reddit OAuth access token', 'Subreddit posting permissions required'] },
-  { id: 'threads',   name: 'Threads',     icon: '🧵', desc: 'Text-forward social built on Instagram\'s network',    reqs: ['Use a Threads/Meta access token', 'Instagram-linked account required'] },
-  { id: 'telegram',  name: 'Telegram',    icon: '✈️', desc: 'Channel broadcasts and direct community messaging',    reqs: ['Use a Telegram bot token', 'Bot must be added to the destination chat'] },
-  { id: 'pinterest', name: 'Pinterest',   icon: '📌', desc: 'Visual discovery, pins, and product inspiration',      reqs: ['Use a Pinterest OAuth access token', 'Business account recommended'] },
-  { id: 'rumble',    name: 'Rumble',      icon: '🟩', desc: 'Video-first platform with free-speech positioning',    reqs: ['Store your Rumble credentials or upload workflow token', 'Manual upload fallback is supported'] },
-  { id: 'bluesky',   name: 'Bluesky',     icon: '☁️', desc: 'Open protocol social with decentralized reach',        reqs: ['Use a Bluesky handle and app password', 'AT Protocol access is required'] },
-  { id: 'snapchat',  name: 'Snapchat',    icon: '👻', desc: 'Ephemeral stories and Gen-Z audience engagement',      reqs: ['Use Snap Creative Kit credentials', 'Approval may be required'] },
-  { id: 'twitch',    name: 'Twitch',      icon: '🎮', desc: 'Live streaming, gaming, and real-time community',      reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
+  { id: 'facebook',  name: 'Facebook',    icon: '📘', desc: 'Community engagement and page publishing',            reqs: ['Use a Facebook/Meta access token', 'Page permissions required for page publishing'] },
+  { id: 'instagram', name: 'Instagram',   icon: '📷', desc: 'Visual publishing for feeds and reels',               reqs: ['Use an Instagram Graph API token', 'Business or Creator account required'] },
+  { id: 'x',         name: 'X (Twitter)', icon: '𝕏',  desc: 'Real-time conversations and post publishing',         reqs: ['Use an X OAuth access token', 'Offline access enabled for reconnects'] },
+  { id: 'tiktok',    name: 'TikTok',      icon: '🎵', desc: 'Short-form video publishing',                        reqs: ['Use a TikTok API access token', 'Approved app and upload scope required'] },
+  { id: 'linkedin',  name: 'LinkedIn',    icon: '💼', desc: 'Professional publishing and thought leadership',      reqs: ['Use a LinkedIn OAuth access token', 'Profile or company permissions required'] },
+  { id: 'youtube',   name: 'YouTube',     icon: '▶️', desc: 'Long-form video publishing',                         reqs: ['Use Google OAuth access token', 'YouTube upload scope required'] },
+  { id: 'reddit',    name: 'Reddit',      icon: '👽', desc: 'Community discussions and subreddit posting',         reqs: ['Use a Reddit OAuth access token', 'Permanent refresh token recommended'] },
+  { id: 'threads',   name: 'Threads',     icon: '🧵', desc: 'Text-forward social publishing',                      reqs: ['Use a Threads/Meta access token', 'Instagram-linked account required'] },
+  { id: 'telegram',  name: 'Telegram',    icon: '✈️', desc: 'Channel broadcasts and direct messaging',             reqs: ['Use a Telegram bot token', 'Bot must be added to the destination chat'] },
+  { id: 'pinterest', name: 'Pinterest',   icon: '📌', desc: 'Visual discovery, pins, and product inspiration',     reqs: ['Use a Pinterest OAuth access token', 'Client ID/secret aliases are supported'] },
+  { id: 'rumble',    name: 'Rumble',      icon: '🟩', desc: 'Video-first publishing workflow',                    reqs: ['Store your Rumble credentials or upload workflow token', 'Manual upload workflow only'] },
+  { id: 'bluesky',   name: 'Bluesky',     icon: '☁️', desc: 'Open protocol social publishing',                     reqs: ['Use a Bluesky handle and app password', 'AT Protocol access is required'] },
+  { id: 'snapchat',  name: 'Snapchat',    icon: '👻', desc: 'Ephemeral stories and short-form publishing',          reqs: ['Use Snap Creative Kit credentials', 'Approval may be required'] },
+  { id: 'twitch',    name: 'Twitch',      icon: '🎮', desc: 'Live stream metadata publishing',                      reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
 ];
 
 const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch']);
@@ -2493,24 +2493,25 @@ async function loadPlatformConnections() {
 
 function connectPlatformFromSettings(platId) {
   if (OAUTH_PLATFORM_IDS.has(platId)) {
-    startPlatformOAuth(platId, 'dashboard').catch(err => toast(err.message || 'Connection failed.', 'err'));
+    startPlatformOAuth(platId, 'dashboard').catch(err => {
+      if (/missing credentials|OAuth not supported/i.test(err.message || '')) {
+        renderManualPlatformModal(platId);
+        toast(`OAuth is not configured for ${platId}. Use manual connection instead.`, 'err');
+        return;
+      }
+      toast(err.message || 'Connection failed.', 'err');
+    });
     return;
   }
 
   openPlatModal(platId);
 }
 
-function openPlatModal(platId) {
+function renderManualPlatformModal(platId) {
   const p = OB_PLATFORMS.find(x => x.id === platId);
   if (!p) return;
+
   _currentPlatId = platId;
-
-  if (OAUTH_PLATFORM_IDS.has(platId)) {
-    startPlatformOAuth(platId, 'onboarding')
-      .catch(err => toast(err.message || `Error connecting to ${p.name}`, 'err'));
-    return;
-  }
-
   document.getElementById('pm-icon').textContent = p.icon;
   document.getElementById('pm-title').textContent = 'Connect ' + p.name;
   document.getElementById('pm-reqs').innerHTML = p.reqs.map(r => `<li class="pm-req">${escHtml(r)}</li>`).join('');
@@ -2527,6 +2528,25 @@ function openPlatModal(platId) {
   document.getElementById('pm-connect-btn').textContent = conn ? (conn.is_active === false ? 'Turn On' : 'Reconnect') : 'Connect';
   document.getElementById('pm-disconnect-btn').style.display = conn ? 'inline-flex' : 'none';
   document.getElementById('pm-overlay').style.display = 'flex';
+}
+
+function openPlatModal(platId) {
+  const p = OB_PLATFORMS.find(x => x.id === platId);
+  if (!p) return;
+
+  if (OAUTH_PLATFORM_IDS.has(platId)) {
+    startPlatformOAuth(platId, 'onboarding')
+      .catch(err => {
+        if (/missing credentials|OAuth not supported/i.test(err.message || '')) {
+          renderManualPlatformModal(platId);
+          toast(`OAuth is not configured for ${p.name}. Use manual connection instead.`, 'err');
+          return;
+        }
+        toast(err.message || `Error connecting to ${p.name}`, 'err');
+      });
+    return;
+  }
+  renderManualPlatformModal(platId);
 }
 
 function closePlatModal() {

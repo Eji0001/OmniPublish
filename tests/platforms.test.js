@@ -89,6 +89,18 @@ describe('YouTube OAuth flow', () => {
     expect(res.headers['set-cookie']?.join(';')).toContain('oauth_pkce_youtube=');
   });
 
+  it('requests permanent refresh access for Reddit OAuth', async () => {
+    mockPlatformTables();
+
+    const res = await request(app)
+      .get('/api/v1/platforms/reddit/auth?returnTo=' + encodeURIComponent('http://localhost:3000/#dashboard'))
+      .set(authHeader());
+
+    expect(res.status).toBe(200);
+    expect(res.body.url).toContain('duration=permanent');
+    expect(res.body.url).toContain('https://www.reddit.com/api/v1/authorize');
+  });
+
   it('stores the YouTube OAuth connection on callback', async () => {
     const upsertChain = mockChain({ data: null, error: null }, { data: null, error: null });
     const state = (await generateOAuthState('youtube', TEST_USER.id, 'http://localhost:3000/#dashboard')).state;

@@ -135,8 +135,8 @@ const OAUTH_PROVIDERS = {
     tokenUrl: 'https://api.pinterest.com/v5/oauth/token',
     profileUrl: 'https://api.pinterest.com/v5/user_account',
     scopes: 'user_accounts:read,pins:write,boards:read',
-    clientId: process.env.PINTEREST_CLIENT_ID,
-    clientSecret: process.env.PINTEREST_CLIENT_SECRET,
+    clientId: process.env.PINTEREST_CLIENT_ID || process.env.PINTEREST_APP_ID,
+    clientSecret: process.env.PINTEREST_CLIENT_SECRET || process.env.PINTEREST_APP_SECRET,
     extractProfile: (data) => ({
       id: data.username || 'unknown',
       username: data.username || 'Pinterest User'
@@ -292,6 +292,10 @@ router.get('/:platform/auth', async (req, res) => {
       oauthUrl.searchParams.append('access_type', 'offline');
       oauthUrl.searchParams.append('prompt', 'consent');
       oauthUrl.searchParams.append('include_granted_scopes', 'true');
+    }
+
+    if (platform === 'reddit') {
+      oauthUrl.searchParams.append('duration', 'permanent');
     }
 
     if (provider.pkce) {

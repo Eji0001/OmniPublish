@@ -51,8 +51,8 @@ const OAUTH_REFRESH_PROVIDERS = {
   },
   pinterest: {
     tokenUrl: 'https://api.pinterest.com/v5/oauth/token',
-    clientId: process.env.PINTEREST_CLIENT_ID,
-    clientSecret: process.env.PINTEREST_CLIENT_SECRET,
+    clientId: process.env.PINTEREST_CLIENT_ID || process.env.PINTEREST_APP_ID,
+    clientSecret: process.env.PINTEREST_CLIENT_SECRET || process.env.PINTEREST_APP_SECRET,
     useBasicAuthForToken: true,
   },
   twitch: {
