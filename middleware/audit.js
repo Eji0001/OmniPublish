@@ -37,20 +37,25 @@ const ALWAYS_AUDIT = new Set([
   'token_refresh', 'account_delete', 'publish',
   'platform_connect', 'platform_disconnect',
   'media_upload', 'admin_action',
+  'gdpr_export', 'gdpr_deletion_request', 'gdpr_deletion_cancel', 'gdpr_status',
 ]);
 
 const inferAction = (req) => {
   const m = req.method;
   const p = req.path.replace(/\/[0-9a-f-]{36}/gi, '/:id');
   const map = {
-    'POST /auth/login':        'login',
-    'POST /auth/register':     'register',
-    'POST /auth/logout':       'logout',
-    'POST /auth/refresh':      'token_refresh',
-    'POST /publish':           'publish',
-    'POST /media/upload':      'media_upload',
-    'POST /platforms/connect': 'platform_connect',
-    'DELETE /platforms/:id':   'platform_disconnect',
+    'POST /auth/login':              'login',
+    'POST /auth/register':           'register',
+    'POST /auth/logout':             'logout',
+    'POST /auth/refresh':            'token_refresh',
+    'POST /publish':                 'publish',
+    'POST /media/upload':            'media_upload',
+    'POST /platforms/connect':       'platform_connect',
+    'DELETE /platforms/:id':         'platform_disconnect',
+    'POST /gdpr/export-data':        'gdpr_export',
+    'POST /gdpr/request-deletion':   'gdpr_deletion_request',
+    'POST /gdpr/cancel-deletion':    'gdpr_deletion_cancel',
+    'GET /gdpr/status':              'gdpr_status',
   };
   for (const [key, action] of Object.entries(map)) {
     const [method, path] = key.split(' ');

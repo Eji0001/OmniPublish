@@ -3,7 +3,7 @@
 const express = require('express');
 const { supabase } = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
-const { gdprExportRateLimiter } = require('../middleware/rateLimit');
+const { gdprExportRateLimiter, gdprMutationRateLimiter, gdprStatusRateLimiter } = require('../middleware/rateLimit');
 const { logger } = require('../utils/logger');
 
 const router = express.Router();
@@ -25,7 +25,7 @@ router.post('/export-data', gdprExportRateLimiter, async (req, res) => {
     exportData.posts = posts || [];
 
     const { data: connections } = await db.from('platform_connections')
-      .select('id, platform, platform_user_id, platform_username, token_expires_at, is_active, connected_at');
+      .select('id, platform, platform_user_id, platform_username, is_active, connected_at');
     exportData.platform_connections = connections || [];
 
     const { data: media } = await db.from('media_files').select('*');
@@ -47,7 +47,7 @@ router.post('/export-data', gdprExportRateLimiter, async (req, res) => {
   }
 });
 
-router.post('/request-deletion', async (req, res) => {
+router.post('/request-deletion', gdprMutationRateLimiter, async (req, res) => {
   const userId = req.user.id;
   const deletionScheduledFor = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
   const db = getDb(req);
@@ -71,7 +71,7 @@ router.post('/request-deletion', async (req, res) => {
   }
 });
 
-router.post('/cancel-deletion', async (req, res) => {
+router.post('/cancel-deletion', gdprMutationRateLimiter, async (req, res) => {
   const userId = req.user.id;
   const db = getDb(req);
 
@@ -89,7 +89,7 @@ router.post('/cancel-deletion', async (req, res) => {
   }
 });
 
-router.get('/status', async (req, res) => {
+router.get('/status', gdprStatusRateLimiter, async (req, res) => {
   const userId = req.user.id;
   const db = getDb(req);
 

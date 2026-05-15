@@ -107,6 +107,14 @@ const resolveAccessToken = async ({ platform, conn, persistConnectionTokens }) =
   const accessToken = decrypt(conn.access_token_enc);
   if (!isExpired(conn.token_expires_at)) return accessToken;
 
+  // Fail fast — no point hitting the platform API if the refresh token is also expired
+  if (conn.refresh_token_expires_at && isExpired(conn.refresh_token_expires_at)) {
+    throw Object.assign(
+      new Error(`Access and refresh tokens both expired for ${platform}. Reconnect to continue publishing.`),
+      { platform, status: 401 }
+    );
+  }
+
   const refreshed = await refreshAccessToken(platform, conn);
   if (!refreshed) {
     throw Object.assign(new Error(`Platform token expired. Reconnect ${platform} to continue publishing.`), { platform, status: 401 });

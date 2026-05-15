@@ -151,7 +151,7 @@ app.use(cors({
   allowedHeaders:     ['Content-Type', 'Authorization', 'X-Request-ID', 'X-CSRF-Token'],
   exposedHeaders:     ['X-Request-ID', 'X-RateLimit-Remaining', 'Retry-After'],
   credentials:        true,
-  maxAge:             600,   // preflight cache: 10 min
+  maxAge:             60,    // preflight cache: 1 min (reduce CORS origin injection window)
   optionsSuccessStatus: 204,
 }));
 

@@ -6,13 +6,18 @@
 
 const express = require('express');
 const multer = require('multer');
-const path = require('path');
 const sharp = require('sharp');
 const { v4: uuid } = require('uuid');
 const { supabase } = require('../config/database');
 const { verifyToken } = require('../middleware/auth');
 const { mediaRateLimiter } = require('../middleware/rateLimit');
 const { ALLOWED_MEDIA_TYPES, MAX_FILE_SIZE } = require('../config/security');
+
+const VIDEO_MIME_EXT = {
+  'video/mp4': 'mp4', 'video/webm': 'webm',
+  'video/quicktime': 'mov', 'video/x-msvideo': 'avi',
+  'video/x-ms-wmv': 'wmv',
+};
 
 const router = express.Router();
 router.use(verifyToken);
@@ -47,7 +52,7 @@ router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, 
       file.mimetype = 'image/webp';
     }
 
-    const ext = isImage ? 'webp' : path.extname(file.originalname).slice(1);
+    const ext = isImage ? 'webp' : (VIDEO_MIME_EXT[file.mimetype] || 'bin');
     const filename = `${req.user.id}/${uuid()}.${ext}`;
 
     // Storage uses service client — bucket policies control access

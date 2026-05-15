@@ -36,9 +36,17 @@ const syncDraftMedia = async (db, draftId, userId, mediaIds) => {
   }
 };
 
+const VALID_POST_STATUS = new Set(['draft', 'scheduled', 'published', 'failed']);
+const VALID_POST_FORMAT  = new Set(['post', 'video', 'short', 'story', 'article']);
+
 /* ── GET /posts ── */
 router.get('/', async (req, res) => {
   const { status, format } = req.query;
+  if (status && !VALID_POST_STATUS.has(status))
+    return res.status(422).json({ error: 'Invalid status value', valid: [...VALID_POST_STATUS] });
+  if (format && !VALID_POST_FORMAT.has(format))
+    return res.status(422).json({ error: 'Invalid format value', valid: [...VALID_POST_FORMAT] });
+
   const page  = Math.max(1, Math.min(999, parseInt(req.query.page)  || 1));
   const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
   const offset = (page - 1) * limit;
