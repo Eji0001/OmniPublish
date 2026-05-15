@@ -291,8 +291,24 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .modal-input{width:100%;background:var(--s2);border:1px solid var(--bd2);border-radius:9px;padding:9px 12px;color:var(--tx);font-size:13px;outline:none;font-family:inherit}
 .modal-input:focus{border-color:var(--ai-border);box-shadow:0 0 0 2px var(--glow)}
 .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.settings-home,.settings-menu,.settings-panel{display:none;flex-direction:column;gap:12px}
+.settings-home-note,.settings-panel-note{font-size:12px;color:var(--tx3);line-height:1.45}
+.settings-entry-btn,.settings-action-btn,.settings-back-btn{padding:12px 14px;border-radius:12px;border:1px solid var(--bd2);background:var(--s2);color:var(--tx2);font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.settings-entry-btn{background:linear-gradient(135deg,var(--pn),var(--sn));color:#fff;border:none;font-size:14px}
+[data-theme="dark"] .settings-entry-btn{color:#04111f;box-shadow:0 0 12px rgba(0,200,255,.16)}
+.settings-entry-btn:hover,.settings-action-btn:hover,.settings-back-btn:hover{transform:translateY(-1px);border-color:var(--ai-border);color:var(--tx)}
+.settings-menu{gap:10px}
+.settings-menu.active,.settings-panel.active,.settings-home.active{display:flex}
+.settings-action-btn{justify-content:space-between}
+.settings-action-btn.danger{background:rgba(255,99,132,.12);border-color:rgba(255,99,132,.24);color:#ff8ca4}
+.settings-action-btn.danger:hover{color:#ff8ca4}
+.settings-back-btn{align-self:flex-start;padding:9px 12px;background:var(--s3)}
+.settings-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.settings-panel-title{font-size:13px;font-weight:900;color:var(--tx)}
 .settings-connections{display:flex;flex-direction:column;gap:10px}
 .settings-connection{background:var(--s2);border:1px solid var(--bd2);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.settings-connection.good{border-color:rgba(0,184,148,.32);background:rgba(0,184,148,.08)}
+.settings-connection.warn{border-color:rgba(253,203,110,.38);background:rgba(253,203,110,.08)}
 .settings-connection-main{min-width:0}
 .settings-connection-title{font-size:13px;font-weight:800;color:var(--tx);margin-bottom:2px}
 .settings-connection-meta{font-size:12px;color:var(--tx3);line-height:1.35}
@@ -443,21 +459,30 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .ob-connection-hero:hover button{color:var(--ob-tx)}
 .ob-connection-hero .plus{font-size:26px;line-height:1;color:var(--ob-acc)}
 .ob-plats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:0 0 12px}
-.ob-plat-card{background:var(--ob-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--ob-bdr);border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;transition:all .28s;min-height:130px}
+.ob-plat-card{background:var(--ob-card);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--ob-bdr);border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;transition:all .28s;min-height:130px;position:relative;overflow:hidden}
 [data-theme="dark"] .ob-plat-card{box-shadow:0 6px 20px rgba(0,0,0,.2)}
 [data-theme="sky"] .ob-plat-card{box-shadow:0 1px 6px rgba(0,80,180,.05)}
 .ob-plat-card:hover{transform:translateY(-4px);border-color:var(--pn)}
 [data-theme="dark"] .ob-plat-card:hover{box-shadow:0 12px 28px rgba(0,0,0,.28),0 0 12px rgba(0,200,255,.08)}
 [data-theme="sky"] .ob-plat-card:hover{box-shadow:0 6px 18px rgba(0,80,180,.12)}
+.ob-plat-card.connected{border-color:var(--ob-sel-bdr);background:var(--ob-sel-bg)}
+[data-theme="dark"] .ob-plat-card.connected{box-shadow:0 0 0 1px rgba(0,200,255,.16),0 0 18px rgba(0,200,255,.08)}
+[data-theme="sky"] .ob-plat-card.connected{box-shadow:0 0 0 2px rgba(0,102,221,.12),0 4px 16px rgba(0,80,180,.08)}
+.ob-plat-card.connected::after{content:'✓';position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--pn),var(--sn));color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;box-shadow:0 6px 14px rgba(0,0,0,.16)}
+.ob-plat-check{width:100%;display:none;font-size:11px;font-weight:900;letter-spacing:.4px;text-transform:uppercase;color:var(--ob-acc);margin:2px 0 4px}
+.ob-plat-card.connected .ob-plat-check{display:block}
 .ob-plat-icon{font-size:1.75rem;line-height:1;margin-bottom:4px}
 .ob-plat-name{font-size:15px;font-weight:800;color:var(--ob-tx)}
 .ob-plat-desc{font-size:11.5px;color:var(--ob-tx3);line-height:1.4;flex:1;margin-bottom:4px}
+.ob-plat-state{font-size:11px;font-weight:800;color:var(--ob-tx3);line-height:1.35;min-height:15px}
+.ob-plat-card.connected .ob-plat-state{color:var(--ob-acc)}
 .ob-add-btn{width:100%;padding:9px 12px;border-radius:9px;background:linear-gradient(135deg,var(--pn),var(--sn));color:#fff;font-size:12.5px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:all .22s;margin-top:auto;letter-spacing:.2px}
 [data-theme="dark"] .ob-add-btn{color:#04111f;box-shadow:0 0 12px rgba(0,200,255,.16)}
 .ob-add-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
 [data-theme="dark"] .ob-add-btn:hover{box-shadow:0 0 20px rgba(0,200,255,.32),0 4px 14px rgba(0,0,0,.2)}
 [data-theme="sky"] .ob-add-btn:hover{box-shadow:0 4px 16px rgba(0,102,221,.38)}
 .ob-add-btn.connected{background:var(--ob-sel-bg);color:var(--ob-acc);border:1.5px solid var(--ob-sel-bdr);box-shadow:none;filter:none;transform:none}
+.ob-add-btn.inactive{background:rgba(253,203,110,.12);color:#d97706;border:1.5px solid rgba(253,203,110,.35);box-shadow:none;filter:none;transform:none}
 .ob-empty-note{margin:14px auto 0;max-width:600px;text-align:center;font-size:14px;color:var(--ob-tx3);line-height:1.55}
 
 /* ── Step 3: Frequency ── */
@@ -760,7 +785,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="ob-panel active" id="ob-panel-1">
         <div class="ob-accent">step 1 of 4</div>
         <div class="ob-title">Choose your persona</div>
-        <div class="ob-plat-sub">Pick the profile that best matches how you publish content.</div>
+        <div class="ob-plat-sub">Pick one profile now. Your choice will be locked until you continue.</div>
         <div class="ob-persona-grid">
           <button class="ob-role-card" type="button" data-role="founder" onclick="selectRole(this, 'founder')">
             <span class="ob-role-icon">🚀</span>
@@ -817,7 +842,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="ob-panel" id="ob-panel-2">
         <div class="ob-accent">step 2 of 4</div>
         <div class="ob-title">Connect your channels</div>
-        <div class="ob-plat-sub">Link your social accounts to publish everywhere from one workspace.</div>
+        <div class="ob-plat-sub">Connect as many channels as you can before moving on.</div>
         <div class="ob-connection-hero">
           <button type="button" id="ob-add-connection-btn"><span class="plus">+</span><span>Add connection</span></button>
         </div>
@@ -852,7 +877,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="ob-panel" id="ob-panel-4">
         <div class="ob-accent">step 4 of 4</div>
         <div class="ob-title">Final verification</div>
-        <div class="ob-plat-sub">Review your setup below, then launch your workspace.</div>
+        <div class="ob-plat-sub">Verify every connection below before launching your workspace.</div>
         <div class="ob-summary">
           <h3>Connected accounts</h3>
           <div class="ob-summary-list" id="ob-summary-list"></div>
@@ -1065,15 +1090,27 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
   <div class="modal-overlay" onclick="closeSettings(event)">
     <div class="modal settings-modal" onclick="event.stopPropagation()">
       <div class="modal-title">⚙️ Settings</div>
-      <div class="modal-field">
-        <label class="modal-label">Platform Connections</label>
+      <div class="settings-home active" id="settings-home">
+        <button class="settings-entry-btn" id="settings-connection-btn" type="button" onclick="openConnectionMenu()">Connections</button>
+        <div class="settings-home-note">Manage connection checks, add new channels, or remove existing ones.</div>
+      </div>
+      <div class="settings-menu" id="settings-menu">
+        <button class="settings-action-btn" type="button" onclick="checkAllConnections()"><span>Check connection</span><span>✓</span></button>
+        <button class="settings-action-btn" type="button" onclick="showAddConnectionFromSettings()"><span>Add connection</span><span>+</span></button>
+        <button class="settings-action-btn danger" type="button" onclick="showRemoveConnections()"><span>Remove connection</span><span>−</span></button>
+      </div>
+      <div class="settings-panel" id="settings-panel">
+        <div class="settings-panel-head">
+          <button class="settings-back-btn" type="button" onclick="backToSettingsMenu()">← Back</button>
+          <div class="settings-panel-title" id="settings-panel-title">Connections</div>
+        </div>
+        <div class="settings-panel-note" id="settings-panel-note">Choose a connection action to continue.</div>
         <div class="settings-connections" id="settings-connections"></div>
         <div class="settings-empty" id="settings-empty">No connected platforms yet.</div>
         <div class="settings-status" id="settings-status"></div>
       </div>
       <div class="modal-actions">
-        <button class="modal-btn cancel" onclick="closeSettings()">Cancel</button>
-        <button class="modal-btn save" onclick="saveSettings()">Save</button>
+        <button class="modal-btn cancel" onclick="closeSettings()">Close</button>
       </div>
     </div>
   </div>
@@ -2113,80 +2150,158 @@ async function publishAll() {
   publishing=false;
 }
 
+let _settingsView = 'home';
+
+function showSettingsView(view) {
+  _settingsView = view;
+  const home = document.getElementById('settings-home');
+  const menu = document.getElementById('settings-menu');
+  const panel = document.getElementById('settings-panel');
+  if (home) home.classList.toggle('active', view === 'home');
+  if (menu) menu.classList.toggle('active', view === 'menu');
+  if (panel) panel.classList.toggle('active', view === 'check' || view === 'remove');
+}
+
 function openSettings() {
   document.getElementById('settings-modal').style.display = 'block';
-  renderSettingsConnections();
-  loadPlatformConnections().catch(() => renderSettingsConnections());
-}
-function closeSettings(e) { if(!e||e.target===e.currentTarget)document.getElementById('settings-modal').style.display='none'; }
-function saveSettings() {
-  document.getElementById('settings-modal').style.display='none';
-  toast('Settings saved!','ok');
+  showSettingsView('home');
+  const statusEl = document.getElementById('settings-status');
+  if (statusEl) statusEl.textContent = '';
+  loadPlatformConnections().catch(() => {});
 }
 
-function renderSettingsConnections() {
+function closeSettings(e) { if(!e||e.target===e.currentTarget)document.getElementById('settings-modal').style.display='none'; }
+
+function openConnectionMenu() {
+  showSettingsView('menu');
+}
+
+function backToSettingsMenu() {
+  showSettingsView('menu');
+  const statusEl = document.getElementById('settings-status');
+  if (statusEl) statusEl.textContent = '';
+}
+
+function renderSettingsConnections(mode = _settingsView) {
   const wrap = document.getElementById('settings-connections');
   const empty = document.getElementById('settings-empty');
+  const panelNote = document.getElementById('settings-panel-note');
+  const panelTitle = document.getElementById('settings-panel-title');
   if (!wrap || !empty) return;
 
-  const entries = OB_PLATFORMS.map(plat => {
-    const conn = _platformConnections[plat.id];
-    const active = conn?.is_active !== false;
-    const verified = conn?.token_expires_at ? new Date(conn.token_expires_at) > new Date() : true;
-    const stateText = conn ? (active ? (verified ? 'Active' : 'Expired') : 'Turned off') : 'Not connected';
-    const connectLabel = conn ? 'Reconnect' : 'Connect';
-    const connectAction = OAUTH_PLATFORM_IDS.has(plat.id)
-      ? `connectPlatformFromSettings(${escJsArg(plat.id)})`
-      : `openPlatModal(${escJsArg(plat.id)})`;
+  const connections = Object.values(_platformConnections || {});
+  if (panelTitle) panelTitle.textContent = mode === 'remove' ? 'Remove connections' : 'Check connections';
+  if (panelNote) panelNote.textContent = mode === 'remove'
+    ? 'Disconnect any saved platform from your account.'
+    : 'Run a status check on your current connections.';
+
+  if (!connections.length) {
+    wrap.innerHTML = '';
+    empty.style.display = 'block';
+    empty.textContent = 'No connected platforms yet.';
+    return;
+  }
+
+  empty.style.display = 'none';
+  wrap.innerHTML = connections.map(conn => {
+    const plat = OB_PLATFORMS.find(p => p.id === conn.platform);
+    const active = conn.is_active !== false;
+    const verified = conn.token_expires_at ? new Date(conn.token_expires_at) > new Date() : true;
+    const healthy = active && verified;
+    const stateText = healthy ? 'Connected' : active ? 'Needs attention' : 'Disconnected';
+    const stateIcon = healthy ? '✓' : '⚠';
+    const actionBtn = mode === 'remove'
+      ? `<button class="settings-connection-btn disconnect" type="button" onclick="disconnectPlatformById(${escJsArg(conn.platform)})">Disconnect</button>`
+      : `<button class="settings-connection-btn verify" type="button" onclick="verifyPlatformConnection(${escJsArg(conn.platform)})">Check</button>`;
 
     return `
-      <div class="settings-connection">
+      <div class="settings-connection ${healthy ? 'good' : 'warn'}">
         <div class="settings-connection-main">
-          <div class="settings-connection-title">${escHtml(plat.name)}</div>
-          <div class="settings-connection-meta">${escHtml(conn?.platform_username || conn?.platform_user_id || 'Not connected')} · ${stateText}</div>
+          <div class="settings-connection-title">${escHtml(plat?.name || conn.platform)}</div>
+          <div class="settings-connection-meta">${stateIcon} ${escHtml(conn?.platform_username || conn?.platform_user_id || 'Account saved')} · ${stateText}</div>
         </div>
         <div class="settings-connection-actions">
-          <button class="settings-connection-btn connect" type="button" onclick="${connectAction}">${connectLabel}</button>
-          ${conn ? `<button class="settings-connection-btn verify" type="button" onclick="verifyPlatformConnection(${escJsArg(conn.platform)})">Verify</button>
-          <button class="settings-connection-btn toggle ${active ? 'off' : 'on'}" type="button" onclick="togglePlatformConnection(${escJsArg(conn.platform)})">Turn ${active ? 'Off' : 'On'}</button>
-          <button class="settings-connection-btn disconnect" type="button" onclick="disconnectPlatformById(${escJsArg(conn.platform)})">Disconnect</button>` : ''}
+          ${actionBtn}
         </div>
       </div>
     `;
-  });
-
-  const connectionCount = Object.keys(_platformConnections || {}).length;
-  empty.style.display = connectionCount ? 'none' : 'block';
-  empty.textContent = connectionCount
-    ? 'Use Connect to add or reconnect platforms.'
-    : 'No connected platforms yet. Use Connect on any platform to get started.';
-  wrap.innerHTML = entries.join('');
+  }).join('');
 }
 
-async function verifyPlatformConnection(platId) {
+async function verifyPlatformConnection(platId, opts = {}) {
+  const { announce = true, redraw = true } = opts;
   const conn = _platformConnections[platId];
   const statusEl = document.getElementById('settings-status');
+  const platName = (OB_PLATFORMS.find(p => p.id === platId)?.name || platId);
   if (!conn?.id) {
-    if (statusEl) statusEl.textContent = 'No saved connection found.';
-    toast('No saved connection found.', 'err');
-    return;
+    if (statusEl && announce) statusEl.textContent = 'No saved connection found.';
+    if (announce) toast('No saved connection found.', 'err');
+    return { ok: false, healthy: false, message: 'No saved connection found.' };
   }
-  if (statusEl) statusEl.textContent = 'Verifying connection…';
+  if (statusEl && announce) statusEl.textContent = `Checking ${platName}…`;
   try {
     const res = await api('POST', `/api/v1/platforms/${conn.id}/verify`);
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Verification failed');
     _platformConnections[platId] = { ...conn, ...data.connection };
     syncPlatformCard(platId);
-    renderSettingsConnections();
-    renderOnboardingIntro();
-    renderOnboardingSummary();
-    if (statusEl) statusEl.textContent = `${(OB_PLATFORMS.find(p => p.id === platId)?.name || platId)} verified ${data.connection.token_valid ? 'successfully' : 'with warnings'}.`;
-    toast(`${(OB_PLATFORMS.find(p => p.id === platId)?.name || platId)} verified.`, 'ok');
+    if (redraw) {
+      renderSettingsConnections();
+      renderOnboardingIntro();
+      renderOnboardingSummary();
+    }
+    const healthy = data.connection.token_valid !== false && data.connection.is_active !== false;
+    const message = healthy ? `${platName} verified successfully.` : `${platName} needs attention.`;
+    if (statusEl && announce) statusEl.textContent = healthy ? `✓ ${message}` : `⚠ ${message}`;
+    if (announce) toast(message, healthy ? 'ok' : 'err');
+    return { ok: true, healthy, connection: data.connection, message };
   } catch (err) {
-    if (statusEl) statusEl.textContent = err.message || 'Verification failed.';
-    toast(`Verification failed: ${err.message}`, 'err');
+    if (statusEl && announce) statusEl.textContent = `⚠ ${err.message || 'Verification failed.'}`;
+    if (announce) toast(`Verification failed: ${err.message}`, 'err');
+    return { ok: false, healthy: false, error: err };
   }
+}
+
+async function checkAllConnections() {
+  showSettingsView('check');
+  renderSettingsConnections('check');
+  const statusEl = document.getElementById('settings-status');
+  const connections = Object.values(_platformConnections || {});
+  if (!connections.length) {
+    if (statusEl) statusEl.textContent = 'No saved connections found.';
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = 'Checking saved connections…';
+  const results = [];
+  for (const conn of connections) {
+    const result = await verifyPlatformConnection(conn.platform, { announce: false, redraw: false });
+    results.push(result);
+  }
+
+  renderSettingsConnections('check');
+  renderOnboardingIntro();
+  renderOnboardingSummary();
+  const good = results.filter(result => result.ok && result.healthy).length;
+  const warn = results.length - good;
+  if (statusEl) {
+    statusEl.textContent = warn
+      ? `✓ ${good} good connection${good === 1 ? '' : 's'} · ⚠ ${warn} need attention`
+      : `✓ ${good} connection${good === 1 ? '' : 's'} verified`;
+  }
+}
+
+function showRemoveConnections() {
+  showSettingsView('remove');
+  renderSettingsConnections('remove');
+  const statusEl = document.getElementById('settings-status');
+  if (statusEl) statusEl.textContent = 'Select a connection to disconnect it.';
+}
+
+function showAddConnectionFromSettings() {
+  closeSettings();
+  showPage('onboarding');
+  requestAnimationFrame(() => obGoStep(2));
 }
 
 async function togglePlatformConnection(platId) {
@@ -2407,7 +2522,6 @@ function selectRole(card, role) {
   localStorage.setItem('omni_user_role', role);
   syncPersonaSelection(role);
   api('PATCH', '/api/v1/auth/me/profile', { userType: role }).catch(() => {});
-  setTimeout(() => obGoStep(2), 550);
 }
 
 function updateFrequencyDisplay(value) {
@@ -2422,6 +2536,22 @@ function prevOnboardingStep() {
 }
 
 function nextOnboardingStep() {
+  if (_onboardingStep === 1) {
+    if (!_selectedPersona) {
+      toast('Choose one persona to continue.', 'err');
+      return;
+    }
+    obGoStep(2);
+    return;
+  }
+  if (_onboardingStep === 2) {
+    if (!Object.values(_platformConnections).some(c => c?.is_active !== false)) {
+      toast('Connect at least one channel to continue.', 'err');
+      return;
+    }
+    obGoStep(3);
+    return;
+  }
   if (_onboardingStep < 4) {
     obGoStep(_onboardingStep + 1);
     return;
@@ -2431,14 +2561,24 @@ function nextOnboardingStep() {
 
 function syncPlatformCard(platId) {
   const btn = document.getElementById('ob-add-' + platId);
-  if (!btn) return;
+  const card = document.getElementById('ob-plat-' + platId);
+  const state = document.getElementById('ob-plat-state-' + platId);
   const conn = _platformConnections[platId];
   const connected = !!conn;
   const active = connected && conn.is_active !== false;
-  btn.textContent = connected ? (active ? '✓ Connected' : 'Turn On') : (OAUTH_PLATFORM_IDS.has(platId) ? 'Connect' : 'Add');
-  btn.classList.toggle('connected', active);
-  btn.classList.toggle('inactive', connected && !active);
-  btn.title = connected ? (active ? 'Click to manage connection' : 'Connection is off. Click to turn on') : 'Click to connect';
+  if (btn) {
+    btn.textContent = connected ? (active ? '✓ Connected' : 'Turn On') : (OAUTH_PLATFORM_IDS.has(platId) ? 'Connect' : 'Add');
+    btn.classList.toggle('connected', active);
+    btn.classList.toggle('inactive', connected && !active);
+    btn.title = connected ? (active ? 'Click to manage connection' : 'Connection is off. Click to turn on') : 'Click to connect';
+  }
+  if (card) {
+    card.classList.toggle('connected', active);
+    card.classList.toggle('inactive', connected && !active);
+  }
+  if (state) {
+    state.textContent = connected ? (active ? 'Connected' : 'Connection paused') : 'Ready to connect';
+  }
 }
 
 function renderOnboardingIntro() {
@@ -2457,21 +2597,27 @@ function renderOnboardingSummary() {
   const list = document.getElementById('ob-summary-list');
   const empty = document.getElementById('ob-summary-empty');
   if (!list || !empty) return;
-  const active = Object.values(_platformConnections).filter(c => c?.is_active !== false);
-  list.innerHTML = active.map(conn => {
+  const connections = Object.values(_platformConnections);
+  list.innerHTML = connections.map(conn => {
     const plat = OB_PLATFORMS.find(p => p.id === conn.platform);
-    return `<div class="ob-summary-chip">${escHtml(plat?.name || conn.platform)}</div>`;
+    const active = conn?.is_active !== false;
+    const verified = conn?.token_expires_at ? new Date(conn.token_expires_at) > new Date() : true;
+    const icon = active && verified ? '✓' : '⚠';
+    const label = active && verified ? 'Connected' : 'Needs attention';
+    return `<div class="ob-summary-chip">${icon} ${escHtml(plat?.name || conn.platform)} · ${label}</div>`;
   }).join('');
-  empty.style.display = active.length ? 'none' : 'block';
+  empty.style.display = connections.length ? 'none' : 'block';
 }
 
 function renderObPlatforms() {
   const grid = document.getElementById('ob-plats-grid');
   grid.innerHTML = OB_PLATFORMS.map(p => `
     <div class="ob-plat-card" id="ob-plat-${p.id}">
+      <div class="ob-plat-check">✓ Connected</div>
       <div class="ob-plat-icon">${p.icon}</div>
       <div class="ob-plat-name">${p.name}</div>
       <div class="ob-plat-desc">${p.desc}</div>
+      <div class="ob-plat-state" id="ob-plat-state-${p.id}">Ready to connect</div>
       <button class="ob-add-btn" id="ob-add-${p.id}" type="button" data-plat="${p.id}">Add</button>
     </div>
   `).join('');
@@ -2489,6 +2635,7 @@ async function loadPlatformConnections() {
   OB_PLATFORMS.forEach(p => syncPlatformCard(p.id));
   renderOnboardingIntro();
   renderSettingsConnections();
+  renderOnboardingSummary();
 }
 
 function connectPlatformFromSettings(platId) {
