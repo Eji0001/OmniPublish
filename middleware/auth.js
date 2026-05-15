@@ -8,7 +8,7 @@
 
 const jwt            = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
-const { supabase }   = require('../config/database');
+const { supabase, createUserScopedClient } = require('../config/database');
 const { JWT_CONFIG } = require('../config/security');
 const { logger }     = require('../utils/logger');
 
@@ -62,6 +62,7 @@ const verifyToken = async (req, res, next) => {
   }
 
   req.user = { id: payload.sub, email: payload.email, role: payload.role || 'user', plan: payload.plan || 'free', jti: payload.jti };
+  req.db   = typeof createUserScopedClient === 'function' ? createUserScopedClient(token) : supabase;
   next();
 };
 

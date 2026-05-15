@@ -1,6 +1,6 @@
 /**
  * routes/posts.js
- * Post management: create · read · update · delete · AI adapt
+ * Post management: create · read · update · delete
  */
 
 'use strict';
@@ -15,20 +15,23 @@ const { logger }         = require('../utils/logger');
 
 const router = express.Router();
 router.use(verifyToken);
+const getDb = (req) => req.db || supabase;
 
-const syncDraftPlatforms = async (draftId, platforms) => {
-  await supabase.from('post_platforms').delete().eq('post_id', draftId);
+// Helpers use service-client for post_platforms (ownership verified via post lookup)
+// and pass userId explicitly for media_files scoping.
+const syncDraftPlatforms = async (db, draftId, platforms) => {
+  await db.from('post_platforms').delete().eq('post_id', draftId);
   if (platforms?.length) {
-    const { error } = await supabase.from('post_platforms')
+    const { error } = await db.from('post_platforms')
       .insert(platforms.map(p => ({ post_id: draftId, platform: p, status: 'pending' })));
     if (error) throw error;
   }
 };
 
-const syncDraftMedia = async (draftId, userId, mediaIds) => {
-  await supabase.from('media_files').update({ post_id: null }).eq('post_id', draftId).eq('user_id', userId);
+const syncDraftMedia = async (db, draftId, userId, mediaIds) => {
+  await db.from('media_files').update({ post_id: null }).eq('post_id', draftId).eq('user_id', userId);
   if (mediaIds?.length) {
-    const { error } = await supabase.from('media_files').update({ post_id: draftId }).in('id', mediaIds).eq('user_id', userId);
+    const { error } = await db.from('media_files').update({ post_id: draftId }).in('id', mediaIds).eq('user_id', userId);
     if (error) throw error;
   }
 };
@@ -36,13 +39,14 @@ const syncDraftMedia = async (draftId, userId, mediaIds) => {
 /* ── GET /posts ── */
 router.get('/', async (req, res) => {
   const { status, format } = req.query;
-  const page = Math.max(1, Math.min(999, parseInt(req.query.page) || 1));
+  const page  = Math.max(1, Math.min(999, parseInt(req.query.page)  || 1));
   const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 20));
-
   const offset = (page - 1) * limit;
-  let query = supabase.from('posts')
+
+  const db = getDb(req);
+  let query = db.from('posts')
     .select('id,title,content,format,aspect_ratio,status,scheduled_at,published_at,created_at,post_platforms(platform,status,platform_post_url,published_at),media_files(id,storage_path,cdn_url,mime_type,original_name)', { count: 'exact' })
-    .eq('user_id', req.user.id).order('created_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1);
   if (status) query = query.eq('status', status);
   if (format) query = query.eq('format', format);
@@ -53,11 +57,11 @@ router.get('/', async (req, res) => {
 
 /* ── GET /posts/stats/overview — must be before /:id ── */
 router.get('/stats/overview', async (req, res) => {
-  const { data: userPosts } = await supabase
-    .from('posts').select('id, status').eq('user_id', req.user.id);
+  const db = getDb(req);
+  const { data: userPosts } = await db.from('posts').select('id, status');
   const postIds = (userPosts || []).map(p => p.id);
   const { data: byPlatform } = postIds.length
-    ? await supabase.from('post_platforms').select('platform, status').in('post_id', postIds)
+    ? await db.from('post_platforms').select('platform, status').in('post_id', postIds)
     : { data: [] };
   const counts = (userPosts || []).reduce((acc, p) => { acc[p.status] = (acc[p.status] || 0) + 1; return acc; }, {});
   const platformStats = (byPlatform || []).reduce((acc, p) => {
@@ -80,30 +84,23 @@ router.post('/adapt', aiRateLimiter, validateBody('adaptContent'), async (req, r
 /* ── POST /posts/draft ── */
 router.post('/draft', validateBody('saveDraft'), async (req, res) => {
   const { draftId, content, title, format, aspectRatio, scheduledAt, platforms, mediaIds } = req.body;
+  const db = getDb(req);
   const draftPayload = {
-    title: title || null,
-    content,
-    format: format || 'post',
-    aspect_ratio: aspectRatio || '16:9',
-    status: 'draft',
-    scheduled_at: scheduledAt || null,
+    title: title || null, content,
+    format: format || 'post', aspect_ratio: aspectRatio || '16:9',
+    status: 'draft', scheduled_at: scheduledAt || null,
   };
 
   let post;
   if (draftId) {
-    const { data, error } = await supabase.from('posts')
+    const { data, error } = await db.from('posts')
       .update({ ...draftPayload, updated_at: new Date() })
-      .eq('id', draftId)
-      .eq('user_id', req.user.id)
-      .select()
-      .single();
+      .eq('id', draftId).select().single();
     if (error || !data) return res.status(404).json({ error: 'Draft not found' });
     post = data;
   } else {
-    const { data, error } = await supabase.from('posts')
-      .insert({ user_id: req.user.id, ...draftPayload })
-      .select()
-      .single();
+    const { data, error } = await db.from('posts')
+      .insert({ ...draftPayload }).select().single();
     if (error || !data) {
       logger.error('Draft save error', { err: error?.message });
       return res.status(500).json({ error: 'Failed to save draft' });
@@ -112,8 +109,8 @@ router.post('/draft', validateBody('saveDraft'), async (req, res) => {
   }
 
   try {
-    if (platforms !== undefined) await syncDraftPlatforms(post.id, platforms);
-    if (mediaIds !== undefined) await syncDraftMedia(post.id, req.user.id, mediaIds);
+    if (platforms !== undefined) await syncDraftPlatforms(db, post.id, platforms);
+    if (mediaIds !== undefined)  await syncDraftMedia(db, post.id, req.user.id, mediaIds);
   } catch (error) {
     logger.error('Draft association update failed', { draftId: post.id, err: error.message });
     return res.status(500).json({ error: 'Failed to sync draft associations' });
@@ -124,28 +121,25 @@ router.post('/draft', validateBody('saveDraft'), async (req, res) => {
 
 /* ── DELETE /posts/draft/:id ── */
 router.delete('/draft/:id', async (req, res) => {
-  const { data: post, error: lookupError } = await supabase.from('posts')
-    .select('id, user_id')
-    .eq('id', req.params.id)
-    .eq('user_id', req.user.id)
-    .eq('status', 'draft')
-    .single();
+  const db = getDb(req);
+  const { data: post, error: lookupError } = await db.from('posts')
+    .select('id').eq('id', req.params.id).eq('status', 'draft').single();
 
   if (lookupError || !post) return res.status(404).json({ error: 'Draft not found' });
 
-  await supabase.from('post_platforms').delete().eq('post_id', post.id);
-  await supabase.from('media_files').update({ post_id: null }).eq('post_id', post.id).eq('user_id', req.user.id);
+  await db.from('post_platforms').delete().eq('post_id', post.id);
+  await db.from('media_files').update({ post_id: null }).eq('post_id', post.id).eq('user_id', req.user.id);
 
-  const { error } = await supabase.from('posts').delete().eq('id', post.id).eq('user_id', req.user.id);
+  const { error } = await db.from('posts').delete().eq('id', post.id);
   if (error) return res.status(500).json({ error: 'Failed to delete draft' });
   res.status(204).send();
 });
 
 /* ── GET /posts/:id ── */
 router.get('/:id', async (req, res) => {
-  const { data: post, error } = await supabase.from('posts')
-    .select('*, post_platforms(*), media_files(*)')
-    .eq('id', req.params.id).eq('user_id', req.user.id).single();
+  const db = getDb(req);
+  const { data: post, error } = await db.from('posts')
+    .select('*, post_platforms(*), media_files(*)').eq('id', req.params.id).single();
   if (error || !post) return res.status(404).json({ error: 'Post not found' });
   res.json({ post });
 });
@@ -153,19 +147,28 @@ router.get('/:id', async (req, res) => {
 /* ── POST /posts ── */
 router.post('/', validateBody('createPost'), async (req, res) => {
   const { content, title, format, aspectRatio, scheduledAt, platforms, mediaIds } = req.body;
-  const { data: post, error } = await supabase.from('posts')
-    .insert({ user_id: req.user.id, title: title || null, content, format: format || 'post', aspect_ratio: aspectRatio || '16:9', status: scheduledAt ? 'scheduled' : 'draft', scheduled_at: scheduledAt || null })
+  const db = getDb(req);
+  const { data: post, error } = await db.from('posts')
+    .insert({
+      title: title || null, content,
+      format: format || 'post', aspect_ratio: aspectRatio || '16:9',
+      status: scheduledAt ? 'scheduled' : 'draft', scheduled_at: scheduledAt || null,
+    })
     .select().single();
   if (error) { logger.error('Create post error', { err: error.message }); return res.status(500).json({ error: 'Failed to create post' }); }
+
   if (platforms?.length) {
-    const { error: ppErr } = await supabase.from('post_platforms').insert(platforms.map(p => ({ post_id: post.id, platform: p, status: 'pending' })));
+    const { error: ppErr } = await db.from('post_platforms')
+      .insert(platforms.map(p => ({ post_id: post.id, platform: p, status: 'pending' })));
     if (ppErr) {
       logger.error('Failed to create post_platforms', { postId: post.id, err: ppErr.message });
-      await supabase.from('posts').delete().eq('id', post.id);
+      await db.from('posts').delete().eq('id', post.id);
       return res.status(500).json({ error: 'Failed to assign platforms to post' });
     }
   }
-  if (mediaIds?.length) await supabase.from('media_files').update({ post_id: post.id }).in('id', mediaIds).eq('user_id', req.user.id);
+  if (mediaIds?.length) {
+    await db.from('media_files').update({ post_id: post.id }).in('id', mediaIds).eq('user_id', req.user.id);
+  }
   res.status(201).json({ post });
 });
 
@@ -174,34 +177,32 @@ router.patch('/:id', validateBody('patchPost'), async (req, res) => {
   const allowed = ['title', 'content', 'format', 'aspect_ratio', 'scheduled_at', 'status'];
   const updates = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowed.includes(k)));
   updates.updated_at = new Date();
-  const { data: post, error } = await supabase.from('posts').update(updates).eq('id', req.params.id).eq('user_id', req.user.id).select().single();
+  const db = getDb(req);
+  const { data: post, error } = await db.from('posts')
+    .update(updates).eq('id', req.params.id).select().single();
   if (error || !post) return res.status(404).json({ error: 'Post not found or update failed' });
   res.json({ post });
 });
 
 /* ── DELETE /posts/:id ── */
 router.delete('/:id', async (req, res) => {
+  const db = getDb(req);
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
-  const { data: mediaFiles } = await supabase.from('media_files')
-    .select('storage_path')
-    .eq('post_id', req.params.id)
-    .eq('user_id', req.user.id);
+  const { data: mediaFiles } = await db.from('media_files')
+    .select('storage_path').eq('post_id', req.params.id);
 
-  const { error } = await supabase.from('posts').delete().eq('id', req.params.id).eq('user_id', req.user.id);
+  const { error } = await db.from('posts').delete().eq('id', req.params.id);
   if (error) return res.status(404).json({ error: 'Post not found' });
 
-  const storagePaths = (mediaFiles || []).map(file => file.storage_path).filter(Boolean);
+  const storagePaths = (mediaFiles || []).map(f => f.storage_path).filter(Boolean);
   if (storagePaths.length) {
     const { error: storageError } = await supabase.storage.from(bucket).remove(storagePaths);
     if (storageError) {
       logger.warn('Failed to remove post media from storage', {
-        postId: req.params.id,
-        userId: req.user.id,
-        err: storageError.message,
+        postId: req.params.id, userId: req.user.id, err: storageError.message,
       });
     }
   }
-
   res.status(204).send();
 });
 

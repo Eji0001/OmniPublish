@@ -14,6 +14,7 @@ const { logger }      = require('../utils/logger');
 const { generateOAuthState, verifyOAuthState } = require('../middleware/oauthStateVerification');
 
 const router = express.Router();
+const getDb = (req) => req.db || supabase;
 
 const isProd = process.env.NODE_ENV === 'production';
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
@@ -169,6 +170,16 @@ router.get('/:platform/callback', async (req, res) => {
   try {
     const { userId, returnTo } = await verifyOAuthState(req.query.state, platform);
 
+    // Re-verify the userId encoded in the state JWT exists and is active.
+    // Prevents IDOR: an attacker with a captured state token cannot write OAuth
+    // credentials to an arbitrary user account.
+    const { data: stateUser, error: stateUserErr } = await supabase
+      .from('users').select('id, is_active').eq('id', userId).single();
+    if (stateUserErr || !stateUser || !stateUser.is_active) {
+      logger.warn('OAuth callback rejected: state userId not found or inactive', { userId, platform });
+      return res.redirect(`${getSafeReturnTo()}?platform_error=${platform}_invalid_state`);
+    }
+
     if (req.query.error) {
       logger.error(`${platform} OAuth error`, { error: req.query.error });
       const errorUrl = new URL(returnTo || getSafeReturnTo());
@@ -257,7 +268,8 @@ router.use(verifyToken);
 
 /* ── GET /platforms — list connected platforms ── */
 router.get('/', async (req, res) => {
-  const { data, error } = await supabase.from('platform_connections')
+  const db = getDb(req);
+  const { data, error } = await db.from('platform_connections')
     .select('id, platform, platform_username, is_active, connected_at, token_expires_at')
     .eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: 'Failed to fetch platforms' });
@@ -321,8 +333,9 @@ router.get('/:platform/auth', async (req, res) => {
 /* ── POST /platforms/connect — store OAuth tokens ── */
 router.post('/connect', validateBody('platformConnection'), async (req, res) => {
   const { platform, accessToken, refreshToken, platformUserId, platformUsername, expiresAt } = req.body;
+  const db = getDb(req);
 
-  const { data, error } = await supabase.from('platform_connections').upsert({
+  const { data, error } = await db.from('platform_connections').upsert({
     user_id:           req.user.id,
     platform,
     platform_user_id:  platformUserId,
@@ -341,7 +354,8 @@ router.post('/connect', validateBody('platformConnection'), async (req, res) => 
 
 /* ── POST /platforms/:id/verify — verify connection status ── */
 router.post('/:id/verify', async (req, res) => {
-  const { data: connection, error } = await supabase.from('platform_connections')
+  const db = getDb(req);
+  const { data: connection, error } = await db.from('platform_connections')
     .select('id, platform, platform_username, is_active, connected_at, token_expires_at')
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
@@ -368,7 +382,8 @@ router.patch('/:id', async (req, res) => {
   const { is_active } = req.body || {};
   if (typeof is_active !== 'boolean') return res.status(422).json({ error: 'is_active is required' });
 
-  const { data: connection, error } = await supabase.from('platform_connections')
+  const db = getDb(req);
+  const { data: connection, error } = await db.from('platform_connections')
     .update({ is_active })
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
@@ -382,7 +397,8 @@ router.patch('/:id', async (req, res) => {
 
 /* ── DELETE /platforms/:id — disconnect platform ── */
 router.delete('/:id', async (req, res) => {
-  const { error } = await supabase.from('platform_connections')
+  const db = getDb(req);
+  const { error } = await db.from('platform_connections')
     .update({ is_active: false }).eq('id', req.params.id).eq('user_id', req.user.id);
   if (error) return res.status(404).json({ error: 'Connection not found' });
   res.status(204).send();

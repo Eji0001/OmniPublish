@@ -27,6 +27,7 @@ const TOKEN_PURPOSE = {
   OAUTH_EXCHANGE: 'oauth_exchange',
 };
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const getDb = (req) => req.db || supabase;
 
 const buildAuthResponse = ({ user, tokens, csrfToken }) => ({
   user: { id: user.id, email: user.email, role: user.role, plan: user.plan },
@@ -203,7 +204,8 @@ router.post('/logout', verifyToken, async (req, res) => {
 
 /* ── GET /auth/me ── */
 router.get('/me', verifyToken, async (req, res) => {
-  const { data: user } = await supabase.from('users')
+  const db = getDb(req);
+  const { data: user } = await db.from('users')
     .select('id, email, full_name, role, plan, user_type, onboarding_completed_at, created_at, last_login_at')
     .eq('id', req.user.id).single();
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -218,7 +220,8 @@ router.patch('/me/profile', verifyToken, validateBody('userProfile'), async (req
   if (onboardingCompleted !== undefined) update.onboarding_completed_at = onboardingCompleted ? new Date() : null;
   if (!Object.keys(update).length) return res.status(422).json({ error: 'Nothing to update' });
 
-  const { data: user, error } = await supabase.from('users')
+  const db = getDb(req);
+  const { data: user, error } = await db.from('users')
     .update(update)
     .eq('id', req.user.id)
     .select('id, email, role, plan, user_type, onboarding_completed_at')
@@ -231,12 +234,13 @@ router.patch('/me/profile', verifyToken, validateBody('userProfile'), async (req
 /* ── GET /auth/export-data (GDPR Art. 20) ── */
 router.get('/export-data', verifyToken, async (req, res) => {
   const uid = req.user.id;
+  const db = getDb(req);
   const [{ data: user }, { count: postCount }, { data: connections }, { data: mediaFiles }, { count: auditCount }] = await Promise.all([
-    supabase.from('users').select('id, email, full_name, role, plan, user_type, created_at, last_login_at').eq('id', uid).single(),
-    supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', uid),
-    supabase.from('platform_connections').select('platform, platform_username, is_active, connected_at').eq('user_id', uid),
-    supabase.from('media_files').select('filename, original_name, mime_type, size_bytes, cdn_url, created_at').eq('user_id', uid),
-    supabase.from('audit_logs').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+    db.from('users').select('id, email, full_name, role, plan, user_type, created_at, last_login_at').eq('id', uid).single(),
+    db.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', uid),
+    db.from('platform_connections').select('platform, platform_username, is_active, connected_at').eq('user_id', uid),
+    db.from('media_files').select('filename, original_name, mime_type, size_bytes, cdn_url, created_at').eq('user_id', uid),
+    db.from('audit_logs').select('*', { count: 'exact', head: true }).eq('user_id', uid),
   ]);
   res.json({ exportedAt: new Date(), user, postCount: postCount || 0, connections, mediaFiles, auditLogCount: auditCount || 0 });
 });
@@ -244,8 +248,9 @@ router.get('/export-data', verifyToken, async (req, res) => {
 /* ── DELETE /auth/me (GDPR Art. 17) ── */
 router.delete('/me', verifyToken, async (req, res) => {
   const { password } = req.body;
+  const db = getDb(req);
 
-  const { data: user } = await supabase.from('users')
+  const { data: user } = await db.from('users')
     .select('id, password_hash').eq('id', req.user.id).eq('is_active', true).single();
   if (!user) return res.status(404).json({ error: 'User not found' });
 
@@ -258,13 +263,13 @@ router.delete('/me', verifyToken, async (req, res) => {
   await revokeUserSessions(user.id, req.user.jti);
 
   const [userUpdate, connectionsUpdate] = await Promise.all([
-    supabase.from('users').update({
+    db.from('users').update({
       is_active: false,
       email: `deleted_${user.id}@deleted.local`,
       password_hash: null,
       full_name: null,
     }).eq('id', user.id),
-    supabase.from('platform_connections').update({ is_active: false }).eq('user_id', user.id),
+    db.from('platform_connections').update({ is_active: false }).eq('user_id', user.id),
   ]);
   if (userUpdate.error || connectionsUpdate.error) {
     logger.error('Account deletion failed', {

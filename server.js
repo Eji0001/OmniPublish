@@ -42,7 +42,7 @@ const mediaRoutes     = require('./routes/media');
 const healthRoutes    = require('./routes/health');
 const gdprRoutes      = require('./routes/gdpr');
 
-const { processScheduledPosts, cleanupRevokedTokens } = require('./services/schedulerService');
+const { processScheduledPosts, cleanupRevokedTokens, executeGdprDeletions } = require('./services/schedulerService');
 const { healthReadinessCheck, healthLivenessCheck } = require('./middleware/healthChecks');
 const { limiter } = require('./middleware/concurrencyLimit');
 const { setupGracefulShutdown } = require('./utils/gracefulShutdown');
@@ -335,6 +335,12 @@ if (require.main === module) {
   cron.schedule('0 * * * *', async () => {
     try { await cleanupExpiredOAuthStates(); }
     catch (e) { logger.error('OAuth state cleanup error', { err: e.message }); }
+  });
+
+  // GDPR Art. 17 — purge accounts whose 30-day grace period has elapsed (runs daily at 03:00)
+  cron.schedule('0 3 * * *', async () => {
+    try { await executeGdprDeletions(); }
+    catch (e) { logger.error('GDPR deletion cron error', { err: e.message }); }
   });
 
   const PORT = parseInt(process.env.PORT || '4000', 10);

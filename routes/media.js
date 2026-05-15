@@ -50,18 +50,20 @@ router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, 
     const ext = isImage ? 'webp' : path.extname(file.originalname).slice(1);
     const filename = `${req.user.id}/${uuid()}.${ext}`;
 
+    // Storage uses service client — bucket policies control access
     const { error: storageErr } = await supabase.storage.from(bucket).upload(filename, buffer, { contentType: file.mimetype, upsert: false });
     if (storageErr) throw new Error(`Storage upload failed: ${storageErr.message}`);
 
     const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(filename);
-    const { data: record, error: dbErr } = await supabase.from('media_files').insert({
-      user_id: req.user.id, filename, original_name: file.originalname.slice(0, 255),
+
+    // DB insert uses scoped client — user_id injected automatically
+    const { data: record, error: dbErr } = await req.db.from('media_files').insert({
+      filename, original_name: file.originalname.slice(0, 255),
       mime_type: file.mimetype, size_bytes: file.size, storage_path: filename,
       cdn_url: publicUrl, width: width || null, height: height || null,
     }).select().single();
 
     if (dbErr || !record) {
-      // Storage upload succeeded but DB insert failed — remove the orphaned file
       await supabase.storage.from(bucket).remove([filename]).catch(() => {});
       throw new Error(`Failed to save media record: ${dbErr?.message || 'unknown error'}`);
     }
@@ -76,8 +78,10 @@ router.post('/upload', mediaRateLimiter, upload.array('files', 10), async (req, 
 
 /* ── DELETE /media/:id ── */
 router.delete('/:id', async (req, res) => {
-  const { data: file } = await supabase.from('media_files').select('storage_path, user_id').eq('id', req.params.id).single();
-  if (!file || file.user_id !== req.user.id) return res.status(404).json({ error: 'File not found' });
+  // Scoped select — can only fetch own files
+  const { data: file } = await req.db.from('media_files')
+    .select('storage_path').eq('id', req.params.id).single();
+  if (!file) return res.status(404).json({ error: 'File not found' });
 
   const { error: storageErr } = await supabase.storage
     .from(process.env.SUPABASE_STORAGE_BUCKET || 'media')
@@ -87,7 +91,7 @@ router.delete('/:id', async (req, res) => {
     logger.warn('Failed to remove file from storage on delete', { id: req.params.id, err: storageErr.message });
   }
 
-  const { error: dbErr } = await supabase.from('media_files').delete().eq('id', req.params.id);
+  const { error: dbErr } = await req.db.from('media_files').delete().eq('id', req.params.id);
   if (dbErr) return res.status(500).json({ error: 'Failed to delete file record' });
 
   res.status(204).send();

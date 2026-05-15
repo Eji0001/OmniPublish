@@ -23,11 +23,67 @@ const supabasePublic = createClient(SUPABASE_URL || 'http://localhost', SUPABASE
   global: { headers: { 'x-application-name': 'omnipublish-api' } },
 });
 
+const createUserScopedClient = (accessToken) => {
+  if (!accessToken) return supabasePublic;
+
+  return createClient(SUPABASE_URL || 'http://localhost', SUPABASE_ANON || 'anon', {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    global: {
+      headers: {
+        'x-application-name': 'omnipublish-api-user',
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  });
+};
+
 /** Service-role client — bypasses RLS, for server-only operations */
 const supabase = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_SERVICE || 'service', {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   global: { headers: { 'x-application-name': 'omnipublish-api-service' } },
 });
+
+/**
+ * Tables that have a direct user_id column and should be auto-scoped.
+ * post_platforms is excluded — ownership is enforced via posts.user_id.
+ */
+const _USER_OWNED_TABLES = new Set(['posts', 'media_files', 'platform_connections']);
+
+/**
+ * userScopedDb — wraps the service client so that all DML on user-owned tables
+ * automatically includes a user_id guard. Eliminates the entire class of IDOR
+ * bugs where a developer forgets to scope a query.
+ *
+ * select  → appends .eq('user_id', userId) before the caller chains more filters
+ * insert  → injects user_id into the payload (array or object)
+ * update  → appends .eq('user_id', userId) so stray updates can't touch other users
+ * delete  → appends .eq('user_id', userId) so stray deletes can't touch other users
+ * upsert  → caller is responsible for including user_id (conflict resolution needs it)
+ *
+ * Tables NOT in _USER_OWNED_TABLES are passed through unmodified (post_platforms,
+ * users, revoked_tokens, audit_logs, etc. follow their own ownership model).
+ */
+const userScopedDb = (userId) => {
+  if (!userId) throw Object.assign(new Error('userScopedDb requires a userId'), { status: 500 });
+  return {
+    from(table) {
+      const base = supabase.from(table);
+      if (!_USER_OWNED_TABLES.has(table)) return base;
+      return {
+        select: (...args)    => base.select(...args).eq('user_id', userId),
+        insert: (data)       => base.insert(
+          Array.isArray(data)
+            ? data.map(r => ({ user_id: userId, ...r }))
+            : { user_id: userId, ...data }
+        ),
+        update: (data)       => base.update(data).eq('user_id', userId),
+        delete: ()           => base.delete().eq('user_id', userId),
+        upsert: (data, opts) => base.upsert(data, opts),
+      };
+    },
+    get storage() { return supabase.storage; },
+  };
+};
 
 const CORE_RELATIONS = [
   'users',
@@ -44,6 +100,7 @@ const SUPPORT_RELATIONS = [
   'idempotency_tokens',
   'oauth_states',
   'api_requests',
+  'api_request_metrics',
   'retry_queue',
   'user_sessions',
   'post_publish_summary',
@@ -97,17 +154,100 @@ const probeRelation = async (relation) => {
   }
 };
 
+const fetchSecurityAudit = async () => {
+  if (typeof supabase.rpc !== 'function') return null;
+
+  const [relationAudit, definerAudit] = await Promise.all([
+    supabase.rpc('get_relation_security_audit', { relations: REQUIRED_RELATIONS }),
+    supabase.rpc('get_public_security_definer_routines'),
+  ]);
+
+  if (relationAudit?.error && definerAudit?.error) return null;
+
+  return {
+    relations: relationAudit?.data || [],
+    securityDefinerRoutines: definerAudit?.data || [],
+  };
+};
+
+const normalizeAuditRows = (rows = []) => rows.reduce((acc, row) => {
+  if (row?.relation) acc[row.relation] = row;
+  return acc;
+}, {});
+
+const REQUIRED_POLICIES = {
+  users: ['users_self'],
+  platform_connections: ['pc_own'],
+  posts: ['posts_own'],
+  post_platforms: ['pp_own'],
+  media_files: ['media_own'],
+  audit_logs: ['audit_logs_own_select'],
+};
+
+const SUPPORT_RLS_RELATIONS = [
+  'password_resets',
+  'revoked_tokens',
+  'idempotency_tokens',
+  'oauth_states',
+  'api_requests',
+  'api_request_metrics',
+  'retry_queue',
+  'user_sessions',
+  'audit_logs',
+];
+
 /** Health check — verifies Supabase is reachable and MVP relations exist */
 const dbSchemaHealthCheck = async () => {
   const checks = await Promise.all(REQUIRED_RELATIONS.map(probeRelation));
   const missingRelations = checks.filter(result => !result.ok).map(result => result.relation);
   const missingCoreRelations = checks.filter(result => CORE_RELATIONS.includes(result.relation) && !result.ok).map(result => result.relation);
   const missingSupportRelations = checks.filter(result => SUPPORT_RELATIONS.includes(result.relation) && !result.ok).map(result => result.relation);
+
+  const securityAudit = await fetchSecurityAudit();
+  const relationAudit = normalizeAuditRows(securityAudit?.relations);
+  const securityDefinerRoutines = securityAudit?.securityDefinerRoutines || [];
+
+  const rlsMissing = [];
+  const policyMissing = [];
+  const viewSecurityMissing = [];
+
+  if (securityAudit) {
+    for (const relation of SUPPORT_RLS_RELATIONS) {
+      const row = relationAudit[relation];
+      if (!row || row.relation_kind === 'v') continue;
+      if (!row.rls_enabled) rlsMissing.push(relation);
+    }
+
+    for (const [relation, policies] of Object.entries(REQUIRED_POLICIES)) {
+      const row = relationAudit[relation];
+      if (!row) continue;
+      const currentPolicies = Array.isArray(row?.policies) ? row.policies : [];
+      const missingPolicies = policies.filter(policy => !currentPolicies.includes(policy));
+      if (missingPolicies.length) policyMissing.push({ relation, missingPolicies });
+    }
+
+    const summaryView = relationAudit.post_publish_summary;
+    if (summaryView && summaryView.relation_kind === 'v' && !summaryView.security_invoker) {
+      viewSecurityMissing.push('post_publish_summary');
+    }
+  }
+
+  const unsafeRoutines = securityDefinerRoutines.map(routine => routine.routine_name || routine.signature || routine);
+
   return {
-    ok: missingCoreRelations.length === 0,
+    ok: missingCoreRelations.length === 0
+      && rlsMissing.length === 0
+      && policyMissing.length === 0
+      && viewSecurityMissing.length === 0
+      && unsafeRoutines.length === 0,
     missingRelations,
     missingCoreRelations,
     missingSupportRelations,
+    rlsMissing,
+    policyMissing,
+    viewSecurityMissing,
+    unsafeRoutines,
+    securityAudit,
     checks,
   };
 };
@@ -121,4 +261,4 @@ const dbHealthCheck = async () => {
   }
 };
 
-module.exports = { supabase, supabasePublic, execute, executeWithRetry, dbHealthCheck, dbSchemaHealthCheck, REQUIRED_RELATIONS, CORE_RELATIONS, SUPPORT_RELATIONS };
+module.exports = { supabase, supabasePublic, createUserScopedClient, userScopedDb, execute, executeWithRetry, dbHealthCheck, dbSchemaHealthCheck, REQUIRED_RELATIONS, CORE_RELATIONS, SUPPORT_RELATIONS };

@@ -213,4 +213,93 @@ const cleanupRevokedTokens = async () => {
   else logger.debug('Revoked token cleanup ran');
 };
 
-module.exports = { processScheduledPosts, cleanupRevokedTokens };
+/**
+ * executeGdprDeletions — purges all user data for accounts whose 30-day grace period
+ * has elapsed. Called daily from server.js cron. Implements GDPR Art. 17 Right to Erasure.
+ *
+ * Deletion order respects FK constraints:
+ *   post_platforms → posts → media_files → platform_connections
+ *   → audit_logs → user_sessions → revoked_tokens → password_resets → users
+ */
+const executeGdprDeletions = async () => {
+  const now = new Date().toISOString();
+  const { data: due, error: lookupErr } = await supabase
+    .from('users')
+    .select('id, email')
+    .not('deletion_scheduled_for', 'is', null)
+    .lte('deletion_scheduled_for', now);
+
+  if (lookupErr) { logger.error('GDPR deletion lookup failed', { err: lookupErr.message }); return; }
+  if (!due?.length) return;
+
+  logger.info(`GDPR deletion: processing ${due.length} account(s)`);
+
+  for (const user of due) {
+    const uid = user.id;
+    try {
+      // 1. Get media storage paths before deleting records
+      const { data: mediaFiles } = await supabase.from('media_files')
+        .select('storage_path').eq('user_id', uid);
+
+      // 2. Get post IDs to cascade post_platforms
+      const { data: posts } = await supabase.from('posts').select('id').eq('user_id', uid);
+      const postIds = (posts || []).map(p => p.id);
+
+      // 3. Delete post_platforms (FK to posts)
+      if (postIds.length) {
+        await supabase.from('post_platforms').delete().in('post_id', postIds);
+      }
+
+      // 4. Delete posts
+      await supabase.from('posts').delete().eq('user_id', uid);
+
+      // 5. Remove media from storage
+      const storagePaths = (mediaFiles || []).map(f => f.storage_path).filter(Boolean);
+      if (storagePaths.length) {
+        const bucket = process.env.SUPABASE_STORAGE_BUCKET || 'media';
+        const CHUNK = 100;
+        for (let i = 0; i < storagePaths.length; i += CHUNK) {
+          await supabase.storage.from(bucket).remove(storagePaths.slice(i, i + CHUNK));
+        }
+      }
+
+      // 6. Delete media_files records
+      await supabase.from('media_files').delete().eq('user_id', uid);
+
+      // 7. Delete platform connections
+      await supabase.from('platform_connections').delete().eq('user_id', uid);
+
+      // 8. Delete audit logs
+      await supabase.from('audit_logs').delete().eq('user_id', uid);
+
+      // 9. Delete user sessions
+      await supabase.from('user_sessions').delete().eq('user_id', uid);
+
+      // 10. Delete revoked tokens
+      await supabase.from('revoked_tokens').delete().eq('user_id', uid);
+
+      // 11. Delete password resets / magic links
+      await supabase.from('password_resets').delete().eq('user_id', uid);
+
+      // 12. Anonymise and mark user record as deleted (keep row for audit trail)
+      await supabase.from('users').update({
+        email:                    `deleted-${uid}@deleted.invalid`,
+        full_name:                null,
+        avatar_url:               null,
+        password_hash:            null,
+        is_active:                false,
+        is_verified:              false,
+        marketing_consent:        false,
+        deletion_requested_at:    null,
+        deletion_scheduled_for:   null,
+        deleted_at:               new Date(),
+      }).eq('id', uid);
+
+      logger.info('GDPR deletion completed', { userId: uid });
+    } catch (err) {
+      logger.error('GDPR deletion failed for user', { userId: uid, err: err.message });
+    }
+  }
+};
+
+module.exports = { processScheduledPosts, cleanupRevokedTokens, executeGdprDeletions };

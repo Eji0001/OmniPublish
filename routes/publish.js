@@ -14,6 +14,7 @@ const { logger }               = require('../utils/logger');
 
 const router = express.Router();
 router.use(verifyToken);
+const getDb = (req) => req.db || supabase;
 
 const buildPlatformPostPayload = (post, platform) => {
   const platformPost = post.post_platforms?.find(p => p.platform === platform);
@@ -29,22 +30,23 @@ const buildPlatformPostPayload = (post, platform) => {
  */
 router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, res) => {
   const { postId, platforms } = req.body;
+  const db = getDb(req);
 
-  // Ownership check
-  const { data: post } = await supabase.from('posts')
+  // Ownership check via scoped client — req.db auto-scopes to req.user.id
+  const { data: post } = await db.from('posts')
     .select('*, post_platforms(*), media_files(cdn_url)')
-    .eq('id', postId).eq('user_id', req.user.id).single();
+    .eq('id', postId).single();
   if (!post) return res.status(404).json({ error: 'Post not found' });
 
-  // Fetch connected platform tokens
-  const { data: connections } = await supabase.from('platform_connections')
+  // Fetch connected platform tokens (scoped to user)
+  const { data: connections } = await db.from('platform_connections')
     .select('id, platform, access_token_enc, refresh_token_enc, platform_user_id, token_expires_at')
-    .eq('user_id', req.user.id).in('platform', platforms).eq('is_active', true);
+    .in('platform', platforms).eq('is_active', true);
 
   const connectedMap = Object.fromEntries((connections || []).map(c => [c.platform, c]));
 
   // Mark all targets as "publishing"
-  await supabase.from('post_platforms').update({ status: 'publishing' }).eq('post_id', postId).in('platform', platforms);
+  await db.from('post_platforms').update({ status: 'publishing' }).eq('post_id', postId).in('platform', platforms);
 
   // Publish concurrently
   const results = await Promise.allSettled(
@@ -60,14 +62,12 @@ router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, re
         post: buildPlatformPostPayload(post, platform),
         conn,
         persistConnectionTokens: async (updates) => {
-          await supabase.from('platform_connections')
-            .update(updates)
-            .eq('id', conn.id)
-            .eq('user_id', req.user.id);
+          await db.from('platform_connections')
+            .update(updates).eq('id', conn.id).eq('user_id', req.user.id);
         },
       });
 
-      await supabase.from('post_platforms').update({
+      await db.from('post_platforms').update({
         status: 'published', platform_post_id: result.postId,
         platform_post_url: result.url, published_at: new Date(), error_message: null,
       }).eq('post_id', postId).eq('platform', platform);
@@ -80,14 +80,14 @@ router.post('/', publishRateLimiter, validateBody('publishPost'), async (req, re
   const failed = results.filter(r => r.status === 'rejected');
   for (const r of failed) {
     const platform = r.reason?.platform || 'unknown';
-    await supabase.from('post_platforms').update({
+    await db.from('post_platforms').update({
       status: 'failed', error_message: r.reason?.message?.slice(0, 500),
     }).eq('post_id', postId).eq('platform', platform);
   }
 
   const succeeded = results.filter(r => r.status === 'fulfilled');
   if (succeeded.length > 0) {
-    await supabase.from('posts').update({ status: 'published', published_at: new Date() }).eq('id', postId);
+    await db.from('posts').update({ status: 'published', published_at: new Date() }).eq('id', postId);
   }
 
   const summary = results.map(r =>
