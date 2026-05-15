@@ -23,18 +23,23 @@ const supabasePublic = createClient(SUPABASE_URL || 'http://localhost', SUPABASE
   global: { headers: { 'x-application-name': 'omnipublish-api' } },
 });
 
-const createUserScopedClient = (accessToken) => {
-  if (!accessToken) return supabasePublic;
-
-  return createClient(SUPABASE_URL || 'http://localhost', SUPABASE_ANON || 'anon', {
-    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-    global: {
-      headers: {
-        'x-application-name': 'omnipublish-api-user',
-        Authorization: `Bearer ${accessToken}`,
-      },
-    },
-  });
+/**
+ * createUserScopedClient — accepts a JWT token or a raw userId string.
+ * Decodes the sub claim when a JWT is passed so that callers in auth.js
+ * (which pass the raw Bearer token) get the same auto-scoped wrapper as
+ * callers that pass payload.sub directly.  Delegates to userScopedDb so
+ * there is exactly one enforcement point for the user_id guard.
+ */
+const createUserScopedClient = (tokenOrUserId) => {
+  if (!tokenOrUserId) throw Object.assign(new Error('createUserScopedClient requires a token or userId'), { status: 500 });
+  let userId = tokenOrUserId;
+  if (typeof tokenOrUserId === 'string' && tokenOrUserId.split('.').length === 3) {
+    try {
+      const decoded = JSON.parse(Buffer.from(tokenOrUserId.split('.')[1], 'base64url').toString('utf8'));
+      if (decoded?.sub) userId = decoded.sub;
+    } catch { /* fall through — use tokenOrUserId as-is */ }
+  }
+  return userScopedDb(userId);
 };
 
 /** Service-role client — bypasses RLS, for server-only operations */
