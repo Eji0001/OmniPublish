@@ -3,8 +3,8 @@
 const { logger } = require('../utils/logger');
 
 const provider = (process.env.EMAIL_PROVIDER || '').toLowerCase();
-const fromEmail = process.env.FROM_EMAIL || 'noreply@omnipublish.com';
-const fromName  = process.env.FROM_NAME || 'OmniPublish';
+const fromEmail = process.env.FROM_EMAIL || 'noreply@neolinkapp.com';
+const fromName  = process.env.FROM_NAME || 'NeoLink';
 
 async function sendEmail({ to, subject, text, html }) {
   if (!to || !subject) throw new Error('Missing email recipient or subject');
