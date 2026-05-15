@@ -40,6 +40,7 @@ describe('onboarding persona selection', () => {
     extractFunction(html, 'function syncPersonaSelection(role)', 'function obGoStep(n)'),
     extractFunction(html, 'function selectRole(card, role)', 'function renderOnboardingIntro()'),
   ].join('\n');
+  const onboardingStateSource = extractFunction(html, 'function onboardingCompleteKey(userId)', 'let accessToken =');
 
   function buildContext(existingRole = '') {
     const cards = ['founder', 'creator', 'agency'].map(role => ({
@@ -141,5 +142,31 @@ describe('onboarding persona selection', () => {
     expect(elements['ob-add-facebook'].textContent).toBe('✓ Connected');
     expect(elements['ob-plat-facebook'].classList.contains('connected')).toBe(true);
     expect(elements['ob-plat-state-facebook'].textContent).toBe('Connected');
+  });
+
+  it('ties onboarding completion to the current user id', () => {
+    const localStorage = {
+      store: {},
+      getItem(key) { return this.store[key] || null; },
+      setItem(key, value) { this.store[key] = String(value); },
+      removeItem(key) { delete this.store[key]; },
+    };
+
+    const context = {
+      localStorage,
+      auth: { get user() { return JSON.parse(localStorage.getItem('omni_user') || 'null'); } },
+    };
+
+    vm.createContext(context);
+    vm.runInContext(onboardingStateSource, context);
+
+    localStorage.setItem('omni_user', JSON.stringify({ id: 'user-new' }));
+    localStorage.setItem('omni_onboarding_done:user-old', '1');
+
+    expect(context.hasCompletedOnboarding()).toBe(false);
+
+    context.markOnboardingComplete();
+    expect(localStorage.getItem('omni_onboarding_done:user-new')).toBe('1');
+    expect(context.hasCompletedOnboarding()).toBe(true);
   });
 });

@@ -206,6 +206,31 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .ai-btn{width:100%;margin-top:1rem;padding:11px 16px;border-radius:12px;border:1px solid var(--ai-border);background:var(--ai-bg);color:var(--tx);font-size:14px;font-weight:700;cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit}
 .ai-btn:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:0 6px 20px var(--glow)}
 .ai-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.seo-btn{width:100%;margin-top:8px;padding:10px 16px;border-radius:12px;border:1px solid var(--ai-border);background:var(--s1);color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:7px;font-family:inherit}
+.seo-btn:hover:not(:disabled){border-color:var(--pc);color:var(--pc);transform:translateY(-1px)}.seo-btn:disabled{opacity:.4;cursor:not-allowed}
+.seo-card{background:var(--s1);border:1.5px solid var(--bd);border-radius:11px;padding:11px 13px;margin-bottom:8px;cursor:pointer;transition:all .2s;animation:fadeUp .3s ease}
+.seo-card.seo-sel{border-color:var(--pc);background:var(--ai-bg)}
+.seo-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.seo-radio{width:14px;height:14px;border-radius:50%;border:2px solid var(--bd2);flex-shrink:0;transition:all .2s;position:relative;box-sizing:border-box}
+.seo-card.seo-sel .seo-radio{border-color:var(--pc);background:var(--pc)}
+.seo-card.seo-sel .seo-radio::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:5px;height:5px;background:#fff;border-radius:50%}
+.seo-opt-label{font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px}
+.seo-rec-badge{font-size:9px;padding:1px 6px;border-radius:8px;background:var(--badge-bg);color:var(--badge-tx);border:1px solid var(--ai-border);font-weight:700;margin-left:auto}
+.seo-title{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px}
+.seo-desc{font-size:11px;color:var(--tx2);line-height:1.5}
+.seo-copy-btn{background:none;border:1px solid var(--bd);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--tx3);cursor:pointer;transition:all .2s;font-family:inherit;margin-top:6px}
+.seo-copy-btn:hover{border-color:var(--bd2);color:var(--tx)}
+.thumb-card{background:var(--s1);border:1px solid var(--bd);border-radius:11px;padding:12px 13px;margin-bottom:8px;animation:fadeUp .3s ease}
+.thumb-overlay{font-size:15px;font-weight:900;color:var(--tx);margin-bottom:5px;letter-spacing:-.3px}
+.thumb-concept{font-size:11px;color:var(--tx2);line-height:1.55}
+.script-hook{font-size:13px;font-weight:700;color:var(--tx);padding:10px 12px;background:var(--ai-bg);border:1px solid var(--ai-border);border-radius:9px;margin-bottom:8px;animation:fadeUp .3s ease}
+.script-scene{background:var(--s2);border-radius:9px;padding:9px 11px;margin-bottom:6px;animation:fadeUp .3s ease}
+.script-scene-num{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.script-action{font-size:11px;font-weight:600;color:var(--tx2);margin-bottom:3px}
+.script-vo{font-size:12px;color:var(--tx);line-height:1.5;font-style:italic}
+.script-duration{font-size:10px;color:var(--tx3);margin-top:3px}
+.script-cta{font-size:12px;font-weight:700;color:var(--acc);padding:8px 12px;background:var(--s1);border:1px solid var(--bd);border-radius:9px;margin-top:6px;animation:fadeUp .3s ease}
+.enrich-section{margin-bottom:14px}.enrich-section-head{font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
 .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 .template-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:.75rem}
 .tmpl-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--bd);background:var(--s1);color:var(--tx2);cursor:pointer;transition:all .2s;font-family:inherit}
@@ -1026,6 +1051,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="tab-content" id="tab-sched"><div class="sched-row"><input type="date" class="sched-input" id="s-date"><input type="time" class="sched-input" id="s-time"></div></div>
       <div class="tab-content" id="tab-draft"><div class="info-box">Content saved as draft. Review and publish later from the dashboard.</div></div>
       <button class="ai-btn" id="ai-btn" onclick="runAIAdapt()"><span id="ai-ico">✦</span><span id="ai-lbl">AI Adapt for All Platforms</span></button>
+      <button class="seo-btn" id="seo-btn" onclick="runAIEnrich()"><span id="seo-ico">✦</span><span id="seo-lbl">Generate SEO &amp; Script</span></button>
     </div>
 
     <!-- ── PLATFORMS ── -->
@@ -1047,12 +1073,17 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <button class="pub-btn" id="pub-btn" onclick="publishAll()">🚀 &nbsp;Publish to All Platforms</button>
       <div class="tabs" id="right-tabs">
         <button class="tab-btn active" onclick="switchTab('tab-adapted',this,'right-tabs')">Adapted Content</button>
+        <button class="tab-btn" data-tab="tab-enrich" onclick="switchTab('tab-enrich',this,'right-tabs')">SEO &amp; Script</button>
         <button class="tab-btn" onclick="switchTab('tab-status',this,'right-tabs')">Publish Status</button>
         <button class="tab-btn" onclick="switchTab('tab-calendar',this,'right-tabs')">Calendar</button>
       </div>
       <div class="tab-content active" id="tab-adapted">
         <div class="empty" id="adapted-empty"><span class="empty-icon">✦</span><div class="empty-text">Click <strong style="color:var(--tx2)">AI Adapt</strong> to generate platform-optimised content for each network.</div></div>
         <div id="adapted-list"></div>
+      </div>
+      <div class="tab-content" id="tab-enrich">
+        <div class="empty" id="enrich-empty"><span class="empty-icon">✦</span><div class="empty-text">Click <strong style="color:var(--tx2)">Generate SEO &amp; Script</strong> to create SEO titles, descriptions, a thumbnail concept, and a video script.</div></div>
+        <div id="enrich-content"></div>
       </div>
       <div class="tab-content" id="tab-status">
         <div class="empty" id="status-empty"><span class="empty-icon">◉</span><div class="empty-text">Select platforms and click <strong style="color:var(--tx2)">Publish</strong> to start broadcasting.</div></div>
@@ -1143,6 +1174,18 @@ const auth = {
     return true;
   }
 };
+
+function onboardingCompleteKey(userId) {
+  return userId ? `omni_onboarding_done:${userId}` : 'omni_onboarding_done';
+}
+
+function hasCompletedOnboarding(user = auth.user) {
+  return !!user?.id && localStorage.getItem(onboardingCompleteKey(user.id)) === '1';
+}
+
+function markOnboardingComplete(user = auth.user) {
+  if (user?.id) localStorage.setItem(onboardingCompleteKey(user.id), '1');
+}
 
 let accessToken = localStorage.getItem('omni_token') || null;
 if (accessToken) localStorage.removeItem('omni_token');
@@ -1425,6 +1468,7 @@ async function doLogout() {
   _dashInit = false;
   selected.clear();
   adapted = {};
+  enriched = {};
   toast(ok ? 'Logged out.' : 'Logged out locally. Server session may already be expired.', ok ? 'ok' : 'err');
   showPage('home');
 }
@@ -2055,16 +2099,24 @@ async function runAIAdapt() {
   document.getElementById('ai-lbl').textContent = 'Adapting with AI…';
   try {
     const res = await api('POST', '/api/v1/ai/adapt', { content: txt, platforms: sel.map(p=>p.id), format: currentFormat, ratio: currentRatio });
-    if (!res.ok) throw new Error(`${res.status}`);
-    const data = await res.json();
+    if (!res.ok) { const e = await res.json().catch(()=>({error:res.status})); throw new Error(e.error || res.status); }
+    const data = await res.json().catch(()=>{ throw new Error('Invalid response from AI'); });
     adapted = data.adapted || {};
     renderAdapted(sel);
+    try {
+      const enrichRes = await api('POST', '/api/v1/ai/enrich', { content: txt, platforms: sel.map(p=>p.id), format: currentFormat, ratio: currentRatio });
+      if (enrichRes.ok) {
+        enriched = await enrichRes.json().catch(() => ({}));
+        selectedSEO = enriched.thumbnail?.recommended || 1;
+        renderSEOScript();
+      }
+    } catch {}
     toast(`✦ Content adapted for ${sel.length} platforms!`,'ok');
     document.querySelector('#right-tabs .tab-btn:first-child').click();
   } catch (err) {
-    sel.forEach(p=>{adapted[p.id]=txt.length>p.limit?txt.slice(0,p.limit-4)+'…':txt;});
+    sel.forEach(p=>{const lim=p.limit||1000;adapted[p.id]=txt.length>lim?txt.slice(0,lim-4)+'…':txt;});
     renderAdapted(sel);
-    toast('AI unavailable — showing trimmed fallback','err');
+    toast(`AI adapt failed (${err.message}) — showing trimmed fallback`,'err');
   }
   btn.disabled = false;
   document.getElementById('ai-ico').outerHTML = '<span id="ai-ico">✦</span>';
@@ -2080,6 +2132,78 @@ function renderAdapted(sel) {
   }).join('');
 }
 function copyText(pid) { if(adapted[pid]){navigator.clipboard.writeText(adapted[pid]);toast('Copied!','ok');} }
+
+let enriched = {};
+let selectedSEO = 1;
+
+async function runAIEnrich() {
+  const txt = document.getElementById('content').value.trim();
+  const sel = getSelected();
+  if (!txt) { toast('Write some content first!', 'err'); return; }
+  const btn = document.getElementById('seo-btn');
+  btn.disabled = true;
+  document.getElementById('seo-ico').outerHTML = '<span class="spin" id="seo-ico"></span>';
+  document.getElementById('seo-lbl').textContent = 'Generating…';
+  try {
+    const res = await api('POST', '/api/v1/ai/enrich', { content: txt, platforms: sel.map(p=>p.id), format: currentFormat, ratio: currentRatio });
+    if (!res.ok) { const e = await res.json().catch(()=>({error:res.status})); throw new Error(e.error || res.status); }
+    enriched = await res.json();
+    selectedSEO = enriched.thumbnail?.recommended || 1;
+    renderSEOScript();
+    document.querySelector('#right-tabs [data-tab="tab-enrich"]').click();
+    toast('✦ SEO & Script generated!', 'ok');
+  } catch (err) {
+    toast(`SEO generation failed (${err.message})`, 'err');
+  }
+  btn.disabled = false;
+  document.getElementById('seo-ico').outerHTML = '<span id="seo-ico">✦</span>';
+  document.getElementById('seo-lbl').textContent = 'Generate SEO & Script';
+}
+
+function selectSEO(n) {
+  selectedSEO = n;
+  document.querySelectorAll('.seo-card').forEach((c, i) => c.classList.toggle('seo-sel', i + 1 === n));
+}
+
+function renderSEOScript() {
+  const container = document.getElementById('enrich-content');
+  document.getElementById('enrich-empty').style.display = 'none';
+  let html = '';
+
+  const seoOpts = enriched.seo || [];
+  if (seoOpts.length) {
+    html += '<div class="enrich-section"><div class="enrich-section-head">SEO Options — pick one</div>';
+    seoOpts.forEach((opt, i) => {
+      const n = i + 1;
+      const sel = n === selectedSEO;
+      html += `<div class="seo-card${sel?' seo-sel':''}" onclick="selectSEO(${n})"><div class="seo-card-head"><div class="seo-radio"></div><span class="seo-opt-label">Option ${n}</span>${sel?'<span class="seo-rec-badge">AI Pick</span>':''}</div><div class="seo-title">${escHtml(opt.title||'')}</div><div class="seo-desc">${escHtml(opt.description||'')}</div><button class="seo-copy-btn" onclick="event.stopPropagation();copySEO(${i})">Copy</button></div>`;
+    });
+    html += '</div>';
+  }
+
+  const thumb = enriched.thumbnail;
+  if (thumb) {
+    html += `<div class="enrich-section"><div class="enrich-section-head">Thumbnail Concept</div><div class="thumb-card"><div class="thumb-overlay">"${escHtml(thumb.textOverlay||'')}"</div><div class="thumb-concept">${escHtml(thumb.concept||'')}</div></div></div>`;
+  }
+
+  const script = enriched.videoScript;
+  if (script) {
+    html += '<div class="enrich-section"><div class="enrich-section-head">Video Script</div>';
+    if (script.hook) html += `<div class="script-hook">Hook: ${escHtml(script.hook)}</div>`;
+    (script.scenes || []).forEach(s => {
+      html += `<div class="script-scene"><div class="script-scene-num">Scene ${s.scene}${s.duration?' · '+s.duration:''}</div><div class="script-action">${escHtml(s.action||'')}</div><div class="script-vo">"${escHtml(s.voiceover||'')}"</div></div>`;
+    });
+    if (script.cta) html += `<div class="script-cta">CTA: ${escHtml(script.cta)}</div>`;
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function copySEO(idx) {
+  const opt = (enriched.seo || [])[idx];
+  if (opt) { navigator.clipboard.writeText(`${opt.title}\n\n${opt.description}`); toast('Copied!', 'ok'); }
+}
 
 async function publishAll() {
   const txt=document.getElementById('content').value.trim();const sel=getSelected();
@@ -2387,9 +2511,9 @@ async function verifyMagicToken(token) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
-    if (!localStorage.getItem('omni_onboarding_done')) {
-      enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
-    } else {
+        if (!hasCompletedOnboarding(data.user)) {
+          enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
+        } else {
       auth.set({ ...data, user: data.user });
       toast('Welcome to OmniPublish! 🚀', 'ok');
       showPage('dashboard');
@@ -2827,7 +2951,7 @@ async function finishOnboarding() {
     obGoStep(2);
     return;
   }
-  localStorage.setItem('omni_onboarding_done', '1');
+  markOnboardingComplete();
   await api('PATCH', '/api/v1/auth/me/profile', { onboardingCompleted: true }).catch(() => {});
   showPage('dashboard');
 }
@@ -2943,7 +3067,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           setTimeout(() => toast(data.error || 'Google sign-in failed. Please try again.', 'err'), 400);
           return;
         }
-        if (!localStorage.getItem('omni_onboarding_done')) {
+        if (!hasCompletedOnboarding(data.user)) {
           enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
         } else {
           auth.set({ ...data, user: data.user });
@@ -2972,7 +3096,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       showPage('onboarding');
     } else if (hashPage === 'dashboard') {
       showPage('dashboard');
-    } else if (localStorage.getItem('omni_onboarding_done')) {
+    } else if (hasCompletedOnboarding(auth.user)) {
       showPage('dashboard');
     } else {
       showPage('onboarding');

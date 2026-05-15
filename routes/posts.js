@@ -70,7 +70,7 @@ router.get('/stats/overview', async (req, res) => {
   res.json({ statusCounts: counts, platformStats });
 });
 
-/* ── POST /posts/adapt — must be before /:id ── */
+/* ── POST /posts/adapt — compatibility alias for AI adapt ── */
 router.post('/adapt', aiRateLimiter, validateBody('adaptContent'), async (req, res) => {
   const { content, platforms, format, ratio } = req.body;
   const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });

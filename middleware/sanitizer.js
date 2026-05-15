@@ -78,6 +78,12 @@ const schemas = {
     format:    z.string().max(50).optional(),
     ratio:     z.string().max(10).optional(),
   }),
+  enrichContent: z.object({
+    content:   z.string().min(1).max(63206),
+    platforms: z.array(z.enum(PLATFORM_IDS)).max(14).optional(),
+    format:    z.string().max(50).optional(),
+    ratio:     z.string().max(10).optional(),
+  }),
   publishPost: z.object({
     postId:    z.string().uuid(),
     platforms: z.array(z.enum(PLATFORM_IDS)).min(1).max(14),

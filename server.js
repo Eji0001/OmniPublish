@@ -261,16 +261,27 @@ app.use('/api/v1/platforms',  platformsRoutes);
 app.use('/api/v1/publish',    publishRoutes);
 app.use('/api/v1/media',      mediaRoutes);
 
-// AI adapt endpoint (secure — keeps API key server-side)
+// AI endpoints (secure — API key never leaves the server)
+const { verifyToken: _vt }    = require('./middleware/auth');
+const { aiRateLimiter: _arl } = require('./middleware/rateLimit');
+const { validateBody: _vb }   = require('./middleware/sanitizer');
+const { aiAdaptContent, aiEnrichContent } = require('./services/aiService');
+
 app.post('/api/v1/ai/adapt',
-  require('./middleware/auth').verifyToken,
-  require('./middleware/rateLimit').aiRateLimiter,
-  require('./middleware/sanitizer').validateBody('adaptContent'),
+  _vt, _arl, _vb('adaptContent'),
   async (req, res) => {
     const { content, platforms, format, ratio } = req.body;
-    const { aiAdaptContent } = require('./services/aiService');
     const adapted = await aiAdaptContent({ content, platforms, format, ratio, userId: req.user.id });
     res.json({ adapted });
+  }
+);
+
+app.post('/api/v1/ai/enrich',
+  _vt, _arl, _vb('enrichContent'),
+  async (req, res) => {
+    const { content, platforms, format, ratio } = req.body;
+    const result = await aiEnrichContent({ content, platforms, format, ratio, userId: req.user.id });
+    res.json(result);
   }
 );
 // Admin-only route group — requires API key
