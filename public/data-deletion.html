@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>OmniPublish - Data Deletion</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0b1020;--card:#11182d;--card2:#0f1730;--tx:#eaf1ff;--tx2:#b6c6e6;--tx3:#7f95c2;--acc:#3d7cff;--bd:#25314f;--grad:linear-gradient(135deg,#3d7cff,#7a4dff)}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at top,#15213f 0,#0b1020 55%);color:var(--tx);line-height:1.6}
+    main{max-width:920px;margin:0 auto;padding:40px 20px 56px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:28px;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px}
+    .mark{width:32px;height:32px;border-radius:10px;background:var(--grad);display:grid;place-items:center;color:#fff}
+    .home{color:var(--tx2);text-decoration:none;border:1px solid var(--bd);padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.03)}
+    .card{background:linear-gradient(180deg,rgba(17,24,45,.94),rgba(15,23,48,.94));border:1px solid var(--bd);border-radius:24px;padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+    h1{margin:0 0 8px;font-size:clamp(2rem,4vw,3rem);line-height:1.1}
+    .lede{color:var(--tx2);margin:0 0 24px;max-width:70ch}
+    h2{margin:26px 0 10px;font-size:1.1rem}
+    p,li{color:var(--tx2)}
+    ul{margin:10px 0 0 20px}
+    ol{margin:10px 0 0 20px}
+    .note{margin-top:28px;padding:16px 18px;border-radius:16px;background:rgba(61,124,255,.08);border:1px solid rgba(61,124,255,.22);color:var(--tx2)}
+    .meta{margin-top:18px;color:var(--tx3);font-size:12px}
+    a{color:#8fb0ff}
+    code{background:rgba(255,255,255,.06);padding:.15rem .35rem;border-radius:6px}
+  </style>
+</head>
+<body>
+  <main>
+    <div class="top">
+      <div class="brand"><span class="mark">⬡</span><span>OmniPublish</span></div>
+      <a class="home" href="/">Back to app</a>
+    </div>
+    <section class="card">
+      <h1>Data Deletion Instructions</h1>
+      <p class="lede">If you want OmniPublish to delete your data, you can do it from inside the app or contact support. This page explains the process for platform review and user requests.</p>
+
+      <h2>How to request deletion</h2>
+      <ol>
+        <li>Log in to your OmniPublish account.</li>
+        <li>Open the account or GDPR settings page.</li>
+        <li>Choose <strong>Request deletion</strong>.</li>
+        <li>Confirm the request. Deletion is scheduled after a 30-day grace period.</li>
+      </ol>
+
+      <h2>What gets deleted</h2>
+      <ul>
+        <li>Your account profile</li>
+        <li>Connected platform credentials and tokens</li>
+        <li>Drafts, posts, media references, and activity logs associated with your account</li>
+      </ul>
+
+      <h2>How to cancel</h2>
+      <p>You can cancel a pending deletion request during the grace period by opening the account settings and selecting <strong>Cancel deletion</strong>.</p>
+
+      <h2>API endpoints</h2>
+      <ul>
+        <li><code>POST /api/v1/gdpr/request-deletion</code></li>
+        <li><code>POST /api/v1/gdpr/cancel-deletion</code></li>
+        <li><code>POST /api/v1/gdpr/export-data</code></li>
+      </ul>
+
+      <div class="note">For Meta review, use this page as the Data Deletion Instructions URL: <a href="https://omnipublish.io/data-deletion">https://omnipublish.io/data-deletion</a></div>
+      <div class="meta">Last updated: 2026-05-16</div>
+    </section>
+  </main>
+</body>
+</html>

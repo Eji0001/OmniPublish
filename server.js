@@ -302,6 +302,7 @@ const servePublicPage = (fileName) => (req, res) => {
 
 app.get('/terms', servePublicPage('terms.html'));
 app.get('/privacy', servePublicPage('privacy.html'));
+app.get('/data-deletion', servePublicPage('data-deletion.html'));
 
 app.use(express.static('public'));
 

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">OmniPublish Favicon</title>
+  <desc id="desc">Compact OmniPublish network mark for browser tabs.</desc>
+  <defs>
+    <linearGradient id="bg" x1="84" y1="72" x2="432" y2="432" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FBFF"/>
+      <stop offset="1" stop-color="#E7FAF4"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="112" y1="108" x2="400" y2="404" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0696A5"/>
+      <stop offset="0.5" stop-color="#35C3C7"/>
+      <stop offset="1" stop-color="#A7E6BE"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="164" y1="164" x2="348" y2="348" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E7FCFA"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="128" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="154" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="154" stroke="url(#ring)" stroke-width="18"/>
+  <circle cx="256" cy="256" r="120" stroke="url(#ring)" stroke-width="12" opacity="0.64"/>
+  <circle cx="256" cy="256" r="90" stroke="url(#ring)" stroke-width="10" opacity="0.5"/>
+
+  <circle cx="256" cy="256" r="68" fill="none" stroke="url(#mark)" stroke-width="16"/>
+  <path d="M188 256H324" stroke="url(#mark)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M256 188C238 206 228 230 228 256C228 282 238 306 256 324" stroke="url(#mark)" stroke-width="10" stroke-linecap="round"/>
+  <path d="M256 188C274 206 284 230 284 256C284 282 274 306 256 324" stroke="url(#mark)" stroke-width="10" stroke-linecap="round"/>
+
+  <path d="M278 256H382L360 234M382 256L360 278" stroke="url(#ring)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="382" cy="256" r="14" fill="#A7E6BE"/>
+</svg>

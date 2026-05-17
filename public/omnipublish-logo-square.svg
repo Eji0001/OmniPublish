@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">OmniPublish Square Logo</title>
+  <desc id="desc">Square app icon with a networked publishing mark.</desc>
+  <defs>
+    <linearGradient id="bg" x1="140" y1="112" x2="890" y2="904" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FBFF"/>
+      <stop offset="1" stop-color="#E7FAF4"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="200" y1="200" x2="824" y2="824" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0696A5"/>
+      <stop offset="0.5" stop-color="#35C3C7"/>
+      <stop offset="1" stop-color="#A7E6BE"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="300" y1="300" x2="728" y2="728" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#DFF8F4"/>
+    </linearGradient>
+    <filter id="shadow" x="120" y="120" width="784" height="784" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="24" stdDeviation="30" flood-color="#0B455B" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="208" fill="url(#bg)"/>
+  <g filter="url(#shadow)">
+    <circle cx="512" cy="512" r="286" fill="#FFFFFF"/>
+    <circle cx="512" cy="512" r="286" stroke="url(#ring)" stroke-width="24"/>
+    <circle cx="512" cy="512" r="236" stroke="url(#ring)" stroke-width="16" opacity="0.64"/>
+    <circle cx="512" cy="512" r="186" stroke="url(#ring)" stroke-width="12" opacity="0.48"/>
+
+    <circle cx="512" cy="512" r="140" fill="none" stroke="url(#mark)" stroke-width="26"/>
+    <path d="M372 512H652" stroke="url(#mark)" stroke-width="26" stroke-linecap="round"/>
+    <path d="M512 372C476 404 458 451 458 512C458 573 476 620 512 652" stroke="url(#mark)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M512 372C548 404 566 451 566 512C566 573 548 620 512 652" stroke="url(#mark)" stroke-width="14" stroke-linecap="round"/>
+    <path d="M423 436C457 456 483 480 512 512C541 480 567 456 601 436" stroke="url(#mark)" stroke-width="12" stroke-linecap="round" opacity="0.86"/>
+    <path d="M423 588C457 568 483 544 512 512C541 544 567 568 601 588" stroke="url(#mark)" stroke-width="12" stroke-linecap="round" opacity="0.86"/>
+
+    <path d="M548 512H692L666 486M692 512L666 538" stroke="url(#ring)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="692" cy="512" r="16" fill="#A7E6BE"/>
+
+    <g transform="translate(248 224)">
+      <rect x="0" y="0" width="92" height="92" rx="20" fill="#0B455B"/>
+      <path d="M26 31H60" stroke="white" stroke-width="9" stroke-linecap="round"/>
+      <path d="M26 50H52" stroke="white" stroke-width="9" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(684 224)">
+      <rect x="0" y="0" width="92" height="92" rx="20" fill="#8EDDC0"/>
+      <path d="M24 63L45 42L57 52L69 36L78 26" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M24 69H76" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    <g transform="translate(238 708)">
+      <rect x="0" y="0" width="92" height="92" rx="20" fill="#0B455B"/>
+      <rect x="24" y="49" width="10" height="21" rx="5" fill="white"/>
+      <rect x="41" y="36" width="10" height="34" rx="5" fill="white"/>
+      <rect x="58" y="23" width="10" height="47" rx="5" fill="white"/>
+      <path d="M24 23L47 23L64 36L76 18" stroke="white" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g transform="translate(684 708)">
+      <rect x="0" y="0" width="92" height="92" rx="20" fill="#17A9B8"/>
+      <circle cx="30" cy="30" r="7" fill="white"/>
+      <circle cx="64" cy="22" r="7" fill="white"/>
+      <circle cx="64" cy="60" r="7" fill="white"/>
+      <path d="M36 30L54 26" stroke="white" stroke-width="7" stroke-linecap="round"/>
+      <path d="M36 31L55 56" stroke="white" stroke-width="7" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>
