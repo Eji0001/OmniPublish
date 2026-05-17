@@ -1,80 +1,67 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="1800" height="520" viewBox="0 0 1800 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
   <title id="title">OmniPublish Logo</title>
-  <desc id="desc">Connected publishing network icon with OmniPublish wordmark.</desc>
+  <desc id="desc">Network-style content distribution logo with OmniPublish wordmark.</desc>
   <defs>
-    <linearGradient id="bg" x1="36" y1="40" x2="420" y2="480" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#F7FBFF"/>
-      <stop offset="1" stop-color="#E6FBF5"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="520" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCFEFF"/>
+      <stop offset="1" stop-color="#F4F0E8"/>
     </linearGradient>
-    <linearGradient id="ring" x1="84" y1="88" x2="346" y2="348" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0696A5"/>
-      <stop offset="0.5" stop-color="#36C2C8"/>
-      <stop offset="1" stop-color="#A7E6BE"/>
+    <linearGradient id="ring" x1="86" y1="92" x2="354" y2="356" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#17386F"/>
+      <stop offset="0.5" stop-color="#2E9FA4"/>
+      <stop offset="1" stop-color="#D8B65B"/>
     </linearGradient>
-    <linearGradient id="mark" x1="124" y1="124" x2="300" y2="300" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#DFF8F4"/>
+    <linearGradient id="wordmark" x1="470" y1="130" x2="1540" y2="130" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D2F57"/>
+      <stop offset="1" stop-color="#0D1834"/>
     </linearGradient>
-    <linearGradient id="wordmark" x1="470" y1="130" x2="1510" y2="130" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0B455B"/>
-      <stop offset="0.55" stop-color="#0D6B7F"/>
-      <stop offset="1" stop-color="#144A4F"/>
-    </linearGradient>
-    <filter id="shadow" x="40" y="40" width="360" height="360" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0B455B" flood-opacity="0.16"/>
+    <filter id="shadow" x="32" y="36" width="400" height="400" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#1D2F57" flood-opacity="0.14"/>
     </filter>
   </defs>
 
   <rect width="1800" height="520" fill="white"/>
+  <rect width="1800" height="520" fill="url(#bg)" fill-opacity="0.62"/>
 
   <g filter="url(#shadow)">
-    <circle cx="220" cy="260" r="144" fill="url(#bg)"/>
-    <circle cx="220" cy="260" r="144" stroke="url(#ring)" stroke-width="18"/>
-    <circle cx="220" cy="260" r="116" stroke="url(#ring)" stroke-width="12" opacity="0.62"/>
-    <circle cx="220" cy="260" r="88" stroke="url(#ring)" stroke-width="10" opacity="0.5"/>
+    <circle cx="220" cy="260" r="150" fill="#FBFBF7"/>
+    <circle cx="220" cy="260" r="150" stroke="url(#ring)" stroke-width="16"/>
+    <circle cx="220" cy="260" r="122" stroke="url(#ring)" stroke-width="10" opacity="0.46"/>
+    <circle cx="220" cy="260" r="92" stroke="url(#ring)" stroke-width="8" opacity="0.35"/>
 
-    <circle cx="220" cy="260" r="70" fill="none" stroke="url(#mark)" stroke-width="16"/>
-    <path d="M150 260H290" stroke="url(#mark)" stroke-width="16" stroke-linecap="round"/>
-    <path d="M220 190C201 208 191 232 191 260C191 288 201 312 220 330" stroke="url(#mark)" stroke-width="10" stroke-linecap="round"/>
-    <path d="M220 190C239 208 249 232 249 260C249 288 239 312 220 330" stroke="url(#mark)" stroke-width="10" stroke-linecap="round"/>
-    <path d="M176 224C194 236 206 248 220 260C234 248 246 236 264 224" stroke="url(#mark)" stroke-width="9" stroke-linecap="round" opacity="0.86"/>
-    <path d="M176 296C194 284 206 272 220 260C234 272 246 284 264 296" stroke="url(#mark)" stroke-width="9" stroke-linecap="round" opacity="0.86"/>
+    <circle cx="220" cy="260" r="66" fill="none" stroke="#1D2F57" stroke-width="16"/>
+    <circle cx="220" cy="260" r="52" fill="none" stroke="#2E9FA4" stroke-width="8" opacity="0.9"/>
 
-    <path d="M250 260H372L346 236M372 260L346 284" stroke="url(#ring)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="372" cy="260" r="14" fill="#A7E6BE"/>
+    <path d="M220 150V105" stroke="#D8B65B" stroke-width="8" stroke-linecap="round"/>
+    <path d="M220 370V315" stroke="#2E9FA4" stroke-width="8" stroke-linecap="round"/>
+    <path d="M110 260H154" stroke="#17386F" stroke-width="8" stroke-linecap="round"/>
+    <path d="M286 260H330" stroke="#D8B65B" stroke-width="8" stroke-linecap="round"/>
+    <path d="M142 182L175 206" stroke="#17386F" stroke-width="8" stroke-linecap="round"/>
+    <path d="M298 178L267 204" stroke="#2E9FA4" stroke-width="8" stroke-linecap="round"/>
+    <path d="M142 338L175 314" stroke="#2E9FA4" stroke-width="8" stroke-linecap="round"/>
+    <path d="M298 342L268 316" stroke="#D8B65B" stroke-width="8" stroke-linecap="round"/>
 
-    <g transform="translate(86 112)">
-      <rect x="0" y="0" width="72" height="72" rx="16" fill="#0B455B"/>
-      <path d="M20 24H48" stroke="white" stroke-width="8" stroke-linecap="round"/>
-      <path d="M20 40H42" stroke="white" stroke-width="8" stroke-linecap="round"/>
-    </g>
-    <g transform="translate(282 112)">
-      <rect x="0" y="0" width="72" height="72" rx="16" fill="#8EDDC0"/>
-      <path d="M18 50L34 34L44 42L54 28L62 18" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M18 54H60" stroke="white" stroke-width="7" stroke-linecap="round"/>
-    </g>
-    <g transform="translate(80 338)">
-      <rect x="0" y="0" width="72" height="72" rx="16" fill="#0B455B"/>
-      <rect x="18" y="38" width="8" height="16" rx="4" fill="white"/>
-      <rect x="32" y="28" width="8" height="26" rx="4" fill="white"/>
-      <rect x="46" y="18" width="8" height="36" rx="4" fill="white"/>
-      <path d="M18 18L36 18L50 28L60 14" stroke="white" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>
-    <g transform="translate(286 338)">
-      <rect x="0" y="0" width="72" height="72" rx="16" fill="#17A9B8"/>
-      <circle cx="24" cy="24" r="6" fill="white"/>
-      <circle cx="50" cy="18" r="6" fill="white"/>
-      <circle cx="50" cy="48" r="6" fill="white"/>
-      <path d="M28 24L44 20" stroke="white" stroke-width="6" stroke-linecap="round"/>
-      <path d="M28 26L44 44" stroke="white" stroke-width="6" stroke-linecap="round"/>
-    </g>
+    <circle cx="220" cy="104" r="10" fill="#D8B65B" stroke="#1D2F57" stroke-width="4"/>
+    <circle cx="220" cy="370" r="10" fill="#2E9FA4" stroke="#1D2F57" stroke-width="4"/>
+    <circle cx="108" cy="260" r="10" fill="#17386F" stroke="#1D2F57" stroke-width="4"/>
+    <circle cx="332" cy="260" r="10" fill="#D8B65B" stroke="#1D2F57" stroke-width="4"/>
+    <circle cx="175" cy="206" r="10" fill="#17386F" stroke="#1D2F57" stroke-width="4"/>
+    <circle cx="267" cy="204" r="10" fill="#2E9FA4" stroke="#1D2F57" stroke-width="4"/>
+    <circle cx="175" cy="314" r="10" fill="#2E9FA4" stroke="#1D2F57" stroke-width="4"/>
+    <circle cx="268" cy="316" r="10" fill="#D8B65B" stroke="#1D2F57" stroke-width="4"/>
+
+    <path d="M166 260H274" stroke="#1D2F57" stroke-width="10" stroke-linecap="round"/>
+    <path d="M220 206C204 222 196 240 196 260C196 280 204 298 220 314" stroke="#1D2F57" stroke-width="8" stroke-linecap="round"/>
+    <path d="M220 206C236 222 244 240 244 260C244 280 236 298 220 314" stroke="#1D2F57" stroke-width="8" stroke-linecap="round"/>
+    <path d="M180 232C194 240 206 248 220 260C234 248 246 240 260 232" stroke="#2E9FA4" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+    <path d="M180 288C194 280 206 272 220 260C234 272 246 280 260 288" stroke="#D8B65B" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
   </g>
 
-  <text x="470" y="246" fill="url(#wordmark)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="104" font-weight="500" letter-spacing="-1.9">
-    Omni<tspan font-weight="800">Publish</tspan>
+  <text x="470" y="246" fill="url(#wordmark)" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="104" font-weight="800" letter-spacing="-2.2">
+    OMNIPUBLISH
   </text>
-  <text x="472" y="310" fill="#6A7B86" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="32" font-weight="500" letter-spacing="0.3">
-    Multi-Platform Content Distribution
+  <text x="472" y="310" fill="#3C4A69" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="32" font-weight="500" letter-spacing="0.35">
+    CONTENT DISTRIBUTION PLATFORM
   </text>
 </svg>
