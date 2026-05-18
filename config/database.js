@@ -6,6 +6,7 @@
 'use strict';
 
 const { createClient } = require('@supabase/supabase-js');
+const ws               = require('ws');
 const { logger }       = require('../utils/logger');
 
 const SUPABASE_URL     = process.env.SUPABASE_URL;
@@ -21,6 +22,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE) {
 const supabasePublic = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_ANON || 'anon', {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   global: { headers: { 'x-application-name': 'omnipublish-api' } },
+  realtime: { transport: ws },
 });
 
 /**
@@ -46,6 +48,7 @@ const createUserScopedClient = (tokenOrUserId) => {
 const supabase = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_SERVICE || 'service', {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
   global: { headers: { 'x-application-name': 'omnipublish-api-service' } },
+  realtime: { transport: ws },
 });
 
 /**
