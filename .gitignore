@@ -16,8 +16,9 @@ yarn.lock
 *~
 .DS_Store
 
-# Logs
-logs/
+# Logs — keep directory, ignore all log files inside it
+logs/**
+!logs/.gitkeep
 *.log
 npm-debug.log*
 server.err

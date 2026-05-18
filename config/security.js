@@ -5,6 +5,8 @@
 
 'use strict';
 
+const crypto = require('crypto');
+
 // Production boot guard — refuse to start with dev default secrets
 if (process.env.NODE_ENV === 'production') {
   const DEV_ACCESS         = 'dev-access-secret-change-in-prod';
@@ -36,7 +38,7 @@ const securityHeaders = (req, res, next) => {
   }
 
   const requestId = req.headers['x-request-id'] ||
-    `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    `req_${crypto.randomBytes(8).toString('hex')}`;
   req.requestId = requestId;
   res.setHeader('X-Request-ID', requestId);
   res.removeHeader('Server');

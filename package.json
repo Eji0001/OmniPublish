@@ -8,6 +8,8 @@
   },
   "scripts": {
     "start": "node server.js",
+    "start:prod": "pm2 start ecosystem.config.js --env production",
+    "stop": "pm2 stop omnipublish",
     "dev": "nodemon server.js",
     "test": "jest --runInBand --forceExit",
     "test:cov": "jest --coverage",

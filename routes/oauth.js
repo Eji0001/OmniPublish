@@ -25,12 +25,14 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
 
 function getFrontendOrigin(req) {
   const fallback = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:4000';
-  const candidates = [req.query?.returnTo, req.get('origin'), req.get('referer')].filter(Boolean);
 
+  if (!ALLOWED_ORIGINS.length) return fallback;
+
+  const candidates = [req.query?.returnTo, req.get('origin'), req.get('referer')].filter(Boolean);
   for (const candidate of candidates) {
     try {
-      const origin = new URL(candidate).origin;
-      if (!ALLOWED_ORIGINS.length || ALLOWED_ORIGINS.includes(origin)) return origin;
+      const { origin } = new URL(candidate);
+      if (ALLOWED_ORIGINS.includes(origin)) return origin;
     } catch {
       // ignore malformed headers
     }
