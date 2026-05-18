@@ -62,7 +62,7 @@ const buildCspHeader = (nonce) => {
   const attrHashes = INLINE_EVENT_HANDLER_HASHES.join(' ');
   return [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'unsafe-hashes'${attrHashes ? ` ${attrHashes}` : ''}`,
+    `script-src 'self' 'nonce-${nonce}'`,
     `script-src-elem 'self' 'nonce-${nonce}'`,
     `script-src-attr 'unsafe-hashes'${attrHashes ? ` ${attrHashes}` : ''}`,
     "style-src 'self' 'unsafe-inline'",

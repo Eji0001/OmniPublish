@@ -22,6 +22,20 @@ const platformRequest = (url, init, timeoutMs = 15000) => platformApisBreaker.ex
 
 const isExpired = (tokenExpiresAt) => tokenExpiresAt && new Date(tokenExpiresAt) < new Date();
 
+const PRIVATE_HOST_RE = /^(localhost|127\.|10\.|172\.(1[6-9]|2\d|3[01])\.|192\.168\.|0\.|::1$|fc00:|fd[0-9a-f]{2}:)/i;
+
+const validateMediaUrl = (url, platform) => {
+  let parsed;
+  try { parsed = new URL(url); } catch {
+    throw Object.assign(new Error(`Invalid media URL for ${platform}`), { platform });
+  }
+  if (parsed.protocol !== 'https:')
+    throw Object.assign(new Error(`Media URL must use HTTPS for ${platform}`), { platform });
+  if (PRIVATE_HOST_RE.test(parsed.hostname))
+    throw Object.assign(new Error(`Media URL points to a disallowed host for ${platform}`), { platform });
+  return url;
+};
+
 const OAUTH_REFRESH_PROVIDERS = {
   youtube: {
     tokenUrl: 'https://oauth2.googleapis.com/token',
@@ -144,7 +158,7 @@ const requireMediaUrl = (post, platform) => {
   if (!post.media_url) {
     throw Object.assign(new Error(`${platform} publish requires media attached to the post`), { platform });
   }
-  return post.media_url;
+  return validateMediaUrl(post.media_url, platform);
 };
 
 /**
@@ -345,7 +359,7 @@ const publishToPlatform = async ({ platform, content, post, conn, persistConnect
 
     /* ── Pinterest API v5 ── */
     pinterest: async () => {
-      const mediaUrl = post.media_url || null;
+      const mediaUrl = post.media_url ? validateMediaUrl(post.media_url, 'pinterest') : null;
       const res  = await platformRequest('https://api.pinterest.com/v5/pins', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },

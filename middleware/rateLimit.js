@@ -88,8 +88,18 @@ const publishRateLimiter = rateLimit({
   standardHeaders: 'draft-7', legacyHeaders: false,
 });
 
+const resetPasswordRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  keyGenerator: ipKey,
+  handler: limitHandler,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+});
+
 module.exports = {
   globalRateLimiter, authRateLimiter, authSlowDown,
   aiRateLimiter, mediaRateLimiter, gdprExportRateLimiter,
   gdprMutationRateLimiter, gdprStatusRateLimiter, publishRateLimiter,
+  resetPasswordRateLimiter,
 };

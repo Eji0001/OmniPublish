@@ -98,7 +98,7 @@ async function upsertGoogleOAuthUser(email, fullName) {
 async function issueOAuthExchangeCode(user) {
   const code = jwt.sign(
     { purpose: 'oauth_exchange', userId: user.id, email: user.email },
-    JWT_CONFIG.accessSecret,
+    JWT_CONFIG.oauthExchangeSecret,
     {
       expiresIn: '10m',
       issuer: JWT_CONFIG.issuer,

@@ -13,7 +13,7 @@ const { v4: uuidv4 } = require('uuid');
 const { supabase }    = require('../config/database');
 const { issueTokens, rotateRefreshToken, revokeToken, verifyToken, recordSession, revokeUserSessions } = require('../middleware/auth');
 const { validateBody }   = require('../middleware/sanitizer');
-const { authRateLimiter, authSlowDown } = require('../middleware/rateLimit');
+const { authRateLimiter, authSlowDown, resetPasswordRateLimiter } = require('../middleware/rateLimit');
 const { generateCSRFToken } = require('../middleware/csrf');
 const { BCRYPT_ROUNDS, LOCKOUT_POLICY, validatePassword, JWT_CONFIG } = require('../config/security');
 const { mirrorAuthUser } = require('../utils/authMirror');
@@ -290,13 +290,23 @@ router.delete('/me', verifyToken, async (req, res) => {
 router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'), async (req, res) => {
   const { email } = req.body;
   const normalizedEmail = normalizeEmail(email);
+  const requestStart = Date.now();
+  const MIN_RESPONSE_MS = 200;
+  const delayResponse = async () => {
+    const elapsed = Date.now() - requestStart;
+    if (elapsed < MIN_RESPONSE_MS) await new Promise(r => setTimeout(r, MIN_RESPONSE_MS - elapsed));
+  };
 
   const { data: user, error: fpLookupErr } = await supabase.from('users').select('id').ilike('email', normalizedEmail).eq('is_active', true).limit(1).single();
   if (fpLookupErr && fpLookupErr.code !== 'PGRST116') {
     logger.error('Forgot-password DB lookup failed', { err: fpLookupErr.message });
+    await delayResponse();
     return res.status(500).json({ error: 'Request failed. Please try again.' });
   }
-  if (!user) return res.json({ message: 'If that email is registered you will receive a reset link shortly' });
+  if (!user) {
+    await delayResponse();
+    return res.json({ message: 'If that email is registered you will receive a reset link shortly' });
+  }
 
   await supabase.from('password_resets').delete()
     .eq('user_id', user.id)
@@ -315,14 +325,15 @@ router.post('/forgot-password', authRateLimiter, validateBody('forgotPassword'),
     expires_at: expiresAt,
   });
 
-  if (!isProd) logger.info('Password reset token (dev only)', { userId: user.id, token: plainToken });
+  if (!isProd) logger.info('Password reset token (dev only)', { userId: user.id, tokenHash });
 
   logger.info('Password reset requested', { userId: user.id });
+  await delayResponse();
   res.json({ message: 'If that email is registered you will receive a reset link shortly' });
 });
 
 /* ── POST /auth/reset-password ── */
-router.post('/reset-password', authRateLimiter, validateBody('resetPassword'), async (req, res) => {
+router.post('/reset-password', resetPasswordRateLimiter, validateBody('resetPassword'), async (req, res) => {
   const { token, password } = req.body;
   if (!token.startsWith('pr_')) return res.status(400).json({ error: 'Invalid or expired reset token' });
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -459,7 +470,7 @@ router.post('/oauth/exchange', validateBody('oauthExchange'), async (req, res) =
 
   let payload;
   try {
-    payload = jwt.verify(code, JWT_CONFIG.accessSecret, {
+    payload = jwt.verify(code, JWT_CONFIG.oauthExchangeSecret, {
       algorithms: [JWT_CONFIG.algorithm],
       issuer: JWT_CONFIG.issuer,
       audience: JWT_CONFIG.audience,
