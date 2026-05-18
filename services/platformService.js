@@ -154,6 +154,20 @@ const buildTokenUpdate = (refreshed, conn) => {
   return updates;
 };
 
+const getAppBaseUrl = () => process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:4000';
+
+const buildSnapchatShareUrl = ({ post, content }) => {
+  const url = new URL('/snapchat/share', getAppBaseUrl());
+  url.searchParams.set('title', truncateText(post.title || content || 'OmniPublish post', 120) || 'OmniPublish post');
+  url.searchParams.set('description', truncateText(content || post.title || 'Open this OmniPublish post in Snapchat.', 220) || 'Open this OmniPublish post in Snapchat.');
+  if (post.media_url) url.searchParams.set('image', validateMediaUrl(post.media_url, 'snapchat'));
+  if (process.env.SNAPCHAT_APP_ID) url.searchParams.set('appId', process.env.SNAPCHAT_APP_ID);
+  if (process.env.SNAPCHAT_PUBLISHER_ID) url.searchParams.set('publisherId', process.env.SNAPCHAT_PUBLISHER_ID);
+  return url.toString();
+};
+
+const truncateText = (value, max) => String(value ?? '').trim().slice(0, max);
+
 const requireMediaUrl = (post, platform) => {
   if (!post.media_url) {
     throw Object.assign(new Error(`${platform} publish requires media attached to the post`), { platform });
@@ -401,12 +415,12 @@ const publishToPlatform = async ({ platform, content, post, conn, persistConnect
       return { postId: conn.platform_user_id, url: `https://www.twitch.tv/${conn.platform_user_id}` };
     },
 
-    /* ── Snapchat (requires Snap Creative Kit approval) ── */
+    /* ── Snapchat Creative Kit share page ── */
     snapchat: async () => {
-      throw Object.assign(
-        new Error('Snapchat publish requires Snap Creative Kit approval. Contact support to enable this platform.'),
-        { platform: 'snapchat', status: 501 }
-      );
+      return {
+        postId: `snapchat-${post.id || Date.now()}`,
+        url: buildSnapchatShareUrl({ post, content }),
+      };
     },
   };
 

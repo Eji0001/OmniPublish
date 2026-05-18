@@ -132,4 +132,20 @@ describe('publishToPlatform', () => {
       url: 'https://www.youtube.com/watch?v=video-123',
     });
   });
+
+  it('builds a Snapchat share page URL for publishing', async () => {
+    const result = await publishToPlatform({
+      platform: 'snapchat',
+      content: 'Hello Snapchat share',
+      post: { title: 'Snap Title', media_url: 'https://cdn.example.com/story.jpg' },
+      conn: { access_token_enc: 'enc', platform_user_id: 'user-1' },
+    });
+
+    expect(result.postId).toMatch(/^snapchat-/);
+    const shareUrl = new URL(result.url);
+    expect(shareUrl.pathname).toBe('/snapchat/share');
+    expect(shareUrl.searchParams.get('title')).toBe('Snap Title');
+    expect(shareUrl.searchParams.get('description')).toBe('Hello Snapchat share');
+    expect(shareUrl.searchParams.get('image')).toBe('https://cdn.example.com/story.jpg');
+  });
 });

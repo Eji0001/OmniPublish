@@ -16,12 +16,13 @@ jest.mock('../middleware/rateLimit', () => {
     globalRateLimiter: pass,
     authRateLimiter: pass,
     authSlowDown: pass,
-    aiRateLimiter: pass,
-    mediaRateLimiter: pass,
-    gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
-    publishRateLimiter: pass,
-  };
-});
+      aiRateLimiter: pass,
+      mediaRateLimiter: pass,
+      gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
+      resetPasswordRateLimiter: pass,
+      publishRateLimiter: pass,
+    };
+  });
 
 jest.mock('../middleware/csrf', () => ({
   verifyCSRF: (_req, _res, next) => next(),
@@ -43,5 +44,16 @@ describe('Content Security Policy', () => {
     expect(res.text).not.toContain('onclick="toggle(');
     expect(res.text).not.toContain('onclick="copyText(');
     expect(res.headers['expect-ct']).toBeUndefined();
+  });
+
+  it('serves the Snapchat share page with Creative Kit markup', async () => {
+    const res = await request(app)
+      .get('/snapchat/share?title=Hello%20Snap&description=Share%20this%20post&image=https%3A%2F%2Fexample.com%2Fimage.jpg');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('snapchat-creative-kit-share');
+    expect(res.text).toContain('/js/snapchat-share.js');
+    expect(res.text).toContain('og:title');
+    expect(res.text).toContain('data-share-url');
   });
 });

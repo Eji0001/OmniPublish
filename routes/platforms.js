@@ -109,6 +109,20 @@ const OAUTH_PROVIDERS = {
       username: data.username || 'Instagram User'
     })
   },
+  snapchat: {
+    authUrl: 'https://accounts.snapchat.com/accounts/oauth2/auth',
+    tokenUrl: 'https://accounts.snapchat.com/accounts/oauth2/token',
+    profileUrl: null,
+    scopes: 'https://auth.snapchat.com/oauth2/api/user.display_name https://auth.snapchat.com/oauth2/api/user.external_id',
+    clientId: process.env.SNAPCHAT_CLIENT_ID,
+    clientSecret: process.env.SNAPCHAT_CLIENT_SECRET,
+    defaultUsername: 'Snapchat User',
+    pkce: true,
+    extractProfile: () => ({
+      id: null,
+      username: 'Snapchat User'
+    })
+  },
   reddit: {
     authUrl: 'https://www.reddit.com/api/v1/authorize',
     tokenUrl: 'https://www.reddit.com/api/v1/access_token',
@@ -229,11 +243,22 @@ router.get('/:platform/callback', async (req, res) => {
       profileHeaders['Client-Id'] = provider.clientId;
     }
 
-    const channelRes = await fetch(provider.profileUrl, { headers: profileHeaders });
-    const channelData = await channelRes.json();
-    if (channelData.error) throw new Error(channelData.error.message || JSON.stringify(channelData.error));
+    let profile = {
+      id: null,
+      username: provider.defaultUsername || `${platform} User`,
+    };
 
-    const profile = provider.extractProfile(channelData);
+    if (provider.profileUrl) {
+      const channelRes = await fetch(provider.profileUrl, { headers: profileHeaders });
+      const channelData = await channelRes.json();
+      if (channelRes.ok === false) throw new Error(channelData?.error?.message || `Profile lookup failed for ${platform}`);
+      if (channelData.error) throw new Error(channelData.error.message || JSON.stringify(channelData.error));
+      profile = provider.extractProfile(channelData);
+    }
+
+    const scopes = typeof tokenData.scope === 'string'
+      ? tokenData.scope.split(/\s+/).filter(Boolean)
+      : [];
     const expiresAt = tokenData.expires_in ? new Date(Date.now() + tokenData.expires_in * 1000) : null;
 
     // Upsert platform connection
@@ -244,6 +269,7 @@ router.get('/:platform/callback', async (req, res) => {
       platform_username: profile.username,
       access_token_enc:  encrypt(accessToken),
       token_expires_at:  expiresAt,
+      scopes,
       is_active:         true,
       connected_at:      new Date(),
     };

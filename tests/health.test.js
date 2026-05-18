@@ -16,12 +16,13 @@ jest.mock('../middleware/rateLimit', () => {
     globalRateLimiter:  pass,
     authRateLimiter:    pass,
     authSlowDown:       pass,
-    aiRateLimiter:      pass,
-    mediaRateLimiter:   pass,
-    gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
-    publishRateLimiter: pass,
-  };
-});
+      aiRateLimiter:      pass,
+      mediaRateLimiter:   pass,
+      gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
+      resetPasswordRateLimiter: pass,
+      publishRateLimiter: pass,
+    };
+  });
 
 const app = require('../server');
 

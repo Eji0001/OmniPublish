@@ -21,11 +21,12 @@ jest.mock('../config/database', () => ({
 
 jest.mock('../middleware/rateLimit', () => {
   const pass = (_req, _res, next) => next();
-  return {
-    globalRateLimiter: pass, authRateLimiter: pass, authSlowDown: pass,
-    aiRateLimiter: pass, mediaRateLimiter: pass, gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass, publishRateLimiter: pass,
-  };
-});
+    return {
+      globalRateLimiter: pass, authRateLimiter: pass, authSlowDown: pass,
+      aiRateLimiter: pass, mediaRateLimiter: pass, gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
+      resetPasswordRateLimiter: pass, publishRateLimiter: pass,
+    };
+  });
 
 jest.mock('../middleware/csrf', () => ({
   verifyCSRF:        (_req, _res, next) => next(),
@@ -511,7 +512,7 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
   it('200 — exchanges signed oauth codes for session tokens', async () => {
     const code = jwt.sign(
       { purpose: 'oauth_exchange', userId: TEST_USER.id, email: TEST_USER.email },
-      process.env.JWT_ACCESS_SECRET,
+      process.env.JWT_OAUTH_EXCHANGE_SECRET,
       { expiresIn: '10m', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
     );
 
@@ -532,7 +533,7 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
   it('200 — succeeds when user_sessions table is unavailable', async () => {
     const code = jwt.sign(
       { purpose: 'oauth_exchange', userId: TEST_USER.id, email: TEST_USER.email },
-      process.env.JWT_ACCESS_SECRET,
+      process.env.JWT_OAUTH_EXCHANGE_SECRET,
       { expiresIn: '10m', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
     );
 
@@ -562,7 +563,7 @@ describe('POST /api/v1/auth/oauth/exchange', () => {
   it('400 — rejects replayed oauth exchange codes', async () => {
     const code = jwt.sign(
       { purpose: 'oauth_exchange', userId: TEST_USER.id, email: TEST_USER.email },
-      process.env.JWT_ACCESS_SECRET,
+      process.env.JWT_OAUTH_EXCHANGE_SECRET,
       { expiresIn: '10m', issuer: 'omnipublish-api', audience: 'omnipublish-client' }
     );
 

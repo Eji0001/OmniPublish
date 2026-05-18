@@ -2258,7 +2258,7 @@ async function publishAll() {
       sel.forEach(p=>{
         const f=document.getElementById('sif-'+p.id);if(f)f.style.width='100%';
         const r=sm[p.id]||{status:'failed',error:'Unknown'};
-        if(r.status==='published'||r.status==='fulfilled'){ok++;if(f)f.style.background='var(--acc3)';document.getElementById('sb-'+p.id).className='badge b-ok';document.getElementById('sb-'+p.id).textContent='✓ Live';document.getElementById('sid-'+p.id).innerHTML=`Published · ${new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}`;}
+        if(r.status==='published'||r.status==='fulfilled'){ok++;if(f)f.style.background='var(--acc3)';document.getElementById('sb-'+p.id).className='badge b-ok';document.getElementById('sb-'+p.id).textContent='✓ Live';document.getElementById('sid-'+p.id).innerHTML=r.url?`Published · ${new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})} · <a href="${escHtml(r.url)}" target="_blank" rel="noopener">Open</a>`:`Published · ${new Date().toLocaleTimeString('en',{hour:'2-digit',minute:'2-digit'})}`;}
         else{if(f)f.style.background='var(--err)';document.getElementById('sb-'+p.id).className='badge b-err';document.getElementById('sb-'+p.id).textContent='✗ Failed';document.getElementById('sid-'+p.id).textContent=r.error||'Failed';}
       });
       clearMediaSelection();
@@ -2543,11 +2543,11 @@ const OB_PLATFORMS = [
   { id: 'pinterest', name: 'Pinterest',   icon: '📌', desc: 'Visual discovery, pins, and product inspiration',     reqs: ['Use a Pinterest OAuth access token', 'Client ID/secret aliases are supported'] },
   { id: 'rumble',    name: 'Rumble',      icon: '🟩', desc: 'Video-first publishing workflow',                    reqs: ['Store your Rumble credentials or upload workflow token', 'Manual upload workflow only'] },
   { id: 'bluesky',   name: 'Bluesky',     icon: '☁️', desc: 'Open protocol social publishing',                     reqs: ['Use a Bluesky handle and app password', 'AT Protocol access is required'] },
-  { id: 'snapchat',  name: 'Snapchat',    icon: '👻', desc: 'Ephemeral stories and short-form publishing',          reqs: ['Use Snap Creative Kit credentials', 'Approval may be required'] },
+  { id: 'snapchat',  name: 'Snapchat',    icon: '👻', desc: 'Ephemeral stories and short-form publishing',          reqs: ['Use Snap Kit OAuth credentials', 'Snap Developer Portal app required'] },
   { id: 'twitch',    name: 'Twitch',      icon: '🎮', desc: 'Live stream metadata publishing',                      reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
 ];
 
-const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch']);
+const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat']);
 
 let _platformConnections = {};
 let _currentPlatId = null;

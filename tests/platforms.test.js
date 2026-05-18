@@ -22,12 +22,13 @@ jest.mock('../middleware/rateLimit', () => {
     globalRateLimiter: pass,
     authRateLimiter: pass,
     authSlowDown: pass,
-    aiRateLimiter: pass,
-    mediaRateLimiter: pass,
-    gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
-    publishRateLimiter: pass,
-  };
-});
+      aiRateLimiter: pass,
+      mediaRateLimiter: pass,
+      gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
+      resetPasswordRateLimiter: pass,
+      publishRateLimiter: pass,
+    };
+  });
 
 jest.mock('../middleware/csrf', () => ({
   verifyCSRF: (_req, _res, next) => next(),
@@ -128,6 +129,62 @@ describe('YouTube OAuth flow', () => {
       platform_user_id: 'channel-1',
       platform_username: 'YT Channel',
       refresh_token_enc: expect.any(String),
+    }), expect.objectContaining({ onConflict: 'user_id,platform' }));
+  });
+});
+
+describe('Snapchat OAuth flow', () => {
+  it('returns a Snapchat auth URL with PKCE and Snap scopes', async () => {
+    mockPlatformTables();
+
+    const res = await request(app)
+      .get('/api/v1/platforms/snapchat/auth?returnTo=' + encodeURIComponent('http://localhost:3000/#dashboard'))
+      .set(authHeader());
+
+    expect(res.status).toBe(200);
+    expect(res.body.url).toContain('https://accounts.snapchat.com/accounts/oauth2/auth');
+    expect(res.body.url).toContain('code_challenge=');
+    expect(res.body.url).toContain(encodeURIComponent('https://auth.snapchat.com/oauth2/api/user.display_name'));
+    expect(res.headers['set-cookie']?.join(';')).toContain('oauth_pkce_snapchat=');
+  });
+
+  it('stores the Snapchat OAuth connection on callback without a profile lookup', async () => {
+    const upsertChain = mockChain({ data: null, error: null }, { data: null, error: null });
+    const state = (await generateOAuthState('snapchat', TEST_USER.id, 'http://localhost:3000/#dashboard')).state;
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      if (table === 'users') return mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null });
+      if (table === 'platform_connections') return upsertChain;
+      return mockChain({ data: null, error: null });
+    });
+
+    global.fetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        access_token: 'snap-access',
+        refresh_token: 'snap-refresh',
+        expires_in: 3600,
+        scope: 'https://auth.snapchat.com/oauth2/api/user.display_name https://auth.snapchat.com/oauth2/api/user.external_id',
+      }),
+    });
+
+    const res = await request(app)
+      .get('/api/v1/platforms/snapchat/callback?code=code-123&state=' + encodeURIComponent(state));
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toContain('platform_success=snapchat');
+    expect(res.headers.location).toContain('#dashboard');
+    expect(upsertChain.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      user_id: TEST_USER.id,
+      platform: 'snapchat',
+      platform_user_id: null,
+      platform_username: 'Snapchat User',
+      refresh_token_enc: expect.any(String),
+      scopes: expect.arrayContaining([
+        'https://auth.snapchat.com/oauth2/api/user.display_name',
+        'https://auth.snapchat.com/oauth2/api/user.external_id',
+      ]),
     }), expect.objectContaining({ onConflict: 'user_id,platform' }));
   });
 });

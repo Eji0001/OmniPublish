@@ -13,11 +13,12 @@ jest.mock('../config/database', () => ({
 
 jest.mock('../middleware/rateLimit', () => {
   const pass = (_req, _res, next) => next();
-  return {
-    globalRateLimiter: pass, authRateLimiter: pass, authSlowDown: pass,
-    aiRateLimiter: pass, mediaRateLimiter: pass, gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass, publishRateLimiter: pass,
-  };
-});
+    return {
+      globalRateLimiter: pass, authRateLimiter: pass, authSlowDown: pass,
+      aiRateLimiter: pass, mediaRateLimiter: pass, gdprExportRateLimiter: pass, gdprMutationRateLimiter: pass, gdprStatusRateLimiter: pass,
+      resetPasswordRateLimiter: pass, publishRateLimiter: pass,
+    };
+  });
 
 jest.mock('../middleware/csrf', () => ({
   verifyCSRF: (_req, _res, next) => next(),
