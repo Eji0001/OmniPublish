@@ -28,11 +28,14 @@ const base64Url = (value) => value.toString('base64').replace(/\+/g, '-').replac
 const getSafeReturnTo = (candidate) => {
   const fallback = process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:4000';
 
+  // No allowlist configured — never trust user-supplied redirect targets
+  if (!ALLOWED_ORIGINS.length) return fallback;
+
   try {
-    const url = new URL(candidate || fallback);
-    if (!ALLOWED_ORIGINS.length || ALLOWED_ORIGINS.includes(url.origin)) return url.toString();
+    const { origin } = new URL(candidate || fallback);
+    if (ALLOWED_ORIGINS.includes(origin)) return origin;
   } catch {
-    // fall through to the safe fallback
+    // fall through to safe fallback
   }
 
   return fallback;
