@@ -48,6 +48,13 @@ describe('Legal pages', () => {
     expect(res.text).toContain('OmniPublish');
   });
 
+  it('serves data deletion page with canonical Meta URL', async () => {
+    const res = await request(app).get('/data-deletion');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.text).toContain('https://www.omnipublish.io/data-deletion');
+  });
+
   it('links legal pages from the homepage footer', async () => {
     const res = await request(app).get('/');
     expect(res.status).toBe(200);

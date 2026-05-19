@@ -2610,7 +2610,7 @@ function syncPersonaSelection(role) {
   document.querySelectorAll('.ob-role-card').forEach(card => {
     const cardRole = card.dataset.role || '';
     card.classList.toggle('selected', !!selectedRole && cardRole === selectedRole);
-    card.disabled = false;
+    card.disabled = !!selectedRole;
   });
 }
 
