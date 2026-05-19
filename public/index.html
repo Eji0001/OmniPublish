@@ -813,7 +813,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="ob-panel active" id="ob-panel-1">
         <div class="ob-accent">step 1 of 4</div>
         <div class="ob-title">Choose your persona</div>
-        <div class="ob-plat-sub">Pick one profile now. Your choice will be locked until you continue.</div>
+        <div class="ob-plat-sub">Pick one profile. You can change your selection before continuing.</div>
         <div class="ob-persona-grid">
           <button class="ob-role-card" type="button" data-role="founder" onclick="selectRole(this, 'founder')">
             <span class="ob-role-icon">🚀</span>
@@ -2610,7 +2610,7 @@ function syncPersonaSelection(role) {
   document.querySelectorAll('.ob-role-card').forEach(card => {
     const cardRole = card.dataset.role || '';
     card.classList.toggle('selected', !!selectedRole && cardRole === selectedRole);
-    card.disabled = !!selectedRole;
+    card.disabled = false;
   });
 }
 
