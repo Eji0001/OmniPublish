@@ -1,49 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
-  <title id="title">OmniPublish Favicon</title>
-  <desc id="desc">Compact network-style OmniPublish mark for browser tabs.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512" role="img" aria-labelledby="op-title op-desc">
+  <title id="op-title">OmniPublish</title>
+  <desc id="op-desc">OmniPublish network node logo mark</desc>
   <defs>
-    <linearGradient id="bg" x1="72" y1="72" x2="440" y2="440" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#FCFEFF"/>
-      <stop offset="1" stop-color="#F4F0E8"/>
-    </linearGradient>
-    <linearGradient id="ring" x1="100" y1="98" x2="412" y2="412" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#17386F"/>
-      <stop offset="0.5" stop-color="#2E9FA4"/>
-      <stop offset="1" stop-color="#D8B65B"/>
+    <linearGradient id="oGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f5d4"/>
+      <stop offset="50%" stop-color="#0a192f"/>
+      <stop offset="100%" stop-color="#f7b801"/>
     </linearGradient>
   </defs>
-
-  <rect width="512" height="512" rx="128" fill="url(#bg)"/>
-  <circle cx="256" cy="256" r="160" fill="#FBFBF7"/>
-  <circle cx="256" cy="256" r="160" stroke="url(#ring)" stroke-width="16"/>
-  <circle cx="256" cy="256" r="128" stroke="url(#ring)" stroke-width="10" opacity="0.44"/>
-  <circle cx="256" cy="256" r="96" stroke="url(#ring)" stroke-width="8" opacity="0.34"/>
-
-  <circle cx="256" cy="256" r="70" fill="none" stroke="#1D2F57" stroke-width="18"/>
-  <circle cx="256" cy="256" r="54" fill="none" stroke="#2E9FA4" stroke-width="10" opacity="0.9"/>
-
-  <path d="M256 160V118" stroke="#D8B65B" stroke-width="8" stroke-linecap="round"/>
-  <path d="M256 394V348" stroke="#2E9FA4" stroke-width="8" stroke-linecap="round"/>
-  <path d="M118 256H156" stroke="#17386F" stroke-width="8" stroke-linecap="round"/>
-  <path d="M356 256H394" stroke="#D8B65B" stroke-width="8" stroke-linecap="round"/>
-  <path d="M152 152L180 180" stroke="#17386F" stroke-width="8" stroke-linecap="round"/>
-  <path d="M360 152L332 180" stroke="#2E9FA4" stroke-width="8" stroke-linecap="round"/>
-  <path d="M152 360L180 332" stroke="#2E9FA4" stroke-width="8" stroke-linecap="round"/>
-  <path d="M360 360L332 332" stroke="#D8B65B" stroke-width="8" stroke-linecap="round"/>
-
-  <circle cx="256" cy="118" r="10" fill="#D8B65B" stroke="#1D2F57" stroke-width="4"/>
-  <circle cx="256" cy="394" r="10" fill="#2E9FA4" stroke="#1D2F57" stroke-width="4"/>
-  <circle cx="118" cy="256" r="10" fill="#17386F" stroke="#1D2F57" stroke-width="4"/>
-  <circle cx="394" cy="256" r="10" fill="#D8B65B" stroke="#1D2F57" stroke-width="4"/>
-  <circle cx="180" cy="180" r="10" fill="#17386F" stroke="#1D2F57" stroke-width="4"/>
-  <circle cx="332" cy="180" r="10" fill="#2E9FA4" stroke="#1D2F57" stroke-width="4"/>
-  <circle cx="180" cy="332" r="10" fill="#2E9FA4" stroke="#1D2F57" stroke-width="4"/>
-  <circle cx="332" cy="332" r="10" fill="#D8B65B" stroke="#1D2F57" stroke-width="4"/>
-
-  <path d="M196 256H316" stroke="#1D2F57" stroke-width="10" stroke-linecap="round"/>
-  <path d="M256 202C240 218 232 236 232 256C232 276 240 294 256 310" stroke="#1D2F57" stroke-width="8" stroke-linecap="round"/>
-  <path d="M256 202C272 218 280 236 280 256C280 276 272 294 256 310" stroke="#1D2F57" stroke-width="8" stroke-linecap="round"/>
-  <path d="M214 230C228 238 242 246 256 256C270 246 284 238 298 230" stroke="#2E9FA4" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
-  <path d="M214 282C228 274 242 266 256 256C270 266 284 274 298 282" stroke="#D8B65B" stroke-width="6" stroke-linecap="round" opacity="0.9"/>
+  <!-- Navy layer — 6 clockwise orbital branches -->
+  <path d="M 126.00 100.00 C 138.21 111.82, 129.97 156.55, 106.62 175.71" fill="none" stroke="#0a192f" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="106.62" cy="175.71" r="4.8" fill="#0a192f" stroke="#00f5d4" stroke-width="1.5"/>
+  <path d="M 113.00 122.52 C 108.87 139.00, 66.01 154.23, 37.74 143.59" fill="none" stroke="#0a192f" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="37.74" cy="143.59" r="4.8" fill="#0a192f" stroke="#00f5d4" stroke-width="1.5"/>
+  <path d="M 87.00 122.52 C 70.66 127.18, 36.04 97.68, 31.12 67.88" fill="none" stroke="#0a192f" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="31.12" cy="67.88" r="4.8" fill="#0a192f" stroke="#00f5d4" stroke-width="1.5"/>
+  <path d="M 74.00 100.00 C 61.79 88.18, 70.03 43.45, 93.38 24.29" fill="none" stroke="#0a192f" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="93.38" cy="24.29" r="4.8" fill="#0a192f" stroke="#00f5d4" stroke-width="1.5"/>
+  <path d="M 87.00 77.48 C 91.13 61.00, 133.99 45.77, 162.26 56.41" fill="none" stroke="#0a192f" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="162.26" cy="56.41" r="4.8" fill="#0a192f" stroke="#00f5d4" stroke-width="1.5"/>
+  <path d="M 113.00 77.48 C 129.34 72.82, 163.96 102.32, 168.88 132.12" fill="none" stroke="#0a192f" stroke-width="2.2" stroke-linecap="round" opacity="0.85"/>
+  <circle cx="168.88" cy="132.12" r="4.8" fill="#0a192f" stroke="#00f5d4" stroke-width="1.5"/>
+  <!-- Teal layer — 6 offset orbital branches -->
+  <path d="M 120.78 112.00 C 127.19 126.55, 109.78 155.14, 88.54 165.00" fill="none" stroke="#00f5d4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="88.54" cy="165.00" r="4.2" fill="#00f5d4"/>
+  <path d="M 100.00 124.00 C 90.60 136.82, 57.14 136.04, 37.98 122.57" fill="none" stroke="#00f5d4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="37.98" cy="122.57" r="4.2" fill="#00f5d4"/>
+  <path d="M 79.22 112.00 C 63.41 110.27, 47.36 80.90, 49.44 57.58" fill="none" stroke="#00f5d4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="49.44" cy="57.58" r="4.2" fill="#00f5d4"/>
+  <path d="M 79.22 88.00 C 72.81 73.45, 90.22 44.86, 111.46 35.00" fill="none" stroke="#00f5d4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="111.46" cy="35.00" r="4.2" fill="#00f5d4"/>
+  <path d="M 100.00 76.00 C 109.40 63.18, 142.86 63.96, 162.02 77.43" fill="none" stroke="#00f5d4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="162.02" cy="77.43" r="4.2" fill="#00f5d4"/>
+  <path d="M 120.78 88.00 C 136.59 89.73, 152.64 119.10, 150.56 142.42" fill="none" stroke="#00f5d4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="150.56" cy="142.42" r="4.2" fill="#00f5d4"/>
+  <!-- Gold layer — 6 counter-clockwise weave branches -->
+  <path d="M 121.25 105.69 C 133.94 102.10, 137.37 73.17, 136.00 57.10" fill="none" stroke="#f7b801" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="136.00" cy="57.10" r="3.8" fill="#f7b801"/>
+  <path d="M 105.69 121.25 C 115.15 130.44, 141.92 118.95, 155.15 109.72" fill="none" stroke="#f7b801" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="155.15" cy="109.72" r="3.8" fill="#f7b801"/>
+  <path d="M 84.44 115.56 C 81.21 128.34, 104.55 145.77, 119.15 152.62" fill="none" stroke="#f7b801" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="119.15" cy="152.62" r="3.8" fill="#f7b801"/>
+  <path d="M 78.75 94.31 C 66.06 97.90, 62.63 126.83, 64.00 142.90" fill="none" stroke="#f7b801" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="64.00" cy="142.90" r="3.8" fill="#f7b801"/>
+  <path d="M 94.31 78.75 C 84.85 69.56, 58.08 81.05, 44.85 90.28" fill="none" stroke="#f7b801" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="44.85" cy="90.28" r="3.8" fill="#f7b801"/>
+  <path d="M 115.56 84.44 C 118.79 71.66, 95.45 54.23, 80.85 47.38" fill="none" stroke="#f7b801" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="80.85" cy="47.38" r="3.8" fill="#f7b801"/>
+  <!-- Central core O-ring -->
+  <circle cx="100" cy="100" r="17" fill="#0a192f"/>
+  <circle cx="100" cy="100" r="17" stroke="url(#oGrad)" stroke-width="8.5" fill="none"/>
+  <circle cx="100" cy="100" r="11" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.15"/>
 </svg>
