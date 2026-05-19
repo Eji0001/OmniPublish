@@ -226,9 +226,9 @@ const isLocalDevOrigin = origin => /^https?:\/\/(localhost|127(?:\.\d{1,3}){3})(
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow server-to-server (no origin) only in test env
-    if (!origin && process.env.NODE_ENV !== 'production') return cb(null, true);
-    if (process.env.NODE_ENV !== 'production' && origin && isLocalDevOrigin(origin)) return cb(null, true);
+    // No-origin requests (direct browser navigation, curl, Postman) are not a CORS attack vector
+    if (!origin) return cb(null, true);
+    if (process.env.NODE_ENV !== 'production' && isLocalDevOrigin(origin)) return cb(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     logger.warn('CORS rejection', { origin });
     cb(new Error(`CORS: origin ${origin} not permitted`));
