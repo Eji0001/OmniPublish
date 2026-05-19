@@ -389,6 +389,21 @@ const servePublicPage = (fileName) => (req, res) => {
 app.get('/terms', servePublicPage('terms.html'));
 app.get('/privacy', servePublicPage('privacy.html'));
 app.get('/data-deletion', servePublicPage('data-deletion.html'));
+app.get('/brand', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Content-Security-Policy', [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://unpkg.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob:",
+    "connect-src 'none'",
+    "object-src 'none'",
+    "frame-src 'none'",
+    "base-uri 'self'",
+  ].join('; '));
+  res.sendFile(path.join(__dirname, 'public', 'logo-downloads.html'));
+});
 
 app.get('/snapchat/share', (req, res) => {
   const baseUrl = getAppBaseUrl(req);
