@@ -2609,9 +2609,8 @@ function syncPersonaSelection(role) {
   const selectedRole = role || '';
   document.querySelectorAll('.ob-role-card').forEach(card => {
     const cardRole = card.dataset.role || '';
-    const isSelected = !!selectedRole && cardRole === selectedRole;
-    card.classList.toggle('selected', isSelected);
-    card.disabled = !!selectedRole;
+    card.classList.toggle('selected', !!selectedRole && cardRole === selectedRole);
+    card.disabled = false;
   });
 }
 
@@ -2644,11 +2643,16 @@ function obGoStep(n) {
 }
 
 function selectRole(card, role) {
-  if (_selectedPersona && _selectedPersona !== role) return;
-  _selectedPersona = role;
-  localStorage.setItem('omni_user_role', role);
-  syncPersonaSelection(role);
-  api('PATCH', '/api/v1/auth/me/profile', { userType: role }).catch(() => {});
+  if (_selectedPersona === role) {
+    _selectedPersona = null;
+    localStorage.removeItem('omni_user_role');
+    syncPersonaSelection(null);
+  } else {
+    _selectedPersona = role;
+    localStorage.setItem('omni_user_role', role);
+    syncPersonaSelection(role);
+    api('PATCH', '/api/v1/auth/me/profile', { userType: role }).catch(() => {});
+  }
 }
 
 function updateFrequencyDisplay(value) {
