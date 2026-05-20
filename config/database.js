@@ -22,10 +22,52 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE) {
   if (process.env.NODE_ENV === 'production') process.exit(1);
 }
 
+/**
+ * customFetchWithRetry — Custom fetch implementation for Supabase client
+ * wraps global fetch with exponential backoff retries for transient errors
+ * and sets a client-side timeout to prevent hanging connections.
+ */
+const customFetchWithRetry = async (url, options = {}) => {
+  const maxRetries = 3;
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      // Retry on transient server errors (502, 503, 504) or rate limit (429)
+      if ([429, 502, 503, 504].includes(response.status) && attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 150;
+        logger.warn(`Supabase transient HTTP error ${response.status}. Retrying attempt ${attempt}/${maxRetries} in ${delay}ms`);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      return response;
+    } catch (err) {
+      lastError = err;
+      if (attempt === maxRetries) break;
+      const delay = Math.pow(2, attempt) * 150;
+      logger.warn(`Supabase network/fetch error: ${err.message}. Retrying attempt ${attempt}/${maxRetries} in ${delay}ms`);
+      await new Promise(r => setTimeout(r, delay));
+    }
+  }
+  throw lastError || new Error('Fetch failed after maximum retries');
+};
+
 /** Public client — uses anon key, RLS enforced */
 const supabasePublic = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_ANON || 'anon', {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-  global: { headers: { 'x-application-name': 'omnipublish-api' } },
+  global: { 
+    headers: { 'x-application-name': 'omnipublish-api' },
+    fetch: customFetchWithRetry
+  },
   realtime: { transport: ws },
 });
 
@@ -51,7 +93,10 @@ const createUserScopedClient = (tokenOrUserId) => {
 /** Service-role client — bypasses RLS, for server-only operations */
 const supabase = createClient(SUPABASE_URL || 'http://localhost', SUPABASE_SERVICE || 'service', {
   auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
-  global: { headers: { 'x-application-name': 'omnipublish-api-service' } },
+  global: { 
+    headers: { 'x-application-name': 'omnipublish-api-service' },
+    fetch: customFetchWithRetry
+  },
   realtime: { transport: ws },
 });
 

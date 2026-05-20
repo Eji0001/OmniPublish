@@ -6,6 +6,7 @@
 
 const express           = require('express');
 const { dbHealthCheck } = require('../config/database');
+const { anthropicBreaker, platformApisBreaker } = require('../middleware/circuitBreaker');
 
 const router = express.Router();
 
@@ -14,7 +15,21 @@ router.get('/live',  (_req, res) => res.json({ status: 'ok', time: new Date() })
 router.get('/ready', async (_req, res) => {
   const dbOk   = await dbHealthCheck();
   const status = dbOk ? 'ready' : 'not_ready';
-  res.status(dbOk ? 200 : 503).json({ status, db: dbOk ? 'ok' : 'error', time: new Date() });
+  
+  res.status(dbOk ? 200 : 503).json({
+    status,
+    db: dbOk ? 'ok' : 'error',
+    time: new Date(),
+    integrations: {
+      anthropic: {
+        configured: !!process.env.ANTHROPIC_API_KEY,
+        circuitBreaker: anthropicBreaker.getState().state,
+      },
+      platformApis: {
+        circuitBreaker: platformApisBreaker.getState().state,
+      }
+    }
+  });
 });
 
 // Default /health route
