@@ -172,6 +172,18 @@ const OAUTH_PROVIDERS = {
       id: data.data?.[0]?.id || 'unknown',
       username: data.data?.[0]?.display_name || 'Twitch User'
     })
+  },
+  threads: {
+    authUrl: 'https://threads.net/oauth/authorize',
+    tokenUrl: 'https://graph.threads.net/oauth/access_token',
+    profileUrl: 'https://graph.threads.net/v1.0/me?fields=id,username',
+    scopes: 'threads_basic,threads_content_publish',
+    clientId: process.env.THREADS_APP_ID,
+    clientSecret: process.env.THREADS_APP_SECRET,
+    extractProfile: (data) => ({
+      id: data.id || 'unknown',
+      username: data.username || 'Threads User'
+    })
   }
 };
 
