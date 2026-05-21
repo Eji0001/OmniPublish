@@ -62,12 +62,14 @@ const OAUTH_PROVIDERS = {
     })
   },
   x: {
-    authUrl: 'https://twitter.com/i/oauth2/authorize',
+    authUrl: 'https://x.com/i/oauth2/authorize',
     tokenUrl: 'https://api.twitter.com/2/oauth2/token',
     profileUrl: 'https://api.twitter.com/2/users/me',
     scopes: 'tweet.read tweet.write users.read offline.access',
     clientId: process.env.X_CLIENT_ID || process.env.TWITTER_CLIENT_ID,
     clientSecret: process.env.X_CLIENT_SECRET || process.env.TWITTER_CLIENT_SECRET,
+    pkce: true,
+    useBasicAuthForToken: true,
     extractProfile: (data) => ({
       id: data.data?.id || 'unknown',
       username: data.data?.username || 'X Account'
