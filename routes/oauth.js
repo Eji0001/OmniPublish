@@ -43,7 +43,7 @@ function getFrontendOrigin(req) {
 
 async function upsertGoogleOAuthUser(email, fullName) {
   const normalizedEmail = normalizeEmail(email);
-  let { data: user } = await supabase.from('users')
+  const { data: user } = await supabase.from('users')
     .select('id, email, role, plan, full_name, is_verified')
     .ilike('email', normalizedEmail)
     .order('locked_until', { ascending: true, nullsFirst: true })
@@ -134,7 +134,10 @@ if (hasGoogle) {
     try {
       const email    = profile.emails?.[0]?.value;
       const fullName = profile.displayName || profile.name?.givenName || null;
-      if (!email) return done(new Error('No email from Google'));
+      if (!email) {
+        logger.warn('Google OAuth profile missing email', { profileId: profile.id });
+        return done(null, false, { message: 'No email from Google' });
+      }
       const user = await upsertGoogleOAuthUser(email, fullName);
       done(null, user);
     } catch (err) {
@@ -171,23 +174,52 @@ if (hasGoogle) {
         res.redirect('/?oauth_error=invalid_state');
       }
     },
-    passport.authenticate('google', { session: false, failureRedirect: '/?oauth_error=1' }),
-    async (req, res) => {
-      try {
-        const code = await issueOAuthExchangeCode(req.user);
+    (req, res, next) => {
+      passport.authenticate('google', { session: false }, async (err, user, info) => {
+        const returnTo = req.oauthReturnTo || getFrontendOrigin(req);
 
-        // Set CSRF cookie now so frontend can use it immediately after exchange
-        const csrfToken = generateCSRFToken();
-        res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+        if (err) {
+          logger.error('Google OAuth callback error', { err: err.message, requestId: req.requestId });
+          return res.redirect(`${returnTo}/?oauth_error=1`);
+        }
 
-        // Redirect with signed exchange code only — no tokens in URL
-        res.redirect(`${req.oauthReturnTo || getFrontendOrigin(req)}/?oauth_code=${code}#onboarding`);
-      } catch (err) {
-        logger.error('OAuth callback error', { err: err.message });
-        res.redirect('/?oauth_error=1');
-      }
+        if (!user) {
+          logger.warn('Google OAuth callback rejected', {
+            requestId: req.requestId,
+            message: info?.message || 'No authenticated user returned by Google',
+          });
+          return res.redirect(`${returnTo}/?oauth_error=1`);
+        }
+
+        try {
+          const code = await issueOAuthExchangeCode(user);
+
+          // Set CSRF cookie now so frontend can use it immediately after exchange
+          const csrfToken = generateCSRFToken();
+          res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+
+          // Redirect with signed exchange code only — no tokens in URL
+          return res.redirect(`${returnTo}/?oauth_code=${code}#onboarding`);
+        } catch (callbackErr) {
+          logger.error('OAuth callback error', { err: callbackErr.message, requestId: req.requestId });
+          return res.redirect(`${returnTo}/?oauth_error=1`);
+        }
+      })(req, res, next);
     }
   );
+
+  router.use((err, req, res, next) => {
+    if (!req.originalUrl?.includes('/google/callback')) return next(err);
+
+    const returnTo = req.oauthReturnTo || getFrontendOrigin(req);
+    logger.error('Unhandled Google OAuth callback error', {
+      err: err.message,
+      requestId: req.requestId,
+    });
+
+    if (res.headersSent) return next(err);
+    return res.redirect(`${returnTo}/?oauth_error=1`);
+  });
 } else {
   // Stub — frontend shows "coming soon" toast
   router.get('/google', (_req, res) => {

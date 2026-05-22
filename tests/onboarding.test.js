@@ -62,6 +62,7 @@ describe('onboarding persona selection', () => {
     };
 
     const localStorage = {
+      removeItem: jest.fn(),
       getItem: jest.fn(() => existingRole),
       setItem: jest.fn(),
     };
@@ -91,18 +92,34 @@ describe('onboarding persona selection', () => {
   beforeEach(() => jest.useFakeTimers());
   afterEach(() => jest.useRealTimers());
 
-  it('keeps the selected persona highlighted until continue is clicked', async () => {
-    const { context, cards, localStorage, api, obGoStep } = buildContext();
+  it('allows toggling one persona at a time and requires a selection to continue', async () => {
+    const { context, cards, localStorage, api, obGoStep, toast } = buildContext();
 
     const selection = context.selectRole(cards[1], 'creator');
     expect(selection).toBeUndefined();
     expect(cards[1].classList.contains('selected')).toBe(true);
-    expect(cards[0].disabled).toBe(true);
-    expect(cards[1].disabled).toBe(true);
-    expect(cards[2].disabled).toBe(true);
+    expect(cards[0].classList.contains('selected')).toBe(false);
+    expect(cards[2].classList.contains('selected')).toBe(false);
+    expect(cards[0].disabled).toBe(false);
+    expect(cards[1].disabled).toBe(false);
+    expect(cards[2].disabled).toBe(false);
     expect(localStorage.setItem).toHaveBeenCalledWith('omni_user_role', 'creator');
     expect(api).toHaveBeenCalledWith('PATCH', '/api/v1/auth/me/profile', { userType: 'creator' });
     expect(obGoStep).not.toHaveBeenCalled();
+
+    context.selectRole(cards[1], 'creator');
+    expect(cards[1].classList.contains('selected')).toBe(false);
+    expect(localStorage.removeItem).toHaveBeenCalledWith('omni_user_role');
+    expect(api).toHaveBeenCalledWith('PATCH', '/api/v1/auth/me/profile', { userType: null });
+
+    context.nextOnboardingStep();
+    expect(toast).toHaveBeenCalledWith('Choose one persona to continue.', 'err');
+    expect(obGoStep).not.toHaveBeenCalledWith(2);
+
+    context.selectRole(cards[2], 'agency');
+    expect(cards[2].classList.contains('selected')).toBe(true);
+    expect(cards[1].classList.contains('selected')).toBe(false);
+    expect(api).toHaveBeenCalledWith('PATCH', '/api/v1/auth/me/profile', { userType: 'agency' });
 
     context.nextOnboardingStep();
     expect(obGoStep).toHaveBeenCalledWith(2);
@@ -113,9 +130,9 @@ describe('onboarding persona selection', () => {
     context.syncPersonaSelection('agency');
 
     expect(cards[2].classList.contains('selected')).toBe(true);
-    expect(cards[0].disabled).toBe(true);
-    expect(cards[1].disabled).toBe(true);
-    expect(cards[2].disabled).toBe(true);
+    expect(cards[0].disabled).toBe(false);
+    expect(cards[1].disabled).toBe(false);
+    expect(cards[2].disabled).toBe(false);
   });
 
   it('blocks onboarding progression on step 2 until a connection exists', () => {

@@ -136,7 +136,7 @@ const schemas = {
     expiresAt: z.string().datetime().optional(),
   }).strict(),
   userProfile: z.object({
-    userType: z.enum(['founder', 'creator', 'agency', 'enterprise', 'small_business', 'personal']).optional(),
+    userType: z.enum(['founder', 'creator', 'agency', 'enterprise', 'small_business', 'personal']).nullable().optional(),
     onboardingCompleted: z.boolean().optional(),
   }),
 };

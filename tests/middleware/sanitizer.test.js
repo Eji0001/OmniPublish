@@ -117,6 +117,11 @@ describe('validateBody schemas', () => {
     expect(next).toHaveBeenCalled();
   });
 
+  it('userProfile: accepts null userType to clear persona', async () => {
+    const { next } = await runValidation('userProfile', { userType: null, onboardingCompleted: true });
+    expect(next).toHaveBeenCalled();
+  });
+
   it('patchPost: rejects unknown fields (strict mode)', async () => {
     const { res } = await runValidation('patchPost', { user_id: 'hacked' });
     expect(res.status).toHaveBeenCalledWith(422);

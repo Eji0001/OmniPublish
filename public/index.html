@@ -2610,7 +2610,7 @@ function syncPersonaSelection(role) {
   document.querySelectorAll('.ob-role-card').forEach(card => {
     const cardRole = card.dataset.role || '';
     card.classList.toggle('selected', !!selectedRole && cardRole === selectedRole);
-    card.disabled = !!selectedRole;
+    card.setAttribute?.('aria-pressed', !!selectedRole && cardRole === selectedRole ? 'true' : 'false');
   });
 }
 
@@ -2647,6 +2647,7 @@ function selectRole(card, role) {
     _selectedPersona = null;
     localStorage.removeItem('omni_user_role');
     syncPersonaSelection(null);
+    api('PATCH', '/api/v1/auth/me/profile', { userType: null }).catch(() => {});
   } else {
     _selectedPersona = role;
     localStorage.setItem('omni_user_role', role);
