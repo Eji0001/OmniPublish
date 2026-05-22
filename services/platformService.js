@@ -117,6 +117,21 @@ const refreshAccessToken = async (platform, conn) => {
   };
 };
 
+const refreshBlueskySession = async (conn) => {
+  const refreshJwt = decrypt(conn.refresh_token_enc);
+  const res = await platformRequest('https://bsky.social/xrpc/com.atproto.server.refreshSession', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${refreshJwt}` },
+  });
+  const data = await res.json();
+  if (data.error) throw Object.assign(new Error(data.message || data.error), { platform: 'bluesky', status: res.status });
+  return {
+    accessToken: data.accessJwt,
+    refreshToken: data.refreshJwt,
+    expiresAt: null,
+  };
+};
+
 const resolveAccessToken = async ({ platform, conn, persistConnectionTokens }) => {
   const accessToken = decrypt(conn.access_token_enc);
   if (!isExpired(conn.token_expires_at)) return accessToken;
@@ -129,7 +144,9 @@ const resolveAccessToken = async ({ platform, conn, persistConnectionTokens }) =
     );
   }
 
-  const refreshed = await refreshAccessToken(platform, conn);
+  const refreshed = platform === 'bluesky'
+    ? await refreshBlueskySession(conn)
+    : await refreshAccessToken(platform, conn);
   if (!refreshed) {
     throw Object.assign(new Error(`Platform token expired. Reconnect ${platform} to continue publishing.`), { platform, status: 401 });
   }

@@ -309,6 +309,53 @@ router.get('/:platform/callback', async (req, res) => {
 // Authenticated routes below
 router.use(verifyToken);
 
+/* ── POST /platforms/bluesky/connect — App Password flow ── */
+router.post('/bluesky/connect', validateBody('blueskyConnect'), async (req, res) => {
+  const { handle, appPassword } = req.body;
+
+  try {
+    const sessionRes = await fetch('https://bsky.social/xrpc/com.atproto.server.createSession', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: handle, password: appPassword }),
+    });
+    const session = await sessionRes.json();
+
+    if (session.error) {
+      logger.warn('Bluesky createSession failed', { handle, error: session.error });
+      return res.status(401).json({ error: session.message || 'Invalid Bluesky handle or app password' });
+    }
+
+    const { accessJwt, refreshJwt, did } = session;
+    const resolvedHandle = session.handle || handle;
+
+    const db = getDb(req);
+    const { data: connection, error } = await db.from('platform_connections').upsert({
+      user_id:           req.user.id,
+      platform:          'bluesky',
+      platform_user_id:  did,
+      platform_username: resolvedHandle,
+      access_token_enc:  encrypt(accessJwt),
+      refresh_token_enc: encrypt(refreshJwt),
+      token_expires_at:  null,
+      scopes:            ['atproto'],
+      is_active:         true,
+      connected_at:      new Date(),
+    }, { onConflict: 'user_id,platform' }).select('id, platform, platform_username').single();
+
+    if (error) {
+      logger.error('Bluesky connection save failed', { err: error.message, userId: req.user.id });
+      return res.status(500).json({ error: 'Failed to save Bluesky connection' });
+    }
+
+    logger.info('Bluesky connected via App Password', { userId: req.user.id, handle: resolvedHandle });
+    res.status(201).json({ connection });
+  } catch (err) {
+    logger.error('Bluesky connect error', { err: err.message });
+    res.status(500).json({ error: 'Failed to connect Bluesky account' });
+  }
+});
+
 /* ── GET /platforms — list connected platforms ── */
 router.get('/', async (req, res) => {
   const db = getDb(req);

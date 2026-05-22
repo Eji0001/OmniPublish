@@ -123,6 +123,10 @@ const schemas = {
   oauthExchange: z.object({
     code: z.string().min(20).max(2048),
   }),
+  blueskyConnect: z.object({
+    handle:      z.string().min(3).max(253).transform(h => h.replace(/^@/, '').trim().toLowerCase()),
+    appPassword: z.string().min(19).max(128),
+  }),
   platformConnection: z.object({
     platform: z.enum(PLATFORM_IDS),
     accessToken: z.string().min(1).max(8192),
