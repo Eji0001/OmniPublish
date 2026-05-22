@@ -47,6 +47,9 @@ const generatePkcePair = () => {
   return { verifier, challenge };
 };
 
+const getClientIdParam = (provider) => provider.clientIdParam || 'client_id';
+const getTokenClientIdParam = (provider) => provider.tokenClientIdParam || provider.clientIdParam || 'client_id';
+
 const OAUTH_PROVIDERS = {
   youtube: {
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -145,6 +148,8 @@ const OAUTH_PROVIDERS = {
     scopes: 'user.info.basic,video.upload',
     clientId: process.env.TIKTOK_CLIENT_KEY,
     clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+    clientIdParam: 'client_key',
+    tokenClientIdParam: 'client_key',
     extractProfile: (data) => ({
       id: data.data?.user?.union_id || 'unknown',
       username: data.data?.user?.display_name || 'TikTok User'
@@ -219,7 +224,7 @@ router.get('/:platform/callback', async (req, res) => {
     }
 
     const tokenParams = new URLSearchParams({
-      client_id: provider.clientId,
+      [getTokenClientIdParam(provider)]: provider.clientId,
       client_secret: provider.clientSecret,
       code: req.query.code,
       redirect_uri: `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/${platform}/callback`,
@@ -229,7 +234,7 @@ router.get('/:platform/callback', async (req, res) => {
     const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
     if (provider.useBasicAuthForToken) {
       headers['Authorization'] = 'Basic ' + Buffer.from(`${provider.clientId}:${provider.clientSecret}`).toString('base64');
-      tokenParams.delete('client_id');
+      tokenParams.delete(getTokenClientIdParam(provider));
       tokenParams.delete('client_secret');
     }
 
@@ -384,7 +389,7 @@ router.get('/:platform/auth', async (req, res) => {
     const { state } = await generateOAuthState(platform, req.user.id, returnTo);
     
     const oauthUrl = new URL(provider.authUrl);
-    oauthUrl.searchParams.append('client_id', provider.clientId);
+    oauthUrl.searchParams.append(getClientIdParam(provider), provider.clientId);
     oauthUrl.searchParams.append('redirect_uri', `${process.env.APP_URL || 'http://localhost:4000'}/api/v1/platforms/${platform}/callback`);
     oauthUrl.searchParams.append('response_type', 'code');
     oauthUrl.searchParams.append('scope', provider.scopes);

@@ -20,4 +20,6 @@ process.env.PINTEREST_CLIENT_ID  = 'test-pinterest-client-id';
 process.env.PINTEREST_CLIENT_SECRET = 'test-pinterest-client-secret';
 process.env.SNAPCHAT_CLIENT_ID   = 'test-snapchat-client-id';
 process.env.SNAPCHAT_CLIENT_SECRET = 'test-snapchat-client-secret';
+process.env.TIKTOK_CLIENT_KEY    = 'test-tiktok-client-key';
+process.env.TIKTOK_CLIENT_SECRET = 'test-tiktok-client-secret';
 process.env.LOG_LEVEL           = 'silent';

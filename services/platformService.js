@@ -10,7 +10,7 @@ const { decrypt, encrypt }  = require('../utils/encryption');
 const { platformApisBreaker } = require('../middleware/circuitBreaker');
 
 const platformRequest = (url, init, timeoutMs = 15000) => platformApisBreaker.execute(async () => {
-  const controller = new AbortController();
+  const controller = new globalThis.AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
@@ -62,6 +62,7 @@ const OAUTH_REFRESH_PROVIDERS = {
     tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
     clientId: process.env.TIKTOK_CLIENT_KEY,
     clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+    clientIdParam: 'client_key',
   },
   pinterest: {
     tokenUrl: 'https://api.pinterest.com/v5/oauth/token',
@@ -81,8 +82,9 @@ const refreshAccessToken = async (platform, conn) => {
   if (!provider || !provider.clientId || !provider.clientSecret || !conn.refresh_token_enc) return null;
 
   const refreshToken = decrypt(conn.refresh_token_enc);
+  const tokenParamName = provider.clientIdParam || 'client_id';
   const tokenParams = new URLSearchParams({
-    client_id: provider.clientId,
+    [tokenParamName]: provider.clientId,
     client_secret: provider.clientSecret,
     refresh_token: refreshToken,
     grant_type: 'refresh_token',
@@ -91,7 +93,7 @@ const refreshAccessToken = async (platform, conn) => {
   const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
   if (provider.useBasicAuthForToken) {
     headers.Authorization = 'Basic ' + Buffer.from(`${provider.clientId}:${provider.clientSecret}`).toString('base64');
-    tokenParams.delete('client_id');
+    tokenParams.delete(tokenParamName);
     tokenParams.delete('client_secret');
   }
 

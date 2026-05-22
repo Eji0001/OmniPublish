@@ -133,6 +133,46 @@ describe('YouTube OAuth flow', () => {
   });
 });
 
+describe('TikTok OAuth flow', () => {
+  it('returns a TikTok auth URL with client_key', async () => {
+    mockPlatformTables();
+
+    const res = await request(app)
+      .get('/api/v1/platforms/tiktok/auth?returnTo=' + encodeURIComponent('http://localhost:3000/#dashboard'))
+      .set(authHeader());
+
+    expect(res.status).toBe(200);
+    expect(res.body.url).toContain('https://www.tiktok.com/v2/auth/authorize/');
+    expect(res.body.url).toContain('client_key=test-tiktok-client-key');
+    expect(res.body.url).not.toContain('client_id=test-tiktok-client-key');
+  });
+
+  it('exchanges TikTok auth codes using client_key', async () => {
+    const upsertChain = mockChain({ data: null, error: null }, { data: null, error: null });
+    const state = (await generateOAuthState('tiktok', TEST_USER.id, 'http://localhost:3000/#dashboard')).state;
+
+    supabase.from.mockImplementation((table) => {
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      if (table === 'users') return mockChain({ data: { id: TEST_USER.id, is_active: true }, error: null });
+      if (table === 'platform_connections') return upsertChain;
+      return mockChain({ data: null, error: null });
+    });
+
+    global.fetch
+      .mockResolvedValueOnce({ json: async () => ({ access_token: 'tt-access', refresh_token: 'tt-refresh', expires_in: 3600, scope: 'user.info.basic' }) })
+      .mockResolvedValueOnce({ json: async () => ({ data: { user: { union_id: 'tiktok-user-1', display_name: 'TikTok Creator' } } }) });
+
+    const res = await request(app)
+      .get('/api/v1/platforms/tiktok/callback?code=code-123&state=' + encodeURIComponent(state));
+
+    expect(res.status).toBe(302);
+    expect(res.headers.location).toContain('platform_success=tiktok');
+    const tokenBody = global.fetch.mock.calls[0][1].body.toString();
+    expect(tokenBody).toContain('client_key=test-tiktok-client-key');
+    expect(tokenBody).not.toContain('client_id=test-tiktok-client-key');
+  });
+});
+
 describe('Snapchat OAuth flow', () => {
   it('returns a Snapchat auth URL with PKCE and Snap scopes', async () => {
     mockPlatformTables();
