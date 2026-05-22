@@ -34,3 +34,12 @@ build/
 
 # Optional eslint cache
 .eslintcache
+
+# Claude Code local settings
+.claude/
+
+# Supabase CLI local files
+supabase/
+
+# Nested / unrelated projects
+omnipublish/
