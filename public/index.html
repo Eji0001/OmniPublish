@@ -197,7 +197,10 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .media-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;z-index:2}
 .media-zone-txt{font-size:12px;color:var(--tx3)}.media-zone-icon{font-size:1.6rem;margin-bottom:5px;display:block}
 .media-previews{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px;justify-content:center}
+.media-thumb-wrap{position:relative;display:inline-flex}
 .media-thumb{width:54px;height:54px;border-radius:7px;object-fit:cover;border:1px solid var(--bd2)}
+.media-remove-btn{position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;background:var(--tx);color:var(--s1);border:none;cursor:pointer;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;z-index:3;line-height:1;padding:0;transition:background .15s}
+.media-remove-btn:hover{background:#e74c3c;color:#fff}
 .tabs{display:flex;gap:3px;background:var(--s2);border:1px solid var(--bd);border-radius:11px;padding:3px;margin-bottom:1rem}
 .tab-btn{flex:1;padding:7px 4px;border-radius:8px;border:none;background:transparent;color:var(--tx2);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
 .tab-btn.active{background:var(--s1);color:var(--tx);border:1px solid var(--bd2);box-shadow:var(--card-shadow)}
@@ -1737,6 +1740,10 @@ function updatePublishButton() {
   const scheduled = document.getElementById('tab-sched')?.classList.contains('active');
   btn.innerHTML = scheduled ? '🗓️ &nbsp;Schedule to All Platforms' : '🚀 &nbsp;Publish to All Platforms';
 }
+function removeMedia(index) {
+  selectedMediaFiles.splice(index, 1);
+  handleFiles([]);
+}
 function handleFiles(files) {
   document.getElementById('media-zone').classList.remove('drag');
   const prev = document.getElementById('media-previews');
@@ -1747,19 +1754,29 @@ function handleFiles(files) {
     }
   });
   prev.innerHTML = '';
-  selectedMediaFiles.forEach(f => {
+  selectedMediaFiles.forEach((f, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'media-thumb-wrap';
+    const xBtn = document.createElement('button');
+    xBtn.className = 'media-remove-btn';
+    xBtn.innerHTML = '&times;';
+    xBtn.title = 'Remove ' + f.name;
+    xBtn.type = 'button';
+    xBtn.onclick = (e) => { e.stopPropagation(); removeMedia(i); };
     if (f.type.startsWith('image/')) {
       const img = document.createElement('img');
       img.src = URL.createObjectURL(f);
       img.className = 'media-thumb';
       img.alt = f.name;
-      prev.appendChild(img);
+      wrap.appendChild(img);
     } else {
       const tag = document.createElement('div');
       tag.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--s3);padding:4px 8px;border-radius:6px;font-size:11px;color:var(--tx2);margin:4px';
       tag.textContent = '🎬 ' + f.name.slice(0, 18);
-      prev.appendChild(tag);
+      wrap.appendChild(tag);
     }
+    wrap.appendChild(xBtn);
+    prev.appendChild(wrap);
   });
   const mediaLabel = document.querySelector('.media-zone-txt');
   if (mediaLabel) {
