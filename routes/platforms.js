@@ -103,16 +103,21 @@ const OAUTH_PROVIDERS = {
     })
   },
   instagram: {
-    authUrl: 'https://api.instagram.com/oauth/authorize',
-    tokenUrl: 'https://api.instagram.com/oauth/access_token',
-    profileUrl: 'https://graph.instagram.com/me?fields=id,username',
-    scopes: 'user_profile,user_media',
-    clientId: process.env.INSTAGRAM_CLIENT_ID,
-    clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
-    extractProfile: (data) => ({
-      id: data.id || 'unknown',
-      username: data.username || 'Instagram User'
-    })
+    // Instagram Graph API via Facebook Login (Basic Display API deprecated Dec 2024)
+    authUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
+    tokenUrl: 'https://graph.facebook.com/v19.0/oauth/access_token',
+    profileUrl: 'https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account{id,username}',
+    scopes: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
+    clientId: process.env.FACEBOOK_APP_ID,
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    extractProfile: (data) => {
+      const page = (data.data || []).find(p => p.instagram_business_account);
+      const ig = page?.instagram_business_account;
+      return {
+        id: ig?.id || 'unknown',
+        username: ig?.username || 'Instagram Business Account'
+      };
+    }
   },
   snapchat: {
     authUrl: 'https://accounts.snapchat.com/accounts/oauth2/auth',

@@ -58,6 +58,11 @@ const OAUTH_REFRESH_PROVIDERS = {
     clientSecret: process.env.REDDIT_CLIENT_SECRET,
     useBasicAuthForToken: true,
   },
+  instagram: {
+    tokenUrl: 'https://graph.facebook.com/v19.0/oauth/access_token',
+    clientId: process.env.FACEBOOK_APP_ID,
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+  },
   tiktok: {
     tokenUrl: 'https://open.tiktokapis.com/v2/oauth/token/',
     clientId: process.env.TIKTOK_CLIENT_KEY,
