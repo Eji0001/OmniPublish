@@ -80,10 +80,17 @@ const buildCspHeader = (nonce) => {
   ].join('; ');
 };
 
-const renderIndexHtml = (nonce, { demoMode = false, edgeProxyUrl = '' } = {}) => PUBLIC_INDEX_TEMPLATE
-  .replace('nonce="__CSP_NONCE__"', `nonce="${nonce}"`)
-  .replace('__OMNIPUBLISH_DEMO_MODE_VALUE__', demoMode ? 'true' : 'false')
-  .replace('__OMNIPUBLISH_EDGE_PROXY_URL_VALUE__', JSON.stringify(edgeProxyUrl));
+const renderIndexHtml = (nonce, { demoMode = false, edgeProxyUrl = '' } = {}) => {
+  const initialHomeClass = demoMode ? 'page active' : 'page';
+  const initialDashboardClass = demoMode ? 'page' : 'page active';
+
+  return PUBLIC_INDEX_TEMPLATE
+    .replace('nonce="__CSP_NONCE__"', `nonce="${nonce}"`)
+    .replace('<div id="page-home" class="page active">', `<div id="page-home" class="${initialHomeClass}">`)
+    .replace('<div id="page-dashboard" class="page">', `<div id="page-dashboard" class="${initialDashboardClass}">`)
+    .replace('__OMNIPUBLISH_DEMO_MODE_VALUE__', demoMode ? 'true' : 'false')
+    .replace('__OMNIPUBLISH_EDGE_PROXY_URL_VALUE__', JSON.stringify(edgeProxyUrl));
+};
 
 const escapeHtml = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')

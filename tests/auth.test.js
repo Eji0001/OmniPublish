@@ -740,6 +740,18 @@ describe('GET /', () => {
     expect(res.status).toBe(200);
     expect(res.text).toContain('window.__OMNIPUBLISH_DEMO_MODE__ = true');
   });
+
+  it('boots production HTML with the dashboard active and home inactive', async () => {
+    delete process.env.OMNIPUBLISH_DEMO_MODE;
+
+    const res = await request(app)
+      .get('/')
+      .set('Host', 'www.omnipublish.io');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('<div id="page-dashboard" class="page active">');
+    expect(res.text).toContain('<div id="page-home" class="page">');
+  });
 });
 
 // ── DELETE /api/v1/auth/me ──────────────────────────────────
