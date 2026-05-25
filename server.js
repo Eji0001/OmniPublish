@@ -228,10 +228,20 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
 
 const isLocalDevOrigin = origin => /^https?:\/\/(localhost|127(?:\.\d{1,3}){3})(:\d+)?$/.test(origin);
 
+// Same-origin requests from the locally-served page always include Origin even in production.
+// Derive the server's own local origins so they're never rejected.
+const _serverPort = parseInt(process.env.PORT || '4000', 10);
+const SELF_ORIGINS = new Set([
+  `http://localhost:${_serverPort}`,
+  `http://127.0.0.1:${_serverPort}`,
+]);
+
 app.use(cors({
   origin: (origin, cb) => {
     // No-origin requests (direct browser navigation, curl, Postman) are not a CORS attack vector
     if (!origin) return cb(null, true);
+    // Same-origin requests from the server's own frontend are always allowed
+    if (SELF_ORIGINS.has(origin)) return cb(null, true);
     if (process.env.NODE_ENV !== 'production' && isLocalDevOrigin(origin)) return cb(null, true);
     if (ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
     logger.warn('CORS rejection', { origin });

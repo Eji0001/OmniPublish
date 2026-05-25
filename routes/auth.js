@@ -34,7 +34,7 @@ const hashToken = (token) => crypto.createHash('sha256').update(token).digest('h
 const getDb = (req) => req.db || supabase;
 
 const buildAuthResponse = ({ user, tokens, csrfToken }) => ({
-  user: { id: user.id, email: user.email, role: user.role, plan: user.plan },
+  user: { id: user.id, email: user.email, full_name: user.full_name || null, role: user.role, plan: user.plan },
   accessToken: tokens.accessToken,
   csrfToken,
 });
