@@ -23,7 +23,8 @@ const router = express.Router();
 
 const isProd = process.env.NODE_ENV === 'production';
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
-const isDemoMode = () => process.env.NODE_ENV !== 'production' && process.env.OMNIPUBLISH_DEMO_MODE === 'true';
+const isLocalDevHost = (host) => /^(localhost|127(?:\.\d{1,3}){3}|\[::1\]|::1)$/i.test(String(host || '').trim());
+const isDemoMode = (req) => process.env.NODE_ENV !== 'production' && (process.env.OMNIPUBLISH_DEMO_MODE === 'true' || isLocalDevHost(req?.hostname || req?.headers?.host));
 const TOKEN_PURPOSE = {
   OAUTH_EXCHANGE: 'oauth_exchange',
 };
@@ -174,7 +175,7 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
 
 /* ── POST /auth/dev-session ── */
 router.post('/dev-session', authSlowDown, authRateLimiter, async (_req, res) => {
-  if (!isDemoMode()) return res.status(404).json({ error: 'Not found' });
+  if (!isDemoMode(_req)) return res.status(404).json({ error: 'Not found' });
 
   try {
     const user = await getDemoUser();

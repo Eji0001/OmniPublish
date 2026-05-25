@@ -675,6 +675,42 @@ describe('POST /api/v1/auth/dev-session', () => {
     expect(res.body.user.email).toBe('demo@omnipublish.local');
     expect(res.headers['set-cookie']).toBeDefined();
   });
+
+  it('200 — boots a demo session on localhost without env flag', async () => {
+    delete process.env.OMNIPUBLISH_DEMO_MODE;
+
+    const demoLookup = mockChain({ data: null, error: { code: 'PGRST116', message: 'not found' } });
+    const demoInsert = mockChain({
+      data: {
+        id: TEST_USER.id,
+        email: 'demo@omnipublish.local',
+        full_name: 'Demo User',
+        role: 'user',
+        plan: 'pro',
+        user_type: 'creator',
+        onboarding_completed_at: new Date().toISOString(),
+        is_active: true,
+        is_verified: true,
+      },
+      error: null,
+    });
+    const sessionInsert = mockChain({ data: null, error: null });
+
+    let usersCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'users') return usersCalls++ === 0 ? demoLookup : demoInsert;
+      if (table === 'user_sessions') return sessionInsert;
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      return mockChain({ data: null, error: null });
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/dev-session')
+      .set('Host', 'localhost:4000');
+
+    expect(res.status).toBe(200);
+    expect(res.body.user.email).toBe('demo@omnipublish.local');
+  });
 });
 
 describe('GET /', () => {
@@ -689,6 +725,17 @@ describe('GET /', () => {
     process.env.OMNIPUBLISH_DEMO_MODE = 'true';
 
     const res = await request(app).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('window.__OMNIPUBLISH_DEMO_MODE__ = true');
+  });
+
+  it('injects the demo mode flag on localhost without env override', async () => {
+    delete process.env.OMNIPUBLISH_DEMO_MODE;
+
+    const res = await request(app)
+      .get('/')
+      .set('Host', 'localhost:4000');
 
     expect(res.status).toBe(200);
     expect(res.text).toContain('window.__OMNIPUBLISH_DEMO_MODE__ = true');

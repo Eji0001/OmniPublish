@@ -57,6 +57,7 @@ const INLINE_EVENT_HANDLER_HASHES = [...new Set([
 });
 
 const createNonce = () => crypto.randomBytes(16).toString('base64');
+const isLocalDevHost = (host) => /^(localhost|127(?:\.\d{1,3}){3}|\[::1\]|::1)$/i.test(String(host || '').trim());
 
 const buildCspHeader = (nonce) => {
   const attrHashes = INLINE_EVENT_HANDLER_HASHES.join(' ');
@@ -78,10 +79,10 @@ const buildCspHeader = (nonce) => {
   ].join('; ');
 };
 
-const renderIndexHtml = (nonce) => PUBLIC_INDEX_TEMPLATE
+const renderIndexHtml = (nonce, { demoMode = false, edgeProxyUrl = '' } = {}) => PUBLIC_INDEX_TEMPLATE
   .replace('nonce="__CSP_NONCE__"', `nonce="${nonce}"`)
-  .replace('__OMNIPUBLISH_DEMO_MODE_VALUE__', (process.env.NODE_ENV !== 'production' && process.env.OMNIPUBLISH_DEMO_MODE === 'true') ? 'true' : 'false')
-  .replace('__OMNIPUBLISH_EDGE_PROXY_URL_VALUE__', JSON.stringify(process.env.OMNIPUBLISH_EDGE_PROXY_URL || ''));
+  .replace('__OMNIPUBLISH_DEMO_MODE_VALUE__', demoMode ? 'true' : 'false')
+  .replace('__OMNIPUBLISH_EDGE_PROXY_URL_VALUE__', JSON.stringify(edgeProxyUrl));
 
 const escapeHtml = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')
@@ -381,7 +382,11 @@ app.use('/api/v1/admin', requireApiKey, (req, res) => {
 // Serve static UI
 app.get(['/', '/index.html'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  res.type('html').send(renderIndexHtml(res.locals.cspNonce));
+  const demoMode = process.env.NODE_ENV !== 'production' && (process.env.OMNIPUBLISH_DEMO_MODE === 'true' || isLocalDevHost(req.hostname));
+  res.type('html').send(renderIndexHtml(res.locals.cspNonce, {
+    demoMode,
+    edgeProxyUrl: process.env.OMNIPUBLISH_EDGE_PROXY_URL || '',
+  }));
 });
 
 const servePublicPage = (fileName) => (req, res) => {
