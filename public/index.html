@@ -1249,6 +1249,7 @@ async function api(method, path, body, skipCsrf = false) {
     if (DEMO_MODE) {
       const rehydrated = await bootstrapAuthState();
       if (rehydrated) {
+        await refreshDashboardAfterAuth();
         headers['Authorization'] = `Bearer ${auth.token}`;
         const csrf3 = getCsrf();
         if (csrf3) headers['X-CSRF-Token'] = csrf3;
@@ -1355,6 +1356,16 @@ function showPage(name, opts = {}) {
     }
     window.scrollTo(0, 0);
   });
+}
+
+async function refreshDashboardAfterAuth() {
+  if (!document.getElementById('page-dashboard')?.classList.contains('active')) return;
+  updateDashboardUser();
+  await Promise.allSettled([
+    loadPlatformConnections(),
+    loadBackendDraft(),
+    loadCalendarPosts(),
+  ]);
 }
 
 function goAuth(tab) {
@@ -3111,7 +3122,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (DEMO_MODE) {
     showPage('dashboard');
-    bootstrapAuthState().catch(err => console.warn('Demo session bootstrap failed', err));
+    bootstrapAuthState()
+      .then((ok) => { if (ok) return refreshDashboardAfterAuth(); })
+      .catch(err => console.warn('Demo session bootstrap failed', err));
     return;
   }
 

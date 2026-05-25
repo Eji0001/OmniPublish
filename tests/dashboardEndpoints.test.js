@@ -43,4 +43,9 @@ describe('dashboard endpoint wiring', () => {
       expect(html).toContain(signal);
     });
   });
+
+  it('refreshes dashboard data after demo auth bootstrap', () => {
+    expect(html).toContain('refreshDashboardAfterAuth');
+    expect(html).toContain('bootstrapAuthState()');
+  });
 });
