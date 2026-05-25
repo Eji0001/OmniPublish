@@ -8,6 +8,7 @@ describe('dashboard endpoint wiring', () => {
 
   it('references the endpoints used by dashboard click actions', () => {
     const expected = [
+      '/api/v1/auth/dev-session',
       '/api/v1/auth/login',
       '/api/v1/auth/register',
       '/api/v1/auth/forgot-password',

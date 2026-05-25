@@ -1153,11 +1153,15 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
   </div>
 </div>
 
+<script nonce="__CSP_NONCE__">window.__OMNIPUBLISH_DEMO_MODE__ = __OMNIPUBLISH_DEMO_MODE_VALUE__;window.__OMNIPUBLISH_EDGE_PROXY_URL__ = __OMNIPUBLISH_EDGE_PROXY_URL_VALUE__;</script>
 <script src="/js/backend-url.js"></script>
 <script nonce="__CSP_NONCE__">
 /* ══════════════════════════════════════
    AUTH STATE
 ══════════════════════════════════════ */
+const DEMO_MODE = window.__OMNIPUBLISH_DEMO_MODE__ === true;
+const DEMO_AUTH_HIDDEN_IDS = ['nav-login-btn', 'nav-signup-btn', 'hero-login-btn', 'hero-start-btn', 'cta-start-btn'];
+
 const auth = {
   get token()   { return accessToken; },
   get user()    { return JSON.parse(localStorage.getItem('omni_user') || 'null'); },
@@ -1186,6 +1190,8 @@ function onboardingCompleteKey(userId) {
 }
 
 function hasCompletedOnboarding(user = auth.user) {
+  const demoMode = typeof window !== 'undefined' && window.__OMNIPUBLISH_DEMO_MODE__ === true;
+  if (demoMode) return true;
   return !!user?.id && localStorage.getItem(onboardingCompleteKey(user.id)) === '1';
 }
 
@@ -1201,6 +1207,7 @@ let BACKEND_URL = BACKEND_URL_POLICY.loadBackendUrl({
   storage: localStorage,
   origin: window.location.origin,
   hostname: window.location.hostname,
+  edgeProxyUrl: window.__OMNIPUBLISH_EDGE_PROXY_URL__ || '',
 });
 let currentTheme = localStorage.getItem('omni_theme') || 'dark';
 
@@ -1236,6 +1243,17 @@ async function api(method, path, body, skipCsrf = false) {
       }
     } catch {}
     auth.clear();
+    if (DEMO_MODE) {
+      const rehydrated = await bootstrapAuthState();
+      if (rehydrated) {
+        headers['Authorization'] = `Bearer ${auth.token}`;
+        const csrf3 = getCsrf();
+        if (csrf3) headers['X-CSRF-Token'] = csrf3;
+        return fetch(base() + path, { ...opts, headers, credentials: 'include' });
+      }
+      showPage('dashboard');
+      throw new Error('Demo session expired');
+    }
     showPage('auth', { tab: 'login' });
     throw new Error('Session expired');
   }
@@ -1243,6 +1261,25 @@ async function api(method, path, body, skipCsrf = false) {
 }
 
 async function bootstrapAuthState() {
+  if (DEMO_MODE && !auth.token) {
+    try {
+      const demoRes = await fetch(base() + '/api/v1/auth/dev-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (demoRes.ok) {
+        const demoData = await demoRes.json();
+        if (demoData?.accessToken) {
+          auth.set(demoData);
+          return true;
+        }
+      }
+    } catch {
+      return false;
+    }
+  }
+
   if (auth.token) return true;
 
   try {
@@ -1276,6 +1313,9 @@ async function bootstrapAuthState() {
 let _dashInit = false;
 
 function showPage(name, opts = {}) {
+  if (DEMO_MODE && (name === 'auth' || name === 'signup' || name === 'onboarding')) {
+    name = 'dashboard';
+  }
   document.querySelectorAll('.page').forEach(p => {
     p.classList.remove('active');
   });
@@ -1534,15 +1574,15 @@ function initScrollAnimations() {
 const PLATFORMS = [
   {id:'facebook', name:'Facebook',  abbr:'f',   color:'#1877F2', limit:63206, reach:'2.9B', formats:['post','video','story'],           ratios:['16:9','1:1','4:5','9:16']},
   {id:'tiktok',   name:'TikTok',    abbr:'TT',  color:'#FF0050', limit:2200,  reach:'1.5B', formats:['video','short','story'],          ratios:['9:16']},
-  {id:'linkedin', name:'LinkedIn',  abbr:'in',  color:'#0A66C2', limit:3000,  reach:'950M', formats:['post','video','article'],         ratios:['16:9','1:1','4:5']},
-  {id:'youtube',  name:'YouTube',   abbr:'▶',   color:'#FF0000', limit:5000,  reach:'2.7B', formats:['video','short'],                  ratios:['16:9','9:16','1:1']},
+  {id:'linkedin', name:'LinkedIn',  abbr:'in',  color:'#0A66C2', limit:3000,  reach:'950M', formats:['post','video','article'],         ratios:['16:9','1:1','4:5','9:16']},
+  {id:'youtube',  name:'YouTube',   abbr:'▶',   color:'#FF0000', limit:5000,  reach:'2.7B', formats:['video','short'],                  ratios:['16:9','9:16']},
   {id:'instagram',name:'Instagram', abbr:'IG',  color:'#C13584', limit:2200,  reach:'2B',   formats:['post','video','short','story'],   ratios:['1:1','4:5','9:16']},
   {id:'twitch',   name:'Twitch',    abbr:'tw',  color:'#9146FF', limit:500,   reach:'140M', formats:['video','story'],                  ratios:['16:9']},
-  {id:'x',        name:'X (Twitter)',abbr:'X',  color:'#4a4a6a', limit:280,   reach:'550M', formats:['post','video','short'],           ratios:['16:9','1:1']},
+  {id:'x',        name:'X (Twitter)',abbr:'X',  color:'#4a4a6a', limit:280,   reach:'550M', formats:['post','video','short'],           ratios:['16:9','1:1','9:16']},
   {id:'telegram', name:'Telegram',  abbr:'tg',  color:'#26A5E4', limit:4096,  reach:'900M', formats:['post','video','story','article'], ratios:['16:9','9:16','1:1','4:5','2:3']},
   {id:'reddit',   name:'Reddit',    abbr:'r/',  color:'#FF4500', limit:40000, reach:'430M', formats:['post','video','article'],         ratios:['16:9','1:1','4:5']},
   {id:'threads',  name:'Threads',   abbr:'⊚',   color:'#4a4a5a', limit:500,   reach:'150M', formats:['post','video','short'],           ratios:['1:1','4:5','9:16']},
-  {id:'pinterest',name:'Pinterest', abbr:'P',   color:'#E60023', limit:500,   reach:'465M', formats:['post','video'],                   ratios:['2:3','4:5','1:1']},
+  {id:'pinterest',name:'Pinterest', abbr:'P',   color:'#E60023', limit:500,   reach:'465M', formats:['post','video'],                   ratios:['2:3','1:1','9:16']},
   {id:'rumble',   name:'Rumble',    abbr:'R',   color:'#85C742', limit:2000,  reach:'80M',  formats:['video','short'],                  ratios:['16:9','9:16']},
   {id:'bluesky',  name:'Bluesky',   abbr:'sky', color:'#0085FF', limit:300,   reach:'30M',  formats:['post','video','short'],           ratios:['16:9','1:1','4:5']},
   {id:'snapchat', name:'Snapchat',  abbr:'👻',  color:'#C8A800', limit:250,   reach:'750M', formats:['short','story','video'],          ratios:['9:16']},
@@ -1556,9 +1596,9 @@ const FORMAT_COMPAT = {
 };
 const RATIO_COMPAT = {
   '16:9':{platforms:['youtube','facebook','linkedin','twitch','x','telegram','reddit','rumble'], label:'YouTube · Facebook · LinkedIn'},
-  '9:16':{platforms:['tiktok','instagram','snapchat','youtube','threads','telegram'],            label:'TikTok · Reels · Shorts'},
-  '1:1': {platforms:['instagram','facebook','x','telegram','reddit','threads','bluesky'],        label:'Instagram · X · Facebook'},
-  '4:5': {platforms:['instagram','facebook','linkedin','threads','pinterest','telegram','bluesky'],label:'Instagram · Pinterest'},
+  '9:16':{platforms:['tiktok','instagram','snapchat','youtube','threads','telegram','rumble','facebook','linkedin','x','pinterest'], label:'TikTok · Reels · Shorts · Stories · X · Pinterest'},
+  '1:1': {platforms:['instagram','facebook','x','telegram','reddit','threads','bluesky','linkedin','pinterest'], label:'Instagram · X · Facebook · LinkedIn · Pinterest'},
+  '4:5': {platforms:['instagram','facebook','linkedin','threads','telegram','bluesky'],label:'Instagram · Facebook · LinkedIn'},
   '2:3': {platforms:['pinterest','telegram'],                                                    label:'Pinterest'},
 };
 const TEMPLATES = {
@@ -2490,6 +2530,14 @@ function enterOnboarding(data, message = 'Account created. Welcome!') {
   showPage('onboarding');
 }
 
+function hideDemoAuthEntryPoints() {
+  if (!DEMO_MODE) return;
+  DEMO_AUTH_HIDDEN_IDS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
 /* ══════════════════════════════════════
    SIGNUP & MAGIC LINK
 ══════════════════════════════════════ */
@@ -3045,6 +3093,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   applyTheme(currentTheme);
   buildMarquee();
+  hideDemoAuthEntryPoints();
+
+  if (DEMO_MODE) {
+    await bootstrapAuthState();
+    showPage('dashboard');
+    return;
+  }
 
   // Handle auth redirects
   const params = new URLSearchParams(window.location.search);

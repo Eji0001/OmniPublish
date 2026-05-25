@@ -39,7 +39,13 @@ build/
 .claude/
 
 # Supabase CLI local files
-supabase/
+supabase/*
+!supabase/config.toml
+!supabase/functions/
+supabase/functions/*
+!supabase/functions/api-proxy/
+supabase/functions/api-proxy/*
+!supabase/functions/api-proxy/index.ts
 
 # Nested / unrelated projects
 omnipublish/

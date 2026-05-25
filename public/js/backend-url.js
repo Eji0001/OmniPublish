@@ -17,6 +17,23 @@
 
   const isDevHost = (hostname) => isAllowedHost(hostname);
 
+  const normalizeEdgeProxyUrl = (candidate) => {
+    const raw = String(candidate || '').trim().replace(/\/$/, '');
+    if (!raw) return '';
+
+    let url;
+    try {
+      url = new URL(raw);
+    } catch {
+      return null;
+    }
+
+    if (url.protocol !== 'https:') return null;
+    if (url.search || url.hash) return null;
+
+    return `${url.origin}${url.pathname.replace(/\/$/, '')}`;
+  };
+
   const normalizeBackendUrl = (candidate, origin, hostname) => {
     const raw = String(candidate || '').trim().replace(/\/$/, '');
     if (!raw) return '';
@@ -35,7 +52,10 @@
     return url.origin;
   };
 
-  const loadBackendUrl = ({ storage, origin, hostname, storageKey = STORAGE_KEY }) => {
+  const loadBackendUrl = ({ storage, origin, hostname, storageKey = STORAGE_KEY, edgeProxyUrl = '' }) => {
+    const proxy = normalizeEdgeProxyUrl(edgeProxyUrl);
+    if (edgeProxyUrl && proxy) return proxy;
+
     if (!storage) return '';
     const stored = storage.getItem(storageKey) || '';
     const normalized = normalizeBackendUrl(stored, origin, hostname || ((typeof window !== 'undefined' && window.location?.hostname) || ''));
@@ -57,6 +77,7 @@
     isAllowedHost,
     isDevHost,
     normalizeBackendUrl,
+    normalizeEdgeProxyUrl,
     loadBackendUrl,
     saveBackendUrl,
   };

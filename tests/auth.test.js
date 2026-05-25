@@ -627,6 +627,74 @@ describe('POST /api/v1/auth/logout', () => {
   });
 });
 
+// ── POST /api/v1/auth/dev-session ──────────────────────────
+
+describe('POST /api/v1/auth/dev-session', () => {
+  const originalDemoMode = process.env.OMNIPUBLISH_DEMO_MODE;
+
+  beforeEach(() => {
+    process.env.OMNIPUBLISH_DEMO_MODE = 'true';
+  });
+
+  afterEach(() => {
+    if (originalDemoMode === undefined) delete process.env.OMNIPUBLISH_DEMO_MODE;
+    else process.env.OMNIPUBLISH_DEMO_MODE = originalDemoMode;
+  });
+
+  it('200 — bootstraps a demo session for the dashboard', async () => {
+    const demoLookup = mockChain({ data: null, error: { code: 'PGRST116', message: 'not found' } });
+    const demoInsert = mockChain({
+      data: {
+        id: TEST_USER.id,
+        email: 'demo@omnipublish.local',
+        full_name: 'Demo User',
+        role: 'user',
+        plan: 'pro',
+        user_type: 'creator',
+        onboarding_completed_at: new Date().toISOString(),
+        is_active: true,
+        is_verified: true,
+      },
+      error: null,
+    });
+    const sessionInsert = mockChain({ data: null, error: null });
+
+    let usersCalls = 0;
+    supabase.from.mockImplementation((table) => {
+      if (table === 'users') return usersCalls++ === 0 ? demoLookup : demoInsert;
+      if (table === 'user_sessions') return sessionInsert;
+      if (table === 'revoked_tokens') return mockChain({ data: null, error: null });
+      return mockChain({ data: null, error: null });
+    });
+
+    const res = await request(app)
+      .post('/api/v1/auth/dev-session');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('accessToken');
+    expect(res.body.user.email).toBe('demo@omnipublish.local');
+    expect(res.headers['set-cookie']).toBeDefined();
+  });
+});
+
+describe('GET /', () => {
+  const originalDemoMode = process.env.OMNIPUBLISH_DEMO_MODE;
+
+  afterEach(() => {
+    if (originalDemoMode === undefined) delete process.env.OMNIPUBLISH_DEMO_MODE;
+    else process.env.OMNIPUBLISH_DEMO_MODE = originalDemoMode;
+  });
+
+  it('injects the demo mode flag when bypass mode is enabled', async () => {
+    process.env.OMNIPUBLISH_DEMO_MODE = 'true';
+
+    const res = await request(app).get('/');
+
+    expect(res.status).toBe(200);
+    expect(res.text).toContain('window.__OMNIPUBLISH_DEMO_MODE__ = true');
+  });
+});
+
 // ── DELETE /api/v1/auth/me ──────────────────────────────────
 
 describe('DELETE /api/v1/auth/me', () => {

@@ -2,6 +2,7 @@
 
 const {
   normalizeBackendUrl,
+  normalizeEdgeProxyUrl,
   loadBackendUrl,
   saveBackendUrl,
 } = require('../public/js/backend-url');
@@ -36,6 +37,24 @@ describe('backend URL policy', () => {
 
     expect(loaded).toBe('');
     expect(storage.removeItem).toHaveBeenCalledWith('omni_backend_url');
+  });
+
+  it('prefers a configured edge proxy base URL', () => {
+    const storage = makeStorage('https://evil.example');
+
+    const loaded = loadBackendUrl({
+      storage,
+      origin,
+      hostname: 'app.example.com',
+      edgeProxyUrl: 'https://xyz.functions.supabase.co/functions/v1/api-proxy',
+    });
+
+    expect(loaded).toBe('https://xyz.functions.supabase.co/functions/v1/api-proxy');
+  });
+
+  it('normalizes edge proxy URLs without query or hash', () => {
+    expect(normalizeEdgeProxyUrl('https://xyz.functions.supabase.co/functions/v1/api-proxy/')).toBe('https://xyz.functions.supabase.co/functions/v1/api-proxy');
+    expect(normalizeEdgeProxyUrl('https://xyz.functions.supabase.co/functions/v1/api-proxy?x=1')).toBeNull();
   });
 
   it('rejects and removes invalid saves', () => {

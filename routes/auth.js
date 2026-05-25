@@ -23,9 +23,12 @@ const router = express.Router();
 
 const isProd = process.env.NODE_ENV === 'production';
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+const isDemoMode = () => process.env.NODE_ENV !== 'production' && process.env.OMNIPUBLISH_DEMO_MODE === 'true';
 const TOKEN_PURPOSE = {
   OAUTH_EXCHANGE: 'oauth_exchange',
 };
+const DEMO_USER_EMAIL = normalizeEmail(process.env.OMNIPUBLISH_DEMO_EMAIL || 'demo@omnipublish.local');
+const DEMO_USER_NAME = process.env.OMNIPUBLISH_DEMO_NAME || 'Demo User';
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const getDb = (req) => req.db || supabase;
 
@@ -39,6 +42,55 @@ const issueSessionTokens = async (user) => {
   const tokens = issueTokens(user);
   await recordSession(user.id, tokens.jti);
   return tokens;
+};
+
+const getDemoUser = async () => {
+  const demoProfile = {
+    email: DEMO_USER_EMAIL,
+    full_name: DEMO_USER_NAME,
+    role: 'user',
+    plan: 'pro',
+    user_type: 'creator',
+    is_active: true,
+    is_verified: true,
+    onboarding_completed_at: new Date(),
+    last_login_at: new Date(),
+  };
+
+  const { data: existing, error: lookupError } = await supabase.from('users')
+    .select('id, email, full_name, role, plan, user_type, onboarding_completed_at, is_active, is_verified')
+    .ilike('email', DEMO_USER_EMAIL)
+    .limit(1)
+    .single();
+
+  if (lookupError && lookupError.code !== 'PGRST116') {
+    throw Object.assign(new Error('Failed to load demo user'), { status: 500 });
+  }
+
+  if (existing?.id) {
+    const { data: updated, error: updateError } = await supabase.from('users')
+      .update(demoProfile)
+      .eq('id', existing.id)
+      .select('id, email, full_name, role, plan, user_type, onboarding_completed_at, is_active, is_verified')
+      .single();
+
+    if (updateError || !updated) {
+      throw Object.assign(new Error('Failed to bootstrap demo session'), { status: 500 });
+    }
+
+    return updated;
+  }
+
+  const { data: created, error: createError } = await supabase.from('users')
+    .insert({ id: uuidv4(), ...demoProfile, password_hash: null })
+    .select('id, email, full_name, role, plan, user_type, onboarding_completed_at, is_active, is_verified')
+    .single();
+
+  if (createError || !created) {
+    throw Object.assign(new Error('Failed to bootstrap demo session'), { status: 500 });
+  }
+
+  return created;
 };
 
 // Set httpOnly refresh cookie alongside every response that issues tokens
@@ -118,6 +170,24 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
   setRefreshCookie(res, tokens.refreshToken);
   logger.info('User registered', { userId: user.id });
   res.json(buildAuthResponse({ user: { ...user, ...sessionUser }, tokens, csrfToken }));
+});
+
+/* ── POST /auth/dev-session ── */
+router.post('/dev-session', authSlowDown, authRateLimiter, async (_req, res) => {
+  if (!isDemoMode()) return res.status(404).json({ error: 'Not found' });
+
+  try {
+    const user = await getDemoUser();
+    const tokens = await issueSessionTokens(user);
+    const csrfToken = generateCSRFToken();
+    res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+    setRefreshCookie(res, tokens.refreshToken);
+    logger.info('Demo session bootstrapped', { userId: user.id });
+    res.json(buildAuthResponse({ user, tokens, csrfToken }));
+  } catch (err) {
+    logger.error('Demo session bootstrap failed', { err: err.message });
+    res.status(err.status || 500).json({ error: 'Failed to start demo session' });
+  }
 });
 
 /* ── POST /auth/login ── */

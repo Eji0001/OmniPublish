@@ -78,7 +78,10 @@ const buildCspHeader = (nonce) => {
   ].join('; ');
 };
 
-const renderIndexHtml = (nonce) => PUBLIC_INDEX_TEMPLATE.replace('nonce="__CSP_NONCE__"', `nonce="${nonce}"`);
+const renderIndexHtml = (nonce) => PUBLIC_INDEX_TEMPLATE
+  .replace('nonce="__CSP_NONCE__"', `nonce="${nonce}"`)
+  .replace('__OMNIPUBLISH_DEMO_MODE_VALUE__', (process.env.NODE_ENV !== 'production' && process.env.OMNIPUBLISH_DEMO_MODE === 'true') ? 'true' : 'false')
+  .replace('__OMNIPUBLISH_EDGE_PROXY_URL_VALUE__', JSON.stringify(process.env.OMNIPUBLISH_EDGE_PROXY_URL || ''));
 
 const escapeHtml = (value) => String(value ?? '')
   .replace(/&/g, '&amp;')
