@@ -173,25 +173,26 @@ router.post('/register', authSlowDown, authRateLimiter, validateBody('register')
   res.json(buildAuthResponse({ user: { ...user, ...sessionUser }, tokens, csrfToken }));
 });
 
-/* ── POST /auth/dev-session — local dev only, never registered in production ── */
-if (!isProd) {
-  router.post('/dev-session', authSlowDown, authRateLimiter, async (req, res) => {
-    if (!isDemoMode(req)) return res.status(404).json({ error: 'Not found' });
+/* ── POST /auth/dev-session ──
+   Allowed only for localhost requests or when OMNIPUBLISH_DEMO_MODE=true.
+   isDemoMode(req) enforces this per-request regardless of NODE_ENV,
+   so production requests (non-localhost hostnames) always get 404. */
+router.post('/dev-session', authSlowDown, authRateLimiter, async (req, res) => {
+  if (!isDemoMode(req)) return res.status(404).json({ error: 'Not found' });
 
-    try {
-      const user = await getDemoUser();
-      const tokens = await issueSessionTokens(user);
-      const csrfToken = generateCSRFToken();
-      res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: false, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
-      setRefreshCookie(res, tokens.refreshToken);
-      logger.info('Demo session bootstrapped', { userId: user.id });
-      res.json(buildAuthResponse({ user, tokens, csrfToken }));
-    } catch (err) {
-      logger.error('Demo session bootstrap failed', { err: err.message });
-      res.status(err.status || 500).json({ error: 'Failed to start demo session' });
-    }
-  });
-}
+  try {
+    const user = await getDemoUser();
+    const tokens = await issueSessionTokens(user);
+    const csrfToken = generateCSRFToken();
+    res.cookie('csrf_token', csrfToken, { httpOnly: false, secure: isProd, sameSite: 'Strict', maxAge: 15 * 60 * 1000 });
+    setRefreshCookie(res, tokens.refreshToken);
+    logger.info('Demo session bootstrapped', { userId: user.id });
+    res.json(buildAuthResponse({ user, tokens, csrfToken }));
+  } catch (err) {
+    logger.error('Demo session bootstrap failed', { err: err.message });
+    res.status(err.status || 500).json({ error: 'Failed to start demo session' });
+  }
+});
 
 /* ── POST /auth/login ── */
 router.post('/login', authSlowDown, authRateLimiter, validateBody('login'), async (req, res) => {

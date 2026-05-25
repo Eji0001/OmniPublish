@@ -13,10 +13,8 @@ const { logger } = require('../utils/logger');
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 // Include both full-path and mount-stripped variants so the check works regardless
 // of whether req.path is stripped by Express's app.use() mount prefix
-const isProd = process.env.NODE_ENV === 'production';
-
 const CSRF_SKIP = new Set([
-  ...(isProd ? [] : ['/api/v1/auth/dev-session', '/v1/auth/dev-session']),
+  '/api/v1/auth/dev-session', '/v1/auth/dev-session',
   '/api/v1/auth/login',            '/v1/auth/login',
   '/api/v1/auth/register',         '/v1/auth/register',
   '/api/v1/auth/forgot-password',  '/v1/auth/forgot-password',
