@@ -1130,6 +1130,8 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div class="settings-home active" id="settings-home">
         <button class="settings-entry-btn" id="settings-connection-btn" type="button" onclick="openConnectionMenu()">Connections</button>
         <div class="settings-home-note">Manage connection checks, add new channels, or remove existing ones.</div>
+        <button class="settings-entry-btn" id="settings-ai-btn" type="button" onclick="openAiProviderPanel()" style="margin-top:4px;background:linear-gradient(135deg,#1a3a5c,#0d2137);">AI Provider</button>
+        <div class="settings-home-note">View the active LLM provider chain powering content adaptation.</div>
       </div>
       <div class="settings-menu" id="settings-menu">
         <button class="settings-action-btn" type="button" onclick="checkAllConnections()"><span>Check connection</span><span>✓</span></button>
@@ -1145,6 +1147,14 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
         <div class="settings-connections" id="settings-connections"></div>
         <div class="settings-empty" id="settings-empty">No connected platforms yet.</div>
         <div class="settings-status" id="settings-status"></div>
+      </div>
+      <div class="settings-panel" id="settings-ai-panel">
+        <div class="settings-panel-head">
+          <button class="settings-back-btn" type="button" onclick="showSettingsView('home')">← Back</button>
+          <div class="settings-panel-title">AI Provider</div>
+        </div>
+        <div class="settings-panel-note">Active provider chain — the first reachable provider is used for content adaptation.</div>
+        <div class="settings-connections" id="ai-provider-list"><div style="color:var(--tx3);font-size:13px;padding:8px 0">Loading…</div></div>
       </div>
       <div class="modal-actions">
         <button class="modal-btn cancel" onclick="closeSettings()">Close</button>
@@ -2363,12 +2373,39 @@ let _settingsView = 'home';
 
 function showSettingsView(view) {
   _settingsView = view;
-  const home = document.getElementById('settings-home');
-  const menu = document.getElementById('settings-menu');
-  const panel = document.getElementById('settings-panel');
-  if (home) home.classList.toggle('active', view === 'home');
-  if (menu) menu.classList.toggle('active', view === 'menu');
-  if (panel) panel.classList.toggle('active', view === 'check' || view === 'remove');
+  const home    = document.getElementById('settings-home');
+  const menu    = document.getElementById('settings-menu');
+  const panel   = document.getElementById('settings-panel');
+  const aiPanel = document.getElementById('settings-ai-panel');
+  if (home)    home.classList.toggle('active', view === 'home');
+  if (menu)    menu.classList.toggle('active', view === 'menu');
+  if (panel)   panel.classList.toggle('active', view === 'check' || view === 'remove');
+  if (aiPanel) aiPanel.classList.toggle('active', view === 'ai');
+}
+
+async function openAiProviderPanel() {
+  showSettingsView('ai');
+  const list = document.getElementById('ai-provider-list');
+  if (!list) return;
+  list.innerHTML = '<div style="color:var(--tx3);font-size:13px;padding:8px 0">Loading…</div>';
+  try {
+    const res  = await api('GET', '/api/v1/ai/status');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load');
+    const providers = data.providers || [];
+    if (!providers.length) { list.innerHTML = '<div style="color:var(--tx3);font-size:13px">No providers configured.</div>'; return; }
+    list.innerHTML = providers.map((p, i) => `
+      <div class="settings-connection${i === 0 ? ' good' : ''}">
+        <div class="settings-connection-main">
+          <div class="settings-connection-title">${escHtml(p.name)}${i === 0 ? ' <span style="font-weight:400;font-size:11px;opacity:.7">(primary)</span>' : ''}</div>
+          <div class="settings-connection-meta">${escHtml(p.type)}${p.model ? ' · ' + escHtml(p.model) : ''}</div>
+        </div>
+        <div class="settings-connection-actions" style="font-size:12px;color:var(--tx3)">#${i + 1}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    list.innerHTML = `<div style="color:#ff8ca4;font-size:13px">⚠ ${escHtml(err.message)}</div>`;
+  }
 }
 
 function openSettings() {

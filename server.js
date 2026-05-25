@@ -41,6 +41,7 @@ const publishRoutes   = require('./routes/publish');
 const mediaRoutes     = require('./routes/media');
 const healthRoutes    = require('./routes/health');
 const gdprRoutes      = require('./routes/gdpr');
+const aiRoutes        = require('./routes/ai');
 
 const { processScheduledPosts, cleanupRevokedTokens, executeGdprDeletions } = require('./services/schedulerService');
 const { healthReadinessCheck, healthLivenessCheck } = require('./middleware/healthChecks');
@@ -360,6 +361,7 @@ app.use('/api/v1/posts',      postsRoutes);
 app.use('/api/v1/platforms',  platformsRoutes);
 app.use('/api/v1/publish',    publishRoutes);
 app.use('/api/v1/media',      mediaRoutes);
+app.use('/api/v1/ai',         aiRoutes);
 
 // AI endpoints (secure — API key never leaves the server)
 const { verifyToken: _vt }    = require('./middleware/auth');
