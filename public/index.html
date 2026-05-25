@@ -1191,7 +1191,10 @@ function onboardingCompleteKey(userId) {
 }
 
 function hasCompletedOnboarding(user = auth.user) {
-  if (DEMO_MODE) return true;
+  const demoMode = typeof DEMO_MODE !== 'undefined'
+    ? DEMO_MODE
+    : (typeof window !== 'undefined' && window.__OMNIPUBLISH_DEMO_MODE__ === true);
+  if (demoMode) return true;
   return !!user?.id && localStorage.getItem(onboardingCompleteKey(user.id)) === '1';
 }
 
@@ -1261,49 +1264,59 @@ async function api(method, path, body, skipCsrf = false) {
 }
 
 async function bootstrapAuthState() {
-  if (DEMO_MODE && !auth.token) {
+  if (_bootstrapAuthStatePromise) return _bootstrapAuthStatePromise;
+
+  _bootstrapAuthStatePromise = (async () => {
+    if (DEMO_MODE && !auth.token) {
+      try {
+        const demoRes = await fetch(base() + '/api/v1/auth/dev-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        if (demoRes.ok) {
+          const demoData = await demoRes.json();
+          if (demoData?.accessToken) {
+            auth.set(demoData);
+            return true;
+          }
+        }
+      } catch {
+        return false;
+      }
+    }
+
+    if (auth.token) return true;
+
     try {
-      const demoRes = await fetch(base() + '/api/v1/auth/dev-session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      if (demoRes.ok) {
-        const demoData = await demoRes.json();
-        if (demoData?.accessToken) {
-          auth.set(demoData);
-          return true;
+      const refreshed = await auth.refresh();
+      if (!refreshed) {
+        auth.clear();
+        return false;
+      }
+
+      if (!auth.user) {
+        const meRes = await fetch(base() + '/api/v1/auth/me', {
+          headers: { 'Authorization': `Bearer ${auth.token}` },
+          credentials: 'include',
+        });
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.user) auth.set({ user: meData.user });
         }
       }
+
+      return true;
     } catch {
-      return false;
-    }
-  }
-
-  if (auth.token) return true;
-
-  try {
-    const refreshed = await auth.refresh();
-    if (!refreshed) {
       auth.clear();
       return false;
     }
+  })();
 
-    if (!auth.user) {
-      const meRes = await fetch(base() + '/api/v1/auth/me', {
-        headers: { 'Authorization': `Bearer ${auth.token}` },
-        credentials: 'include',
-      });
-      if (meRes.ok) {
-        const meData = await meRes.json();
-        if (meData.user) auth.set({ user: meData.user });
-      }
-    }
-
-    return true;
-  } catch {
-    auth.clear();
-    return false;
+  try {
+    return await _bootstrapAuthStatePromise;
+  } finally {
+    _bootstrapAuthStatePromise = null;
   }
 }
 
@@ -1311,6 +1324,7 @@ async function bootstrapAuthState() {
    PAGE ROUTER
 ══════════════════════════════════════ */
 let _dashInit = false;
+let _bootstrapAuthStatePromise = null;
 
 function showPage(name, opts = {}) {
   if (DEMO_MODE && (name === 'auth' || name === 'signup' || name === 'onboarding')) {
@@ -3096,8 +3110,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   hideDemoAuthEntryPoints();
 
   if (DEMO_MODE) {
-    await bootstrapAuthState();
     showPage('dashboard');
+    bootstrapAuthState().catch(err => console.warn('Demo session bootstrap failed', err));
     return;
   }
 
