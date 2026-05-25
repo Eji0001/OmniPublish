@@ -53,4 +53,9 @@ describe('dashboard endpoint wiring', () => {
     expect(html).toContain('hideProductionPublicPages');
     expect(html).toContain("if (IS_PRODUCTION && name === 'signup') name = 'auth';");
   });
+
+  it('routes the connections hash directly into dashboard settings', () => {
+    expect(html).toContain("hashPage === 'connections'");
+    expect(html).toContain('openConnectionMenu()');
+  });
 });

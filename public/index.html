@@ -3258,6 +3258,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       showPage('onboarding');
     } else if (hashPage === 'dashboard') {
       showPage('dashboard');
+    } else if (hashPage === 'connections') {
+      showPage('dashboard');
+      requestAnimationFrame(() => {
+        openSettings();
+        openConnectionMenu();
+      });
     } else if (hasCompletedOnboarding(auth.user)) {
       showPage('dashboard');
     } else {
