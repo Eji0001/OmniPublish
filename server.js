@@ -382,7 +382,7 @@ app.use('/api/v1/admin', requireApiKey, (req, res) => {
 // Serve static UI
 app.get(['/', '/index.html'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
-  const demoMode = process.env.NODE_ENV !== 'production' && (process.env.OMNIPUBLISH_DEMO_MODE === 'true' || isLocalDevHost(req.hostname));
+  const demoMode = process.env.OMNIPUBLISH_DEMO_MODE === 'true' || isLocalDevHost(req.hostname);
   res.type('html').send(renderIndexHtml(res.locals.cspNonce, {
     demoMode,
     edgeProxyUrl: process.env.OMNIPUBLISH_EDGE_PROXY_URL || '',

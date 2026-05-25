@@ -24,7 +24,7 @@ const router = express.Router();
 const isProd = process.env.NODE_ENV === 'production';
 const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
 const isLocalDevHost = (host) => /^(localhost|127(?:\.\d{1,3}){3}|\[::1\]|::1)$/i.test(String(host || '').trim());
-const isDemoMode = (req) => process.env.NODE_ENV !== 'production' && (process.env.OMNIPUBLISH_DEMO_MODE === 'true' || isLocalDevHost(req?.hostname || req?.headers?.host));
+const isDemoMode = (req) => process.env.OMNIPUBLISH_DEMO_MODE === 'true' || isLocalDevHost(req?.hostname || req?.headers?.host);
 const TOKEN_PURPOSE = {
   OAUTH_EXCHANGE: 'oauth_exchange',
 };
