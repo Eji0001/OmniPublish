@@ -21,6 +21,7 @@ module.exports = [
         clearTimeout: 'readonly',
         setInterval: 'readonly',
         clearInterval: 'readonly',
+        AbortController: 'readonly',
         URL:       'readonly',
         URLSearchParams: 'readonly',
         fetch:     'readonly',
@@ -32,6 +33,18 @@ module.exports = [
       'eqeqeq':         ['error', 'always'],
       'no-var':         'error',
       'prefer-const':   'error',
+    },
+  },
+  {
+    files: ['public/js/**/*.js'],
+    languageOptions: {
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        location: 'readonly',
+        navigator: 'readonly',
+        self: 'readonly',
+      },
     },
   },
   {
