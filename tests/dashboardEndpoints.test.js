@@ -48,4 +48,9 @@ describe('dashboard endpoint wiring', () => {
     expect(html).toContain('refreshDashboardAfterAuth');
     expect(html).toContain('bootstrapAuthState()');
   });
+
+  it('hides public pages in production and keeps signup routed to auth', () => {
+    expect(html).toContain('hideProductionPublicPages');
+    expect(html).toContain("if (IS_PRODUCTION && name === 'signup') name = 'auth';");
+  });
 });

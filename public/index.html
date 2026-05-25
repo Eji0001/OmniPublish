@@ -1205,7 +1205,10 @@ function hasCompletedOnboarding(user = auth.user) {
   const demoMode = typeof DEMO_MODE !== 'undefined'
     ? DEMO_MODE
     : (typeof window !== 'undefined' && window.__OMNIPUBLISH_DEMO_MODE__ === true);
-  if (demoMode || IS_PRODUCTION) return true;
+  const productionMode = typeof IS_PRODUCTION !== 'undefined'
+    ? IS_PRODUCTION
+    : (typeof window !== 'undefined' && !/^(localhost|127(?:\.\d{1,3}){3}|\[::1\])$/i.test(window.location.hostname));
+  if (demoMode || productionMode) return true;
   return !!user?.id && localStorage.getItem(onboardingCompleteKey(user.id)) === '1';
 }
 
@@ -1343,6 +1346,7 @@ function showPage(name, opts = {}) {
     name = 'dashboard';
   }
   if (IS_PRODUCTION && name === 'home') name = 'auth';
+  if (IS_PRODUCTION && name === 'signup') name = 'auth';
   if (IS_PRODUCTION && name === 'onboarding') name = 'dashboard';
   document.querySelectorAll('.page').forEach(p => {
     p.classList.remove('active');
@@ -1379,6 +1383,15 @@ async function refreshDashboardAfterAuth() {
     loadBackendDraft(),
     loadCalendarPosts(),
   ]);
+}
+
+function hideProductionPublicPages() {
+  if (!IS_PRODUCTION) return;
+  ['page-home', 'page-signup', 'page-onboarding', 'nav-login-btn', 'nav-signup-btn', 'hero-login-btn', 'hero-start-btn', 'cta-start-btn', 'su-back-btn']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+    });
 }
 
 function goAuth(tab) {
@@ -3160,6 +3173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(currentTheme);
   buildMarquee();
   hideDemoAuthEntryPoints();
+  hideProductionPublicPages();
 
   if (DEMO_MODE) {
     showPage('dashboard');
