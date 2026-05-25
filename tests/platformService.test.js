@@ -6,6 +6,7 @@ const mockPlatformBreakerExecute = jest.fn(async (fn) => fn());
 
 jest.mock('../middleware/circuitBreaker', () => ({
   anthropicBreaker: { execute: jest.fn(async (fn) => fn()) },
+  llmBreaker: { execute: jest.fn(async (fn) => fn()) },
   platformApisBreaker: { execute: mockPlatformBreakerExecute },
 }));
 

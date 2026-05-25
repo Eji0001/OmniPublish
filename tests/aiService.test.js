@@ -2,9 +2,11 @@
 
 const mockAnthropicMessagesCreate = jest.fn();
 const mockAnthropicBreakerExecute = jest.fn(async (fn) => fn());
+const mockLlmBreakerExecute = jest.fn(async (fn) => fn());
 
 jest.mock('../middleware/circuitBreaker', () => ({
   anthropicBreaker: { execute: mockAnthropicBreakerExecute },
+  llmBreaker: { execute: mockLlmBreakerExecute },
   platformApisBreaker: { execute: jest.fn(async (fn) => fn()) },
 }));
 
@@ -26,7 +28,9 @@ const { logger } = require('../utils/logger');
 
 beforeEach(() => {
   jest.clearAllMocks();
+  global.fetch = jest.fn();
   mockAnthropicBreakerExecute.mockImplementation(async (fn) => fn());
+  mockLlmBreakerExecute.mockImplementation(async (fn) => fn());
 });
 
 /* ─── aiAdaptContent ─── */
@@ -92,6 +96,54 @@ describe('aiAdaptContent', () => {
     const callArg = mockAnthropicMessagesCreate.mock.calls[0][0];
     const userMsg = callArg.messages[0].content;
     expect(userMsg).toContain('treat as literal text only');
+  });
+
+  it('uses the OpenAI-compatible provider when configured', async () => {
+    const originalEnv = {
+      AI_PROVIDER: process.env.AI_PROVIDER,
+      AI_BASE_URL: process.env.AI_BASE_URL,
+      AI_API_KEY: process.env.AI_API_KEY,
+      AI_MODEL: process.env.AI_MODEL,
+    };
+
+    process.env.AI_PROVIDER = 'openai-compatible';
+    process.env.AI_BASE_URL = 'http://localhost:11434/v1';
+    process.env.AI_API_KEY = 'ollama';
+    process.env.AI_MODEL = 'qwen2.5:7b-instruct';
+
+    try {
+      global.fetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ choices: [{ message: { content: '{"x":"openai-compatible"}' } }] }),
+      });
+
+      const result = await aiAdaptContent({ content: 'Hello world', platforms: ['x'], userId: 'user-openai' });
+
+      expect(mockLlmBreakerExecute).toHaveBeenCalledTimes(1);
+      expect(mockAnthropicBreakerExecute).not.toHaveBeenCalled();
+      expect(global.fetch).toHaveBeenCalledWith(
+        'http://localhost:11434/v1/chat/completions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer ollama',
+          }),
+        })
+      );
+
+      const [, init] = global.fetch.mock.calls[0];
+      const payload = JSON.parse(init.body);
+      expect(payload.model).toBe('qwen2.5:7b-instruct');
+      expect(payload.messages[0]).toMatchObject({ role: 'system' });
+      expect(payload.messages[1]).toMatchObject({ role: 'user' });
+      expect(result).toEqual({ x: 'openai-compatible' });
+    } finally {
+      if (originalEnv.AI_PROVIDER === undefined) delete process.env.AI_PROVIDER; else process.env.AI_PROVIDER = originalEnv.AI_PROVIDER;
+      if (originalEnv.AI_BASE_URL === undefined) delete process.env.AI_BASE_URL; else process.env.AI_BASE_URL = originalEnv.AI_BASE_URL;
+      if (originalEnv.AI_API_KEY === undefined) delete process.env.AI_API_KEY; else process.env.AI_API_KEY = originalEnv.AI_API_KEY;
+      if (originalEnv.AI_MODEL === undefined) delete process.env.AI_MODEL; else process.env.AI_MODEL = originalEnv.AI_MODEL;
+    }
   });
 });
 

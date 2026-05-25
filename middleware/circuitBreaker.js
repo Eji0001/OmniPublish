@@ -100,6 +100,13 @@ const anthropicBreaker = new CircuitBreaker({
   resetTimeout: 60000,
 });
 
+const llmBreaker = new CircuitBreaker({
+  name: 'llm-api',
+  failureThreshold: 5,
+  timeout: 10000,
+  resetTimeout: 60000,
+});
+
 const platformApisBreaker = new CircuitBreaker({
   name: 'platform-apis',
   failureThreshold: 10,
@@ -107,4 +114,4 @@ const platformApisBreaker = new CircuitBreaker({
   resetTimeout: 30000,
 });
 
-module.exports = { CircuitBreaker, anthropicBreaker, platformApisBreaker };
+module.exports = { CircuitBreaker, anthropicBreaker, llmBreaker, platformApisBreaker };
