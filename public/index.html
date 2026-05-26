@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
@@ -988,6 +988,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       </div>
       <div class="sel-badge" id="hdr-badge">0 Platforms</div>
       <button class="theme-toggle" id="dash-theme-btn">☀️ Sky Blue</button>
+      <button class="dash-icon-btn" onclick="showPage('connections')" title="Connections" style="font-size:13px;padding:6px 12px;font-weight:700">Connections</button>
       <button class="dash-icon-btn" onclick="openSettings()">⚙️</button>
       <button class="logout-btn" id="dash-logout-btn" type="button">Logout →</button>
     </div>
@@ -1376,7 +1377,7 @@ function showPage(name, opts = {}) {
   }
   if (IS_PRODUCTION && name === 'home') name = 'auth';
   if (IS_PRODUCTION && name === 'signup') name = 'auth';
-  if (IS_PRODUCTION && name === 'onboarding') name = 'dashboard';
+  if (IS_PRODUCTION && name === 'onboarding' && !opts.force) name = 'connections';
   document.querySelectorAll('.page').forEach(p => {
     p.classList.remove('active');
   });
@@ -1558,7 +1559,7 @@ async function doLogin() {
     if (!res.ok) { errEl.textContent = data.error || 'Invalid credentials.'; return; }
     auth.set({ ...data, user: data.user });
     toast('Welcome back! 👋', 'ok');
-    showPage('dashboard');
+    showPage(IS_PRODUCTION ? 'connections' : 'dashboard');
   } catch (e) {
     errEl.textContent = 'Connection error. Is the server running?';
   } finally {
@@ -2609,7 +2610,7 @@ function showRemoveConnections() {
 
 function showAddConnectionFromSettings() {
   closeSettings();
-  showPage('onboarding');
+  showPage('onboarding', { force: true });
   requestAnimationFrame(() => obGoStep(2));
 }
 
@@ -2654,6 +2655,7 @@ function enterOnboarding(data, message = 'Account created. Welcome!') {
   toast(message, 'ok');
   showPage('onboarding');
 }
+
 
 function hideDemoAuthEntryPoints() {
   if (!DEMO_MODE) return;
@@ -2704,13 +2706,9 @@ async function verifyMagicToken(token) {
     });
     const data = await res.json();
     if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
-        if (!hasCompletedOnboarding(data.user)) {
-          enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
-        } else {
-      auth.set({ ...data, user: data.user });
-      toast('Welcome to OmniPublish! 🚀', 'ok');
-      showPage('dashboard');
-    }
+    auth.set({ ...data, user: data.user });
+    toast('Welcome to OmniPublish! 🚀', 'ok');
+    showPage(IS_PRODUCTION ? 'connections' : 'dashboard');
   } catch {
     toast('Connection error verifying link.', 'err');
     showPage('home');
@@ -3278,13 +3276,9 @@ document.addEventListener('DOMContentLoaded', async () => {
           setTimeout(() => toast(data.error || 'Google sign-in failed. Please try again.', 'err'), 400);
           return;
         }
-        if (!hasCompletedOnboarding(data.user)) {
-          enterOnboarding({ ...data, user: data.user }, 'Welcome to OmniPublish! 🚀');
-        } else {
-          auth.set({ ...data, user: data.user });
-          toast('Welcome back! 👋', 'ok');
-          showPage('dashboard');
-        }
+        auth.set({ ...data, user: data.user });
+        toast(hasCompletedOnboarding(data.user) ? 'Welcome back! 👋' : 'Welcome to OmniPublish! 🚀', 'ok');
+        showPage(IS_PRODUCTION ? 'connections' : 'dashboard');
       } catch {
         showPage('home');
         setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
