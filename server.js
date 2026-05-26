@@ -85,7 +85,7 @@ const renderIndexHtml = (nonce, { demoMode = false, edgeProxyUrl = '' } = {}) =>
   const initialDashboardClass = demoMode ? 'page' : 'page active';
 
   return PUBLIC_INDEX_TEMPLATE
-    .replace('nonce="__CSP_NONCE__"', `nonce="${nonce}"`)
+    .replaceAll('nonce="__CSP_NONCE__"', `nonce="${nonce}"`)
     .replace('<div id="page-home" class="page active">', `<div id="page-home" class="${initialHomeClass}">`)
     .replace('<div id="page-dashboard" class="page">', `<div id="page-dashboard" class="${initialDashboardClass}">`)
     .replace('__OMNIPUBLISH_DEMO_MODE_VALUE__', demoMode ? 'true' : 'false')

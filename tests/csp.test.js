@@ -36,11 +36,13 @@ describe('Content Security Policy', () => {
     const res = await request(app).get('/');
     const csp = res.headers['content-security-policy'];
     const scriptSrc = csp.match(/script-src[^;]*/)?.[0] || '';
+    const nonceMatches = res.text.match(/<script nonce="([^"]+)">/g) || [];
 
     expect(res.status).toBe(200);
     expect(scriptSrc).toMatch(/'nonce-[^']+'/);
     expect(scriptSrc).not.toContain("'unsafe-inline'");
-    expect(res.text).toMatch(/<script nonce="[^"]+">/);
+    expect(nonceMatches).toHaveLength(2);
+    expect(res.text).not.toContain('__CSP_NONCE__');
     expect(res.text).not.toContain('onclick="toggle(');
     expect(res.text).not.toContain('onclick="copyText(');
     expect(res.headers['expect-ct']).toBeUndefined();
