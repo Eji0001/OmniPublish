@@ -598,6 +598,26 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .pm-disconnect{padding:9px 18px;border-radius:10px;background:var(--err);border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s}
 .pm-disconnect:hover{filter:brightness(0.95);transform:translateY(-1px)}
 .pm-connect:disabled,.pm-disconnect:disabled{opacity:.55;cursor:not-allowed;transform:none}
+
+/* OAuth permission screen modal */
+.perm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(8px);z-index:600;display:flex;align-items:center;justify-content:center;animation:fadeUp .2s ease}
+.perm-card{background:var(--s1);border:1px solid var(--bd2);border-radius:18px;padding:1.75rem;width:440px;max-width:calc(100vw - 2rem);box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.perm-header{display:flex;align-items:center;gap:12px;margin-bottom:1.25rem}
+.perm-plat-icon{font-size:2rem;line-height:1}
+.perm-title{font-size:17px;font-weight:900;color:var(--tx)}
+.perm-subtitle{font-size:13px;color:var(--tx3);margin-bottom:1.25rem;line-height:1.6}
+.perm-list{list-style:none;margin-bottom:1.25rem;display:flex;flex-direction:column;gap:8px}
+.perm-item{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--tx2);line-height:1.5}
+.perm-item-check{color:#00b894;font-weight:900;flex-shrink:0;margin-top:1px}
+.perm-divider{border:none;border-top:1px solid var(--bd2);margin:1.25rem 0}
+.perm-note{font-size:11px;color:var(--tx3);line-height:1.55;margin-bottom:1.25rem}
+.perm-actions{display:flex;gap:8px;justify-content:flex-end}
+.perm-cancel-btn{padding:9px 18px;border-radius:10px;background:var(--s3);border:none;color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s}
+.perm-cancel-btn:hover{background:var(--s4)}
+.perm-auth-btn{padding:9px 20px;border-radius:10px;background:#00b894;border:none;color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;transition:all .2s}
+.perm-auth-btn:hover{background:#00a381;transform:translateY(-1px)}
+.perm-auth-btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.perm-env-vars{background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:10px 14px;margin-top:10px;font-family:monospace;font-size:11px;color:var(--tx2);display:flex;flex-direction:column;gap:5px}
 </style>
 </head>
 <body>
@@ -967,6 +987,24 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <button class="pm-cancel" id="pm-cancel-btn" type="button">Cancel</button>
       <button class="pm-disconnect" id="pm-disconnect-btn" type="button" style="display:none">Disconnect</button>
       <button class="pm-connect" id="pm-connect-btn" type="button">Connect</button>
+    </div>
+  </div>
+</div>
+
+<!-- OAuth Permission Screen Modal -->
+<div class="perm-overlay" id="perm-overlay" style="display:none" onclick="if(event.target===this)closePermModal()">
+  <div class="perm-card">
+    <div class="perm-header">
+      <span class="perm-plat-icon" id="perm-icon"></span>
+      <span class="perm-title" id="perm-title"></span>
+    </div>
+    <div class="perm-subtitle" id="perm-subtitle"></div>
+    <ul class="perm-list" id="perm-list"></ul>
+    <hr class="perm-divider">
+    <div class="perm-note" id="perm-note"></div>
+    <div class="perm-actions">
+      <button class="perm-cancel-btn" type="button" onclick="closePermModal()">Cancel</button>
+      <button class="perm-auth-btn" id="perm-auth-btn" type="button" onclick="authorizeFromPermissionScreen()">Authorize →</button>
     </div>
   </div>
 </div>
@@ -2737,6 +2775,32 @@ const OB_PLATFORMS = [
 
 const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat']);
 
+const PLATFORM_PERMISSIONS = {
+  facebook:  ['Read your public profile and name', 'Publish posts and content to your Pages', 'Manage your Facebook Pages', 'Access Page insights and analytics'],
+  instagram: ['Read your Instagram profile and media', 'Publish photos, videos, and Reels', 'Read your business account insights', 'Manage comments and interactions'],
+  x:         ['Read your X profile and timeline', 'Post tweets and threads on your behalf', 'Access your account information', 'Manage your media uploads'],
+  linkedin:  ['Read your LinkedIn profile and connections', 'Share posts and articles on your behalf', 'Manage Company Pages (if applicable)', 'Read your profile analytics'],
+  youtube:   ['Read your YouTube channel and subscriptions', 'Upload and manage your videos', 'Read your video analytics', 'Manage your channel metadata'],
+  reddit:    ['Read your Reddit profile and subscriptions', 'Submit posts and links to subreddits', 'Manage your post history', 'Read your account stats'],
+  tiktok:    ['Read your TikTok profile and followers', 'Upload and publish videos on your behalf', 'Read your video analytics', 'Manage your account settings'],
+  pinterest: ['Read your Pinterest profile and boards', 'Create and manage Pins and Boards', 'Read your analytics and impressions', 'Access your business profile details'],
+  twitch:    ['Read your Twitch channel information', 'Update your stream title and category', 'Read your channel followers and subscribers', 'Manage your channel metadata'],
+  snapchat:  ['Read your Snapchat profile and audience', 'Publish Stories and Spotlight content', 'Access your audience insights', 'Manage your Snap Kit integrations'],
+};
+
+const PLATFORM_ENV_VARS = {
+  facebook:  ['FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET'],
+  instagram: ['INSTAGRAM_CLIENT_ID', 'INSTAGRAM_CLIENT_SECRET'],
+  x:         ['X_CLIENT_ID', 'X_CLIENT_SECRET'],
+  linkedin:  ['LINKEDIN_CLIENT_ID', 'LINKEDIN_CLIENT_SECRET'],
+  youtube:   ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET'],
+  reddit:    ['REDDIT_CLIENT_ID', 'REDDIT_CLIENT_SECRET'],
+  tiktok:    ['TIKTOK_CLIENT_KEY', 'TIKTOK_CLIENT_SECRET'],
+  pinterest: ['PINTEREST_CLIENT_ID', 'PINTEREST_CLIENT_SECRET'],
+  twitch:    ['TWITCH_CLIENT_ID', 'TWITCH_CLIENT_SECRET'],
+  snapchat:  ['SNAPCHAT_CLIENT_ID', 'SNAPCHAT_CLIENT_SECRET'],
+};
+
 let _platformConnections = {};
 let _currentPlatId = null;
 let _connectingPlatform = false;
@@ -2960,17 +3024,9 @@ async function loadPlatformConnections() {
 
 function connectPlatformFromSettings(platId) {
   if (OAUTH_PLATFORM_IDS.has(platId)) {
-    startPlatformOAuth(platId, 'dashboard').catch(err => {
-      if (/missing credentials|OAuth not supported/i.test(err.message || '')) {
-        renderManualPlatformModal(platId);
-        toast(`OAuth is not configured for ${platId}. Use manual connection instead.`, 'err');
-        return;
-      }
-      toast(err.message || 'Connection failed.', 'err');
-    });
+    renderOAuthPermissionModal(platId, 'dashboard');
     return;
   }
-
   openPlatModal(platId);
 }
 
@@ -3002,15 +3058,7 @@ function openPlatModal(platId) {
   if (!p) return;
 
   if (OAUTH_PLATFORM_IDS.has(platId)) {
-    startPlatformOAuth(platId, 'onboarding')
-      .catch(err => {
-        if (/missing credentials|OAuth not supported/i.test(err.message || '')) {
-          renderManualPlatformModal(platId);
-          toast(`OAuth is not configured for ${p.name}. Use manual connection instead.`, 'err');
-          return;
-        }
-        toast(err.message || `Error connecting to ${p.name}`, 'err');
-      });
+    renderOAuthPermissionModal(platId, 'onboarding');
     return;
   }
   renderManualPlatformModal(platId);
@@ -3019,6 +3067,80 @@ function openPlatModal(platId) {
 function closePlatModal() {
   document.getElementById('pm-overlay').style.display = 'none';
   _currentPlatId = null;
+}
+
+/* ── OAuth permission screen ── */
+
+let _permPlatId = null;
+let _permPage   = 'dashboard';
+
+function renderOAuthPermissionModal(platId, page = 'dashboard') {
+  const p = OB_PLATFORMS.find(x => x.id === platId);
+  if (!p) return;
+  _permPlatId = platId;
+  _permPage   = page;
+  const conn  = _platformConnections[platId];
+  const perms = PLATFORM_PERMISSIONS[platId] || [];
+
+  document.getElementById('perm-icon').textContent = p.icon;
+  document.getElementById('perm-title').textContent = p.name;
+  document.getElementById('perm-subtitle').textContent = conn
+    ? `Reconnect your ${p.name} account to refresh permissions.`
+    : `OmniPublish will request the following permissions from ${p.name}:`;
+  document.getElementById('perm-list').innerHTML =
+    perms.map(perm => `<li class="perm-item"><span class="perm-item-check">✓</span><span>${escHtml(perm)}</span></li>`).join('');
+  document.getElementById('perm-note').textContent =
+    `You will be redirected to ${p.name} to authorize. OmniPublish never stores your ${p.name} password — only a secure access token.`;
+  const btn = document.getElementById('perm-auth-btn');
+  btn.textContent = conn ? `Reconnect with ${p.name} →` : `Authorize with ${p.name} →`;
+  btn.style.display = '';
+  btn.disabled = false;
+  document.getElementById('perm-overlay').style.display = 'flex';
+}
+
+function renderCredentialsMissingModal(platId) {
+  const p       = OB_PLATFORMS.find(x => x.id === platId);
+  if (!p) return;
+  const envVars = PLATFORM_ENV_VARS[platId] || [];
+
+  document.getElementById('perm-icon').textContent = p.icon;
+  document.getElementById('perm-title').textContent = p.name;
+  document.getElementById('perm-subtitle').innerHTML =
+    `<strong style="color:var(--err)">⚠ OAuth Not Configured</strong><br><br>` +
+    `${escHtml(p.name)} OAuth credentials are not set up on this server. Contact your administrator to configure:`;
+  document.getElementById('perm-list').innerHTML = envVars.length
+    ? `<div class="perm-env-vars">${envVars.map(v => `<span>${escHtml(v)}</span>`).join('')}</div>`
+    : '';
+  document.getElementById('perm-note').textContent =
+    `Once configured, you will be able to authorize OmniPublish to access your ${p.name} account via OAuth.`;
+  const btn = document.getElementById('perm-auth-btn');
+  btn.style.display = 'none';
+  document.getElementById('perm-overlay').style.display = 'flex';
+}
+
+function closePermModal() {
+  document.getElementById('perm-overlay').style.display = 'none';
+  document.getElementById('perm-auth-btn').style.display = '';
+  _permPlatId = null;
+}
+
+async function authorizeFromPermissionScreen() {
+  if (!_permPlatId) return;
+  const btn = document.getElementById('perm-auth-btn');
+  const p   = OB_PLATFORMS.find(x => x.id === _permPlatId);
+  btn.disabled    = true;
+  btn.textContent = 'Redirecting…';
+  try {
+    await startPlatformOAuth(_permPlatId, _permPage);
+  } catch (err) {
+    if (/missing credentials|OAuth not supported/i.test(err.message || '')) {
+      renderCredentialsMissingModal(_permPlatId);
+      return;
+    }
+    btn.disabled    = false;
+    btn.textContent = p ? `Authorize with ${p.name} →` : 'Authorize →';
+    toast(err.message || 'Authorization failed.', 'err');
+  }
 }
 
 async function connectPlatform() {

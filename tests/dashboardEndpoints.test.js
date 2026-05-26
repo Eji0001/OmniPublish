@@ -72,4 +72,36 @@ describe('dashboard endpoint wiring', () => {
     expect(html).toContain("(name === 'onboarding' && !opts.force)");
     expect(html).toContain("showPage('onboarding', { force: true })");
   });
+
+  it('shows OAuth permission screen before redirecting to platform authorization', () => {
+    expect(html).toContain('renderOAuthPermissionModal');
+    expect(html).toContain('renderCredentialsMissingModal');
+    expect(html).toContain('authorizeFromPermissionScreen');
+    expect(html).toContain('closePermModal');
+    expect(html).toContain('PLATFORM_PERMISSIONS');
+    expect(html).toContain('PLATFORM_ENV_VARS');
+  });
+
+  it('displays platform-specific permission lists for OAuth platforms', () => {
+    const oauthPlatforms = ['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat'];
+    oauthPlatforms.forEach(plat => {
+      expect(html).toContain(`${plat}:`);
+    });
+    expect(html).toContain('perm-overlay');
+    expect(html).toContain('perm-auth-btn');
+  });
+
+  it('keeps manual token form only for non-OAuth platforms', () => {
+    expect(html).toContain('renderManualPlatformModal');
+    expect(html).toContain('pm-overlay');
+    expect(html).toContain('OAUTH_PLATFORM_IDS.has(platId)');
+  });
+
+  it('shows credentials-missing screen instead of manual form for unconfigured OAuth platforms', () => {
+    expect(html).toContain('missing credentials|OAuth not supported');
+    expect(html).toContain('perm-env-vars');
+    expect(html).toContain('FACEBOOK_APP_ID');
+    expect(html).toContain('GOOGLE_CLIENT_ID');
+    expect(html).toContain('X_CLIENT_ID');
+  });
 });
