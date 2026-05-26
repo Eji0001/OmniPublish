@@ -316,6 +316,25 @@ router.get('/:platform/callback', async (req, res) => {
   }
 });
 
+/* ── GET /platforms/oauth-setup — Admin credential + callback URL status ── */
+router.get('/oauth-setup', (req, res) => {
+  const adminKey = req.headers['x-admin-key'] || req.query.key;
+  if (!process.env.ADMIN_API_KEY || adminKey !== process.env.ADMIN_API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const appUrl = process.env.APP_URL || 'http://localhost:4000';
+  const report = Object.entries(OAUTH_PROVIDERS).map(([id, p]) => ({
+    platform:         id,
+    credentialsSet:   !!(p.clientId && p.clientSecret),
+    callbackUrl:      `${appUrl}/api/v1/platforms/${id}/callback`,
+    authUrl:          p.authUrl,
+    scopes:           p.scopes,
+  }));
+
+  res.json({ appUrl, platforms: report });
+});
+
 // Authenticated routes below
 router.use(verifyToken);
 
