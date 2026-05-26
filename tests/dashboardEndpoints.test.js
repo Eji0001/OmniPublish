@@ -67,4 +67,9 @@ describe('dashboard endpoint wiring', () => {
     expect(html).toContain('showPage(landingPage);');
     expect(html).toContain("localhost:4000/#connections");
   });
+
+  it('lets forced onboarding escape demo-mode dashboard routing', () => {
+    expect(html).toContain("(name === 'onboarding' && !opts.force)");
+    expect(html).toContain("showPage('onboarding', { force: true })");
+  });
 });

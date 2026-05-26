@@ -1372,7 +1372,7 @@ let _dashInit = false;
 let _bootstrapAuthStatePromise = null;
 
 function showPage(name, opts = {}) {
-  if (DEMO_MODE && (name === 'auth' || name === 'signup' || name === 'onboarding')) {
+  if (DEMO_MODE && (name === 'auth' || name === 'signup' || (name === 'onboarding' && !opts.force))) {
     name = 'dashboard';
   }
   if (IS_PRODUCTION && name === 'home') name = 'auth';
