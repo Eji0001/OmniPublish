@@ -83,12 +83,19 @@ describe('dashboard endpoint wiring', () => {
   });
 
   it('displays platform-specific permission lists for OAuth platforms', () => {
-    const oauthPlatforms = ['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat'];
+    const oauthPlatforms = ['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat', 'threads'];
     oauthPlatforms.forEach(plat => {
       expect(html).toContain(`${plat}:`);
     });
     expect(html).toContain('perm-overlay');
     expect(html).toContain('perm-auth-btn');
+  });
+
+  it('includes Threads in the OAuth platform set with credentials and permissions', () => {
+    expect(html).toContain("'threads'");
+    expect(html).toContain('THREADS_APP_ID');
+    expect(html).toContain('THREADS_APP_SECRET');
+    expect(html).toContain('Publish text posts and media threads');
   });
 
   it('keeps manual token form only for non-OAuth platforms', () => {

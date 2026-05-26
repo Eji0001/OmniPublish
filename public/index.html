@@ -2773,7 +2773,7 @@ const OB_PLATFORMS = [
   { id: 'twitch',    name: 'Twitch',      icon: '🎮', desc: 'Live stream metadata publishing',                      reqs: ['Use a Twitch OAuth access token', 'Channel ID is required'] },
 ];
 
-const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat']);
+const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat', 'threads']);
 
 const PLATFORM_PERMISSIONS = {
   facebook:  ['Read your public profile and name', 'Publish posts and content to your Pages', 'Manage your Facebook Pages', 'Access Page insights and analytics'],
@@ -2786,6 +2786,7 @@ const PLATFORM_PERMISSIONS = {
   pinterest: ['Read your Pinterest profile and boards', 'Create and manage Pins and Boards', 'Read your analytics and impressions', 'Access your business profile details'],
   twitch:    ['Read your Twitch channel information', 'Update your stream title and category', 'Read your channel followers and subscribers', 'Manage your channel metadata'],
   snapchat:  ['Read your Snapchat profile and audience', 'Publish Stories and Spotlight content', 'Access your audience insights', 'Manage your Snap Kit integrations'],
+  threads:   ['Read your Threads profile and username', 'Publish text posts and media threads', 'Read your post insights and replies', 'Manage your Threads account settings'],
 };
 
 const PLATFORM_ENV_VARS = {
@@ -2799,6 +2800,7 @@ const PLATFORM_ENV_VARS = {
   pinterest: ['PINTEREST_CLIENT_ID', 'PINTEREST_CLIENT_SECRET'],
   twitch:    ['TWITCH_CLIENT_ID', 'TWITCH_CLIENT_SECRET'],
   snapchat:  ['SNAPCHAT_CLIENT_ID', 'SNAPCHAT_CLIENT_SECRET'],
+  threads:   ['THREADS_APP_ID', 'THREADS_APP_SECRET'],
 };
 
 let _platformConnections = {};
