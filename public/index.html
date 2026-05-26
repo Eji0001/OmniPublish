@@ -1559,7 +1559,7 @@ async function doLogin() {
     if (!res.ok) { errEl.textContent = data.error || 'Invalid credentials.'; return; }
     auth.set({ ...data, user: data.user });
     toast('Welcome back! 👋', 'ok');
-    showPage(IS_PRODUCTION ? 'connections' : 'dashboard');
+    showPage('connections');
   } catch (e) {
     errEl.textContent = 'Connection error. Is the server running?';
   } finally {
@@ -2708,7 +2708,7 @@ async function verifyMagicToken(token) {
     if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
     auth.set({ ...data, user: data.user });
     toast('Welcome to OmniPublish! 🚀', 'ok');
-    showPage(IS_PRODUCTION ? 'connections' : 'dashboard');
+    showPage('connections');
   } catch {
     toast('Connection error verifying link.', 'err');
     showPage('home');
@@ -3222,11 +3222,21 @@ document.addEventListener('DOMContentLoaded', async () => {
   hideDemoAuthEntryPoints();
   hideProductionPublicPages();
 
+  const hashPage = (window.location.hash || '').replace('#', '');
+
   if (DEMO_MODE) {
-    showPage('dashboard');
-    bootstrapAuthState()
-      .then((ok) => { if (ok) return refreshDashboardAfterAuth(); })
-      .catch(err => console.warn('Demo session bootstrap failed', err));
+    const landingPage = hashPage === 'dashboard' ? 'dashboard' : 'connections';
+    try {
+      const ok = await bootstrapAuthState();
+      if (!ok) throw new Error('Demo session bootstrap failed');
+      showPage(landingPage);
+      if (landingPage === 'dashboard') {
+        requestAnimationFrame(() => refreshDashboardAfterAuth().catch(() => {}));
+      }
+    } catch (err) {
+      console.warn('Demo session bootstrap failed', err);
+      showPage('home');
+    }
     return;
   }
 
@@ -3278,7 +3288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         auth.set({ ...data, user: data.user });
         toast(hasCompletedOnboarding(data.user) ? 'Welcome back! 👋' : 'Welcome to OmniPublish! 🚀', 'ok');
-        showPage(IS_PRODUCTION ? 'connections' : 'dashboard');
+        showPage('connections');
       } catch {
         showPage('home');
         setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
@@ -3293,8 +3303,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   await bootstrapAuthState();
-
-  const hashPage = (window.location.hash || '').replace('#', '');
 
   if (auth.token && auth.user) {
     if (hashPage === 'onboarding') {

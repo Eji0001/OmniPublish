@@ -61,4 +61,9 @@ describe('dashboard endpoint wiring', () => {
     expect(html).toContain('connections-next-btn');
     expect(html).toContain('goDashboardFromConnections()');
   });
+
+  it('lands demo mode on connections unless dashboard is explicitly requested', () => {
+    expect(html).toContain("const landingPage = hashPage === 'dashboard' ? 'dashboard' : 'connections';");
+    expect(html).toContain('showPage(landingPage);');
+  });
 });
