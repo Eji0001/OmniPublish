@@ -54,8 +54,11 @@ describe('dashboard endpoint wiring', () => {
     expect(html).toContain("if (IS_PRODUCTION && name === 'signup') name = 'auth';");
   });
 
-  it('routes the connections hash directly into dashboard settings', () => {
+  it('routes the connections hash into the dedicated connections page', () => {
     expect(html).toContain("hashPage === 'connections'");
-    expect(html).toContain('openConnectionMenu()');
+    expect(html).toContain("showPage('connections')");
+    expect(html).toContain('page-connections');
+    expect(html).toContain('connections-next-btn');
+    expect(html).toContain('goDashboardFromConnections()');
   });
 });

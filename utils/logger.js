@@ -46,6 +46,4 @@ const logger = winston.createLogger({
   exitOnError: false,
 });
 
-const httpLogStream = { write: (msg) => logger.http(msg.trim()) };
-
-module.exports = { logger, httpLogStream };
+module.exports = { logger };

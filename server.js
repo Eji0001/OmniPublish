@@ -15,18 +15,18 @@ const express     = require('express');
 const helmet      = require('helmet');
 const cors        = require('cors');
 const compression = require('compression');
-const morgan      = require('morgan');
 const hpp         = require('hpp');
 const cron        = require('node-cron');
 const passport    = require('passport');
 
 const cookieParser                 = require('cookie-parser');
-const { logger, httpLogStream }    = require('./utils/logger');
+const { logger }                   = require('./utils/logger');
 const { dbSchemaHealthCheck } = require('./config/database');
 const { globalRateLimiter }        = require('./middleware/rateLimit');
 const { errorHandler }             = require('./middleware/errorHandler');
 const { requestSanitizer }         = require('./middleware/sanitizer');
 const { auditLogger }              = require('./middleware/audit');
+const { requestLogger }            = require('./middleware/requestLogger');
 const { verifyCSRF }               = require('./middleware/csrf');
 const { securityHeaders }          = require('./config/security');
 const { requireApiKey } = require('./middleware/apiKey');
@@ -315,14 +315,9 @@ app.use(compression({
 }));
 
 /* ─────────────────────────────────────────
-   LAYER 6 — Request Logging (Morgan)
+   LAYER 6 — Structured Request Logging
 ───────────────────────────────────────── */
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan(
-    ':remote-addr :method :url :status :res[content-length] - :response-time ms',
-    { stream: httpLogStream }
-  ));
-}
+app.use(requestLogger);
 
 /* ─────────────────────────────────────────
    LAYER 6 — Global Rate Limiting
