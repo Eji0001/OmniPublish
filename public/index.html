@@ -2776,8 +2776,8 @@ const OB_PLATFORMS = [
 const OAUTH_PLATFORM_IDS = new Set(['facebook', 'instagram', 'x', 'linkedin', 'youtube', 'reddit', 'tiktok', 'pinterest', 'twitch', 'snapchat', 'threads']);
 
 const PLATFORM_PERMISSIONS = {
-  facebook:  ['Read your public profile and name', 'Publish posts and content to your Pages', 'Manage your Facebook Pages', 'Access Page insights and analytics'],
-  instagram: ['Read your Instagram profile and media', 'Publish photos, videos, and Reels', 'Read your business account insights', 'Manage comments and interactions'],
+  facebook:  ['Read your public profile, name, and email', 'Publish posts and content to your Pages', 'Manage your Facebook Pages', 'Access Page insights and analytics', 'Publish video content to your Pages'],
+  instagram: ['Read your Instagram profile and media', 'Publish photos, videos, and Reels', 'Read your business account insights', 'Manage and moderate post comments'],
   x:         ['Read your X profile and timeline', 'Post tweets and threads on your behalf', 'Access your account information', 'Manage your media uploads'],
   linkedin:  ['Read your LinkedIn profile and connections', 'Share posts and articles on your behalf', 'Manage Company Pages (if applicable)', 'Read your profile analytics'],
   youtube:   ['Read your YouTube channel and subscriptions', 'Upload and manage your videos', 'Read your video analytics', 'Manage your channel metadata'],
@@ -2786,7 +2786,7 @@ const PLATFORM_PERMISSIONS = {
   pinterest: ['Read your Pinterest profile and boards', 'Create and manage Pins and Boards', 'Read your analytics and impressions', 'Access your business profile details'],
   twitch:    ['Read your Twitch channel information', 'Update your stream title and category', 'Read your channel followers and subscribers', 'Manage your channel metadata'],
   snapchat:  ['Read your Snapchat profile and audience', 'Publish Stories and Spotlight content', 'Access your audience insights', 'Manage your Snap Kit integrations'],
-  threads:   ['Read your Threads profile and username', 'Publish text posts and media threads', 'Read your post insights and replies', 'Manage your Threads account settings'],
+  threads:   ['Read your Threads profile and username', 'Publish text posts and media threads', 'Read and manage replies to your posts', 'Manage your Threads account settings'],
 };
 
 const PLATFORM_ENV_VARS = {

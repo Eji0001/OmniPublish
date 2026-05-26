@@ -94,7 +94,7 @@ const OAUTH_PROVIDERS = {
     authUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
     tokenUrl: 'https://graph.facebook.com/v19.0/oauth/access_token',
     profileUrl: 'https://graph.facebook.com/me?fields=id,name',
-    scopes: 'pages_show_list,pages_read_engagement,pages_manage_posts,publish_video',
+    scopes: 'public_profile,email,pages_show_list,pages_read_engagement,pages_manage_posts,publish_video',
     clientId: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
     extractProfile: (data) => ({
@@ -107,7 +107,7 @@ const OAUTH_PROVIDERS = {
     authUrl: 'https://www.facebook.com/v19.0/dialog/oauth',
     tokenUrl: 'https://graph.facebook.com/v19.0/oauth/access_token',
     profileUrl: 'https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account{id,username}',
-    scopes: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement',
+    scopes: 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,instagram_manage_comments',
     clientId: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
     extractProfile: (data) => {
@@ -189,7 +189,7 @@ const OAUTH_PROVIDERS = {
     authUrl: 'https://threads.net/oauth/authorize',
     tokenUrl: 'https://graph.threads.net/oauth/access_token',
     profileUrl: 'https://graph.threads.net/v1.0/me?fields=id,username',
-    scopes: 'threads_basic,threads_content_publish',
+    scopes: 'threads_basic,threads_content_publish,threads_manage_replies',
     clientId: process.env.THREADS_APP_ID,
     clientSecret: process.env.THREADS_APP_SECRET,
     extractProfile: (data) => ({
