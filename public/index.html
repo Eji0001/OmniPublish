@@ -904,10 +904,10 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
         <div class="ob-title">Connect your channels</div>
         <div class="ob-plat-sub">Connect as many channels as you can before moving on.</div>
         <div class="ob-connection-hero">
-          <button type="button" id="ob-add-connection-btn"><span class="plus">+</span><span>Add connection</span></button>
+          <button type="button" id="ob-add-connection-btn"><span class="plus">+</span><span>Connect platform</span></button>
         </div>
         <div class="ob-plats-grid" id="ob-plats-grid"></div>
-        <div class="ob-empty-note" id="ob-empty-note">No connected accounts yet. Use the "Add connection" button to get started.</div>
+        <div class="ob-empty-note" id="ob-empty-note">No connected accounts yet. Use the "Connect platform" button to get started.</div>
       </div>
 
       <!-- Step 3: Rhythm -->
@@ -1175,7 +1175,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
       <div>
         <div class="connections-eyebrow">Workspace setup</div>
         <h1 class="connections-title">Connections</h1>
-        <p class="connections-sub">Check, add, or remove saved platforms, then head back to the dashboard.</p>
+        <p class="connections-sub">Check, connect, or remove saved platforms, then head back to the dashboard.</p>
       </div>
       <div class="connections-nav">
         <button class="settings-back-btn" id="connections-back-btn" type="button">← Dashboard</button>
@@ -1186,7 +1186,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
     <div class="connections-card">
       <div class="settings-menu active" id="settings-menu">
         <button class="settings-action-btn" type="button" onclick="checkAllConnections()"><span>Check connection</span><span>✓</span></button>
-        <button class="settings-action-btn" type="button" onclick="showAddConnectionFromSettings()"><span>Add connection</span><span>+</span></button>
+        <button class="settings-action-btn" type="button" onclick="showAddConnectionFromSettings()"><span>Connect platform</span><span>+</span></button>
         <button class="settings-action-btn danger" type="button" onclick="showRemoveConnections()"><span>Remove connection</span><span>−</span></button>
       </div>
       <div class="settings-panel" id="settings-panel">
@@ -2953,7 +2953,7 @@ function syncPlatformCard(platId) {
   const connected = !!conn;
   const active = connected && conn.is_active !== false;
   if (btn) {
-    btn.textContent = connected ? (active ? '✓ Connected' : 'Turn On') : (OAUTH_PLATFORM_IDS.has(platId) ? 'Connect' : 'Add');
+    btn.textContent = connected ? (active ? '✓ Connected' : 'Turn On') : 'Connect';
     btn.classList.toggle('connected', active);
     btn.classList.toggle('inactive', connected && !active);
     btn.title = connected ? (active ? 'Click to manage connection' : 'Connection is off. Click to turn on') : 'Click to connect';
@@ -2971,11 +2971,11 @@ function renderOnboardingIntro() {
   const count = Object.values(_platformConnections).filter(c => c?.is_active !== false).length;
   const btn = document.getElementById('ob-add-connection-btn');
   const note = document.getElementById('ob-empty-note');
-  if (btn) btn.lastElementChild.textContent = count ? 'Add another connection' : 'Add connection';
+  if (btn) btn.lastElementChild.textContent = count ? 'Connect another' : 'Connect platform';
   if (note) {
     note.textContent = count
-      ? `${count} connected account${count === 1 ? '' : 's'} ready. Add another connection or continue to the next step.`
-      : 'No connected accounts yet. Use the "Add connection" button to get started.';
+      ? `${count} connected account${count === 1 ? '' : 's'} ready. Connect another or continue to the next step.`
+      : 'No connected accounts yet. Use the "Connect platform" button to get started.';
   }
 }
 
@@ -3004,7 +3004,7 @@ function renderObPlatforms() {
       <div class="ob-plat-name">${p.name}</div>
       <div class="ob-plat-desc">${p.desc}</div>
       <div class="ob-plat-state" id="ob-plat-state-${p.id}">Ready to connect</div>
-      <button class="ob-add-btn" id="ob-add-${p.id}" type="button" data-plat="${p.id}">Add</button>
+      <button class="ob-add-btn" id="ob-add-${p.id}" type="button" data-plat="${p.id}">Connect</button>
     </div>
   `).join('');
   OB_PLATFORMS.forEach(p => syncPlatformCard(p.id));
