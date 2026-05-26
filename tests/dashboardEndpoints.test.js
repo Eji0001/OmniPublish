@@ -62,8 +62,9 @@ describe('dashboard endpoint wiring', () => {
     expect(html).toContain('goDashboardFromConnections()');
   });
 
-  it('lands demo mode on connections unless dashboard is explicitly requested', () => {
-    expect(html).toContain("const landingPage = hashPage === 'dashboard' ? 'dashboard' : 'connections';");
+  it('gives developer hash-based access to connections page in demo mode', () => {
+    expect(html).toContain("DEV_PAGES[hashPage] || 'dashboard'");
     expect(html).toContain('showPage(landingPage);');
+    expect(html).toContain("localhost:4000/#connections");
   });
 });

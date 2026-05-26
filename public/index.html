@@ -3225,7 +3225,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const hashPage = (window.location.hash || '').replace('#', '');
 
   if (DEMO_MODE) {
-    const landingPage = hashPage === 'dashboard' ? 'dashboard' : 'connections';
+    // Developer hash routing: localhost:4000/#connections → connections page bypass, localhost:4000/#dashboard → dashboard
+    const DEV_PAGES = { dashboard: 'dashboard', connections: 'connections' };
+    const landingPage = DEV_PAGES[hashPage] || 'dashboard';
     try {
       const ok = await bootstrapAuthState();
       if (!ok) throw new Error('Demo session bootstrap failed');
