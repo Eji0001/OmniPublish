@@ -155,6 +155,7 @@ const OAUTH_PROVIDERS = {
     clientSecret: process.env.TIKTOK_CLIENT_SECRET,
     clientIdParam: 'client_key',
     tokenClientIdParam: 'client_key',
+    pkce: true,
     extractProfile: (data) => ({
       id: data.data?.user?.union_id || 'unknown',
       username: data.data?.user?.display_name || 'TikTok User'
