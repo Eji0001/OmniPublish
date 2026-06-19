@@ -212,8 +212,18 @@ router.get('/:platform/callback', async (req, res) => {
     return res.status(400).send('Unsupported platform');
   }
 
+  const buildErrorUrl = (base, code) => {
+    const url = new URL(base || getSafeReturnTo());
+    if (!url.hash) url.hash = '#onboarding';
+    url.searchParams.set('platform_error', code);
+    return url.toString();
+  };
+
+  let returnTo;
   try {
-    const { userId, returnTo } = await verifyOAuthState(req.query.state, platform);
+    const state = await verifyOAuthState(req.query.state, platform);
+    returnTo = state.returnTo;
+    const userId = state.userId;
 
     // Re-verify the userId encoded in the state JWT exists and is active.
     // Prevents IDOR: an attacker with a captured state token cannot write OAuth
@@ -222,14 +232,12 @@ router.get('/:platform/callback', async (req, res) => {
       .from('users').select('id, is_active').eq('id', userId).single();
     if (stateUserErr || !stateUser || !stateUser.is_active) {
       logger.warn('OAuth callback rejected: state userId not found or inactive', { userId, platform });
-      return res.redirect(`${getSafeReturnTo()}?platform_error=${platform}_invalid_state`);
+      return res.redirect(buildErrorUrl(returnTo, `${platform}_invalid_state`));
     }
 
     if (req.query.error) {
       logger.error(`${platform} OAuth error`, { error: req.query.error });
-      const errorUrl = new URL(returnTo || getSafeReturnTo());
-      errorUrl.searchParams.set('platform_error', `${platform}_access_denied`);
-      return res.redirect(errorUrl.toString());
+      return res.redirect(buildErrorUrl(returnTo, `${platform}_access_denied`));
     }
 
     const tokenParams = new URLSearchParams({
@@ -310,13 +318,12 @@ router.get('/:platform/callback', async (req, res) => {
 
     logger.info(`${platform} connected successfully via OAuth`, { userId });
     const successUrl = new URL(returnTo || getSafeReturnTo());
+    if (!successUrl.hash) successUrl.hash = '#onboarding';
     successUrl.searchParams.set('platform_success', platform);
     res.redirect(successUrl.toString());
   } catch (err) {
     logger.error(`${platform} callback error`, { err: err.message });
-    const errorUrl = new URL(getSafeReturnTo());
-    errorUrl.searchParams.set('platform_error', `${platform}_callback_failed`);
-    res.redirect(errorUrl.toString());
+    res.redirect(buildErrorUrl(returnTo, `${platform}_callback_failed`));
   }
 });
 
