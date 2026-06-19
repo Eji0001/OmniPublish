@@ -2839,7 +2839,7 @@ function consumeOAuthResult() {
   const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || ''}`;
   history.replaceState(null, '', cleanUrl);
 
-  if (success) window._returnToChannels = true;
+  if (success || error) window._returnToChannels = true;
 
   const platformName = (OB_PLATFORMS.find(p => p.id === success || p.id === error?.split('_')[0])?.name) || success || error || 'Platform';
   setTimeout(() => {
