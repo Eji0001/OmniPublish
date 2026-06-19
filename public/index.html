@@ -351,6 +351,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .settings-connection-btn.toggle.on{background:rgba(61,124,255,.12);border-color:rgba(61,124,255,.24);color:#6da0ff}
 .settings-connection-btn.toggle.off{background:rgba(255,99,132,.12);border-color:rgba(255,99,132,.24);color:#ff8ca4}
 .settings-connection-btn.disconnect{background:rgba(255,99,132,.12);border-color:rgba(255,99,132,.24);color:#ff8ca4}
+.settings-connection-btn.connected{background:rgba(0,230,118,.1);border-color:rgba(0,230,118,.28);color:#00e676;cursor:default}
 .settings-empty,.settings-status{font-size:12px;color:var(--tx3);line-height:1.45}
 .settings-status{min-height:18px}
 .connections-shell{max-width:980px;margin:0 auto;padding:32px 20px 56px}
@@ -2467,7 +2468,7 @@ function showSettingsView(view) {
   const aiPanel = document.getElementById('settings-ai-panel');
   if (home)    home.classList.toggle('active', view === 'home');
   if (menu)    menu.classList.toggle('active', view === 'menu');
-  if (panel)   panel.classList.toggle('active', view === 'check' || view === 'remove');
+  if (panel)   panel.classList.toggle('active', view === 'check' || view === 'remove' || view === 'add');
   if (aiPanel) aiPanel.classList.toggle('active', view === 'ai');
 }
 
@@ -2648,8 +2649,45 @@ function showRemoveConnections() {
 
 function showAddConnectionFromSettings() {
   closeSettings();
-  showPage('onboarding', { force: true });
-  requestAnimationFrame(() => obGoStep(2));
+  if (document.getElementById('page-connections')?.classList.contains('active')) {
+    renderAddConnectionPanel();
+  } else {
+    showPage('onboarding', { force: true });
+    requestAnimationFrame(() => obGoStep(2));
+  }
+}
+
+function renderAddConnectionPanel() {
+  const panelTitle = document.getElementById('settings-panel-title');
+  const panelNote  = document.getElementById('settings-panel-note');
+  const wrap       = document.getElementById('settings-connections');
+  const empty      = document.getElementById('settings-empty');
+  if (panelTitle) panelTitle.textContent = 'Connect platform';
+  if (panelNote)  panelNote.textContent  = 'Select a platform to authorize via OAuth.';
+  if (empty)      empty.style.display    = 'none';
+  const oauthPlatforms = OB_PLATFORMS.filter(p => OAUTH_PLATFORM_IDS.has(p.id));
+  wrap.innerHTML = oauthPlatforms.map(p => {
+    const conn      = _platformConnections[p.id];
+    const connected = !!conn && conn.is_active !== false;
+    return `
+      <div class="settings-connection${connected ? ' good' : ''}">
+        <div class="settings-connection-main">
+          <div class="settings-connection-title">${escHtml(p.icon)} ${escHtml(p.name)}</div>
+          <div class="settings-connection-meta">${connected ? '✓ Connected as ' + escHtml(conn.platform_username || 'account') : 'Not connected'}</div>
+        </div>
+        <div class="settings-connection-actions">
+          <button class="settings-connection-btn ${connected ? 'connected' : 'connect'}" type="button"
+            ${connected ? 'disabled' : `onclick="connectPlatformFromConnectionsPage(${escJsArg(p.id)})"`}>
+            ${connected ? '✓ Connected' : 'Connect'}
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+  showSettingsView('add');
+}
+
+function connectPlatformFromConnectionsPage(platId) {
+  renderOAuthPermissionModal(platId, 'connections');
 }
 
 async function togglePlatformConnection(platId) {
@@ -2838,6 +2876,14 @@ function consumeOAuthResult() {
     if (success) toast(`${platformName} connected.`, 'ok');
     if (error) toast(`${platformName} connection failed.`, 'err');
   }, 400);
+
+  if (success) {
+    loadPlatformConnections().then(() => {
+      if (document.getElementById('page-connections')?.classList.contains('active')) {
+        renderAddConnectionPanel();
+      }
+    }).catch(() => {});
+  }
 }
 
 function initOnboarding() {
