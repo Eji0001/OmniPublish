@@ -32,8 +32,11 @@ const getSafeReturnTo = (candidate) => {
   if (!ALLOWED_ORIGINS.length) return fallback;
 
   try {
-    const { origin } = new URL(candidate || fallback);
-    if (ALLOWED_ORIGINS.includes(origin)) return origin;
+    const url = new URL(candidate || fallback);
+    // Allow origin + root path + hash only — no arbitrary paths or query strings
+    if (ALLOWED_ORIGINS.includes(url.origin) && url.pathname === '/' && !url.search) {
+      return url.origin + (url.hash || '');
+    }
   } catch {
     // fall through to safe fallback
   }
