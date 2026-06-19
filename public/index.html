@@ -716,14 +716,12 @@ END COMMENTED OUT -->
     </div>
 
     <!-- Tabs (hidden on forgot) -->
-    <!-- COMMENTED OUT
     <div class="auth-tabs" id="auth-tabs">
       <button class="auth-tab active" id="tab-register" type="button">Register</button>
       <button class="auth-tab" id="tab-login" type="button">Login</button>
     </div>
-    END COMMENTED OUT -->
 
-    <!-- REGISTER FORM — COMMENTED OUT
+    <!-- REGISTER FORM -->
     <div class="auth-form active" id="form-register">
       <div class="auth-title">Create your account</div>
       <div class="auth-subtitle">Start publishing to 14 platforms with one click.</div>
@@ -749,9 +747,8 @@ END COMMENTED OUT -->
       <div class="auth-ok" id="reg-ok" style="display:none">✓ Account created. Taking you to onboarding…</div>
       <div class="auth-switch">Already have an account? <a href="#" id="reg-login-link">Login →</a></div>
     </div>
-    END COMMENTED OUT -->
 
-    <!-- SIGN IN / LOGIN FORM — COMMENTED OUT
+    <!-- SIGN IN / LOGIN FORM -->
     <div class="auth-form" id="form-login">
       <div class="auth-title">Welcome back</div>
       <div class="auth-subtitle">Login to your OmniPublish account.</div>
@@ -768,7 +765,6 @@ END COMMENTED OUT -->
       <div class="auth-err" id="login-err"></div>
       <div class="auth-switch">Don't have an account? <a href="#" id="login-register-link">Register →</a></div>
     </div>
-    END COMMENTED OUT -->
 
     <!-- FORGOT PASSWORD FORM -->
     <div class="auth-form" id="form-forgot">
@@ -1507,20 +1503,24 @@ function toggleTheme() { applyTheme(currentTheme === 'dark' ? 'sky' : 'dark'); }
 ══════════════════════════════════════ */
 function switchAuthForm(name) {
   ['register','login','forgot'].forEach(f => {
-    document.getElementById('form-' + f).classList.toggle('active', f === name);
+    document.getElementById('form-' + f)?.classList.toggle('active', f === name);
   });
   const tabs = document.getElementById('auth-tabs');
-  tabs.style.display = name === 'forgot' ? 'none' : 'flex';
+  if (tabs) tabs.style.display = name === 'forgot' ? 'none' : 'flex';
   if (name !== 'forgot') {
-    document.getElementById('tab-register').classList.toggle('active', name === 'register');
-    document.getElementById('tab-login').classList.toggle('active', name === 'login');
+    document.getElementById('tab-register')?.classList.toggle('active', name === 'register');
+    document.getElementById('tab-login')?.classList.toggle('active', name === 'login');
   }
-  document.getElementById('reg-err').textContent = '';
+  const regErr = document.getElementById('reg-err');
+  if (regErr) regErr.textContent = '';
   const regOk = document.getElementById('reg-ok');
   if (regOk) { regOk.style.display = 'none'; regOk.textContent = '✓ Account created. Taking you to onboarding…'; }
-  document.getElementById('login-err').textContent = '';
-  document.getElementById('forgot-err').textContent = '';
-  document.getElementById('forgot-ok').style.display = 'none';
+  const loginErr = document.getElementById('login-err');
+  if (loginErr) loginErr.textContent = '';
+  const forgotErr = document.getElementById('forgot-err');
+  if (forgotErr) forgotErr.textContent = '';
+  const forgotOk = document.getElementById('forgot-ok');
+  if (forgotOk) forgotOk.style.display = 'none';
 }
 
 function togglePw(id, btn) {
