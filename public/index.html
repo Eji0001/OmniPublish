@@ -521,7 +521,8 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .ob-add-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
 [data-theme="dark"] .ob-add-btn:hover{box-shadow:0 0 20px rgba(0,200,255,.32),0 4px 14px rgba(0,0,0,.2)}
 [data-theme="sky"] .ob-add-btn:hover{box-shadow:0 4px 16px rgba(0,102,221,.38)}
-.ob-add-btn.connected{background:var(--ob-sel-bg);color:#22c55e;border:1.5px solid var(--ob-sel-bdr);box-shadow:none;filter:none;transform:none}
+.ob-add-btn.connected{background:var(--ob-sel-bg);color:#22c55e;border:1.5px solid var(--ob-sel-bdr);box-shadow:none;filter:none;transform:none;font-weight:900;cursor:default}
+[data-theme="dark"] .ob-add-btn.connected{color:#4ade80}
 .ob-add-btn.inactive{background:rgba(253,203,110,.12);color:#d97706;border:1.5px solid rgba(253,203,110,.35);box-shadow:none;filter:none;transform:none}
 .ob-empty-note{margin:14px auto 0;max-width:600px;text-align:center;font-size:14px;color:var(--ob-tx3);line-height:1.55}
 
@@ -1651,7 +1652,7 @@ async function doLogout() {
   adapted = {};
   enriched = {};
   toast(ok ? 'Logged out.' : 'Logged out locally. Server session may already be expired.', ok ? 'ok' : 'err');
-  showPage('home');
+  showPage('signup');
 }
 
 /* ══════════════════════════════════════
@@ -2755,13 +2756,13 @@ async function verifyMagicToken(token) {
       credentials: 'include', body: JSON.stringify({ token }),
     });
     const data = await res.json();
-    if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('home'); return; }
+    if (!res.ok) { toast(data.error || 'Invalid link', 'err'); showPage('signup'); return; }
     auth.set({ ...data, user: data.user });
     toast('Welcome to OmniPublish! 🚀', 'ok');
     showPage('connections');
   } catch {
     toast('Connection error verifying link.', 'err');
-    showPage('home');
+    showPage('signup');
   }
 }
 
@@ -2830,6 +2831,7 @@ async function startPlatformOAuth(platId, page = 'dashboard') {
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || `Failed to start ${platId} connection`);
   if (data.url) {
+    if (auth.token) localStorage.setItem('omni_oauth_token', auth.token);
     window.location.href = data.url;
     return;
   }
@@ -2842,10 +2844,18 @@ function consumeOAuthResult() {
   const error = url.searchParams.get('platform_error');
   if (!success && !error) return;
 
+  // Restore auth token saved before OAuth redirect so session survives the redirect round-trip
+  const savedToken = localStorage.getItem('omni_oauth_token');
+  if (savedToken) {
+    auth.set({ accessToken: savedToken });
+    localStorage.removeItem('omni_oauth_token');
+  }
+
   const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || ''}`;
   history.replaceState(null, '', cleanUrl);
 
   if (success || error) window._returnToChannels = true;
+  if (success) window._justConnectedPlatform = success;
 
   const platformName = (OB_PLATFORMS.find(p => p.id === success || p.id === error?.split('_')[0])?.name) || success || error || 'Platform';
   setTimeout(() => {
@@ -2967,7 +2977,7 @@ function syncPlatformCard(platId) {
   const connected = !!conn;
   const active = connected && conn.is_active !== false;
   if (btn) {
-    btn.textContent = connected ? (active ? '✓ Connected' : 'Turn On') : 'Connect';
+    btn.textContent = connected ? (active ? 'Connected' : 'Turn On') : 'Connect';
     btn.classList.toggle('connected', active);
     btn.classList.toggle('inactive', connected && !active);
     btn.title = connected ? (active ? 'Click to manage connection' : 'Connection is off. Click to turn on') : 'Click to connect';
@@ -3396,7 +3406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!res.ok) throw new Error(data.error || 'Confirmation failed');
         enterOnboarding(data, 'Welcome to OmniPublish! 🚀');
       } catch (err) {
-        showPage('home');
+        showPage('signup');
         setTimeout(() => toast(err.message || 'Could not confirm your email.', 'err'), 400);
       }
     })();
@@ -3406,10 +3416,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (oauthError) {
     history.replaceState(null, '', '/');
     if (oauthError === 'not_configured') {
-      showPage('home');
+      showPage('signup');
       setTimeout(() => toast('Google OAuth is not configured yet. Use Register instead.', 'err'), 400);
     } else {
-      showPage('home');
+      showPage('signup');
       setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
     }
     return;
@@ -3422,7 +3432,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res  = await api('POST', '/api/v1/auth/oauth/exchange', { code: oauthCode });
         const data = await res.json();
         if (!res.ok) {
-          showPage('home');
+          showPage('signup');
           setTimeout(() => toast(data.error || 'Google sign-in failed. Please try again.', 'err'), 400);
           return;
         }
@@ -3430,7 +3440,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         toast(hasCompletedOnboarding(data.user) ? 'Welcome back! 👋' : 'Welcome to OmniPublish! 🚀', 'ok');
         showPage('connections');
       } catch {
-        showPage('home');
+        showPage('signup');
         setTimeout(() => toast('Google sign-in failed. Please try again.', 'err'), 400);
       }
     })();
@@ -3448,8 +3458,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (hashPage === 'onboarding') {
       showPage('onboarding');
       if (window._returnToChannels) {
+        const justConnected = window._justConnectedPlatform;
         delete window._returnToChannels;
-        requestAnimationFrame(() => obGoStep(2));
+        delete window._justConnectedPlatform;
+        requestAnimationFrame(() => {
+          obGoStep(2);
+          if (justConnected) {
+            _platformConnections[justConnected] = { is_active: true, platform: justConnected };
+            syncPlatformCard(justConnected);
+          }
+        });
       }
     } else if (hashPage === 'dashboard') {
       showPage('dashboard');
@@ -3461,13 +3479,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       showPage('onboarding');
     }
   } else {
-    // Auth failed (session expired). If we arrived here from an OAuth redirect,
-    // store the intent to return to connections after re-auth and show forgot form.
+    // Auth failed (session expired). Redirect to signup page for re-authentication.
     if (window._returnToChannels) {
       delete window._returnToChannels;
       sessionStorage.setItem('omni_post_auth', 'connections');
     }
-    showPage('home');
+    showPage('signup');
   }
 });
 </script>
