@@ -2522,7 +2522,12 @@ function initConnectionsPage() {
   showSettingsView('menu');
   const statusEl = document.getElementById('settings-status');
   if (statusEl) statusEl.textContent = '';
-  loadPlatformConnections().catch(() => {});
+  loadPlatformConnections().then(() => {
+    if (_pendingOAuthSuccess) {
+      _pendingOAuthSuccess = false;
+      renderAddConnectionPanel();
+    }
+  }).catch(() => {});
 }
 
 function goDashboardFromConnections() {
@@ -2844,6 +2849,7 @@ const PLATFORM_ENV_VARS = {
 let _platformConnections = {};
 let _currentPlatId = null;
 let _connectingPlatform = false;
+let _pendingOAuthSuccess = false;
 let _onboardingStep = 1;
 let _selectedPersona = localStorage.getItem('omni_user_role') || '';
 
@@ -2877,13 +2883,7 @@ function consumeOAuthResult() {
     if (error) toast(`${platformName} connection failed.`, 'err');
   }, 400);
 
-  if (success) {
-    loadPlatformConnections().then(() => {
-      if (document.getElementById('page-connections')?.classList.contains('active')) {
-        renderAddConnectionPanel();
-      }
-    }).catch(() => {});
-  }
+  if (success) _pendingOAuthSuccess = true;
 }
 
 function initOnboarding() {
