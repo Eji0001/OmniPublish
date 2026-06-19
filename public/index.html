@@ -715,13 +715,15 @@ END COMMENTED OUT -->
       <span class="auth-logo-text">OmniPublish</span>
     </div>
 
-    <!-- Tabs (hidden on forgot) -->
+    <!-- Tabs (hidden on forgot) — hidden for existing users; page-home has signup flow -->
+    <!-- AUTH-TABS-START
     <div class="auth-tabs" id="auth-tabs">
       <button class="auth-tab active" id="tab-register" type="button">Register</button>
       <button class="auth-tab" id="tab-login" type="button">Login</button>
     </div>
+    AUTH-TABS-END -->
 
-    <!-- REGISTER FORM -->
+    <!-- REGISTER FORM — hidden for existing users; page-home has signup flow
     <div class="auth-form active" id="form-register">
       <div class="auth-title">Create your account</div>
       <div class="auth-subtitle">Start publishing to 14 platforms with one click.</div>
@@ -747,8 +749,9 @@ END COMMENTED OUT -->
       <div class="auth-ok" id="reg-ok" style="display:none">✓ Account created. Taking you to onboarding…</div>
       <div class="auth-switch">Already have an account? <a href="#" id="reg-login-link">Login →</a></div>
     </div>
+    REGISTER-FORM-END -->
 
-    <!-- SIGN IN / LOGIN FORM -->
+    <!-- SIGN IN / LOGIN FORM — hidden for existing users; page-home has login flow
     <div class="auth-form" id="form-login">
       <div class="auth-title">Welcome back</div>
       <div class="auth-subtitle">Login to your OmniPublish account.</div>
@@ -765,6 +768,7 @@ END COMMENTED OUT -->
       <div class="auth-err" id="login-err"></div>
       <div class="auth-switch">Don't have an account? <a href="#" id="login-register-link">Register →</a></div>
     </div>
+    LOGIN-FORM-END -->
 
     <!-- FORGOT PASSWORD FORM -->
     <div class="auth-form" id="form-forgot">
@@ -1426,7 +1430,9 @@ function showPage(name, opts = {}) {
   requestAnimationFrame(() => {
     page.classList.add('active');
     if (name === 'auth') {
-      switchAuthForm(opts.tab || 'login');
+      const requestedTab = opts.tab || 'login';
+      const tabExists = !!document.getElementById('form-' + requestedTab);
+      switchAuthForm(tabExists ? requestedTab : 'forgot');
     }
     if (name === 'dashboard') {
       updateDashboardUser();
@@ -3455,6 +3461,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       showPage('onboarding');
     }
   } else {
+    // Auth failed (session expired). If we arrived here from an OAuth redirect,
+    // store the intent to return to connections after re-auth and show forgot form.
+    if (window._returnToChannels) {
+      delete window._returnToChannels;
+      sessionStorage.setItem('omni_post_auth', 'connections');
+    }
     showPage('home');
   }
 });
