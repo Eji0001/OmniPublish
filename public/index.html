@@ -521,7 +521,7 @@ body{background:var(--bg);color:var(--tx);font-family:'SF Pro Display',-apple-sy
 .ob-add-btn:hover{transform:translateY(-1px);filter:brightness(1.08)}
 [data-theme="dark"] .ob-add-btn:hover{box-shadow:0 0 20px rgba(0,200,255,.32),0 4px 14px rgba(0,0,0,.2)}
 [data-theme="sky"] .ob-add-btn:hover{box-shadow:0 4px 16px rgba(0,102,221,.38)}
-.ob-add-btn.connected{background:var(--ob-sel-bg);color:var(--ob-acc);border:1.5px solid var(--ob-sel-bdr);box-shadow:none;filter:none;transform:none}
+.ob-add-btn.connected{background:var(--ob-sel-bg);color:#22c55e;border:1.5px solid var(--ob-sel-bdr);box-shadow:none;filter:none;transform:none}
 .ob-add-btn.inactive{background:rgba(253,203,110,.12);color:#d97706;border:1.5px solid rgba(253,203,110,.35);box-shadow:none;filter:none;transform:none}
 .ob-empty-note{margin:14px auto 0;max-width:600px;text-align:center;font-size:14px;color:var(--ob-tx3);line-height:1.55}
 
@@ -2833,6 +2833,8 @@ function consumeOAuthResult() {
   const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || ''}`;
   history.replaceState(null, '', cleanUrl);
 
+  if (success) window._returnToChannels = true;
+
   const platformName = (OB_PLATFORMS.find(p => p.id === success || p.id === error?.split('_')[0])?.name) || success || error || 'Platform';
   setTimeout(() => {
     if (success) toast(`${platformName} connected.`, 'ok');
@@ -3433,6 +3435,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (auth.token && auth.user) {
     if (hashPage === 'onboarding') {
       showPage('onboarding');
+      if (window._returnToChannels) {
+        delete window._returnToChannels;
+        requestAnimationFrame(() => obGoStep(2));
+      }
     } else if (hashPage === 'dashboard') {
       showPage('dashboard');
     } else if (hashPage === 'connections') {
